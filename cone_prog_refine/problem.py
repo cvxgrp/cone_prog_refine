@@ -183,8 +183,7 @@ def print_header(z, norm_Q):
     print(' len(z) = %d,  ||z|| = %.2e,  ||Q||_2 = %.2e ' %
           (len(z), np.linalg.norm(z), norm_Q))
     print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-    print("it.     ||R(z)||     ||DR(z)^T R(z)||  LSQR it.   time")
-#    print("ite.     pri res     dua res     dua gap      LSQR ite.   cum. time")
+    print("it.   ||R(z)/z[-1]||_2  z[-1]  LSQR it.  1-btol   time")
     print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
 
 
@@ -201,27 +200,12 @@ def subopt_stats(A, b, c, x, s, y):
 
 
 @jit
-# def print_stats(i, z, residual, residual_DT, start_time, num_lsqr_iters,
-# norm_Q):
-def print_stats(i, residual, residual_DT, num_lsqr_iters, start_time):
-    # m, n = A.shape
-    #x, s, y, tau, kappa = uv2xsytaukappa(u, v, n)
-    # pri_res_norm, dua_res_norm, rel_gap, compl_gap = subopt_stats(
-    #    A, b, c, x, s, y)
-    print('%d\t%.3e\t%.3e\t%d\t  %.2f' %
-          (i, np.linalg.norm(residual), np.linalg.norm(residual_DT(residual)),
-           num_lsqr_iters,
+# def print_stats(i, residual, residual_DT, num_lsqr_iters, start_time):
+def print_stats(i, residual, z, num_lsqr_iters, start_time, btol):
+    print('%d\t%.2e\t%.1e\t%d\t%.2e\t%.2f' %
+          (i, np.linalg.norm(residual / z[-1]), z[-1],
+           num_lsqr_iters, 1. - btol,
            time.time() - start_time))
-
-    # print('%d\t  %.1e      %.1e      %.1e       %d\t  %.2f' %
-    #       (i, pri_res_norm, dua_res_norm, rel_gap,
-    #        num_lsqr_iters,
-    #        time.time() - start_time))
-
-    # print('%d   %.1e    %.1e    %.1e       %.1e         %d\t\t%.2f' %
-    #       (i, norm_Q, norm(z), norm(residual), norm(residual_DT(residual)),
-    #        num_lsqr_iters,
-    #        time.time() - start_time))
 
 
 @jit
@@ -231,113 +215,106 @@ def print_footer(message):
     print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
 
 
-# @jit
-# def converged(pri_res_norm, dua_res_norm, rel_gap, eps):
-#     return max(pri_res_norm, dua_res_norm, rel_gap) < eps
-
-
 def refine(A, b, c, cones, z,
            verbose=True,
            max_iters=100,
-           # max_lsqr_iter_frac=1.,
            max_lsqr_iters=100,
            max_runtime=5.):
+
+    btol = .8
 
     m, n = A.shape
 
     lambda_var = 1.
-    #max_lsqr_iters = int(max_lsqr_iter_frac * (m + n + 1))
-
-    #print('Max Q eival:', sp.linalg.svds(Q(A, b, c), k=1)[1])
     norm_Q = sp.linalg.svds(Q(A, b, c), k=1)[1][0]
 
     if verbose:
         print_header(z, norm_Q)
 
+    # z /= (np.linalg.norm(z) / len(z))
+
     residual, u, v, cache = residual_and_uv(z, A, b, c, cones)
     start_time = time.time()
 
     if verbose:
-        #print_stats(-1, A, b, c, u, v, start_time, -1)
-        print_stats(-1, residual,
-                    lambda dres: residual_DT(z, dres, A, b, c, cache),
-                    -1, start_time)
+        print_stats(-1, residual, z,
+                    # lambda dres: residual_DT(z, dres, A, b, c, cache),
+                    - 1, start_time, btol)
 
     for i in range(max_iters):
-
-        # print(norm(residual_DT(z, residual, A, b, c, cache)))
 
         if norm(residual_DT(z, residual, A, b, c, cache)) == 0.:
             if verbose:
                 print_footer('Residual orthogonal to derivative.')
             return z / np.abs(z[-1])
-        # print(lambda_var)
-        # D = LinearOperator(shape=(n + m + 2, n + m + 1),
-        #                    matvec=lambda dz:
-        #                    np.concatenate([residual_D(
-        #                        z, dz, A, b, c, cache), [dz[-1]]]),
-        #                    rmatvec=lambda dres: residual_DT(
-        #     z, dres[:-1], A, b, c, cache))
 
-        # D = LinearOperator(shape=(n + m + 1, n + m + 1),
-        #                    matvec=lambda dz: residual_D(z, dz, A, b, c, cache),
-        # rmatvec=lambda dres: residual_DT(z, dres, A, b, c, cache))
+        def lsqr_D(z, dz, A, b, c, cache, residual):
+            return residual_D(z, dz, A, b, c, cache) / z[-1] - (residual /
+                                                                z[-1]**2) * dz[-1]
 
-        returned = lsqr(lambda dz: residual_D(z, dz, A, b, c, cache),
-                        lambda dres: residual_DT(z, dres, A, b, c, cache),
+        e_minus1 = np.zeros(n + m + 1)
+        e_minus1[-1] = 1.
+
+        def lsqr_DT(z, dres, A, b, c, cache, residual):
+            return residual_DT(z, dres, A, b, c, cache) / z[-1] - (dres@residual
+                                                                   / z[-1]**2) * e_minus1
+
+        # def lsqr_D(z, dz, A, b, c, cache, residual):
+        #     return residual_D(z, dz, A, b, c, cache)
+
+        # def lsqr_DT(z, dres, A, b, c, cache, residual):
+        #     return residual_DT(z, dres, A, b, c, cache)
+
+        #print('res norm: %.2e' % np.linalg.norm(residual / z[-1]))
+        #print('1 - btol: %.2e' % (1. - btol))
+        returned = lsqr(lambda dz: lsqr_D(z, dz, A, b, c, cache, residual),  # residual_D(z, dz, A, b, c, cache),
+                        # residual_DT(z, dres, A, b, c, cache),
+                        lambda dres:  lsqr_DT(
+                            z, dres, A, b, c, cache, residual),
                         n + m + 1,
                         n + m + 1,
-                        residual,  # np.concatenate([residual, [0.]]),
-                        damp=0.,  # 1.,  # 1e-15,  # hardcoded..
-                        show=False,
-                        iter_lim=int(max_lsqr_iters))  # int((m + n + 1) * 2))  #
+                        residual / z[-1],  # residual,
+                        damp=0.,
+                        atol=0.,
+                        btol=btol,
+                        # show=True,
+                        iter_lim=None)  # )None)  # int(max_lsqr_iters))
 
         num_lsqr_iters = returned[2]
         step = returned[0]
 
         new_z = z - step
-
-        #scale = np.abs(new_z[-1])
-        #new_z /= scale
+        # new_z /= np.abs(new_z[-1])
 
         new_residual, u, v, new_cache = residual_and_uv(new_z, A, b, c, cones)
 
-        # if converged(pri_res_norm, dua_res_norm, rel_gap, eps):
-        #     print_footer('Refinement succedeed!')
-        #     return new_z
-
         if verbose:
-            #print_stats(i, A, b, c, u, v, start_time, num_lsqr_iters)
+            print_stats(i, new_residual, new_z,
+                        # lambda dres: residual_DT(
+                        #     new_z, dres, A, b, c, new_cache),
+                        num_lsqr_iters, start_time, btol)
 
-            print_stats(i, new_residual,
-                        lambda dres: residual_DT(
-                            new_z, dres, A, b, c, new_cache),
-                        num_lsqr_iters, start_time)
+        if np.linalg.norm(new_residual / new_z[-1]) < np.linalg.norm(residual / z[-1]):
+            btol = 1. - (1. - btol) * 1.1
+        else:
+            btol = 1. - (1. - btol) * 0.5
 
-        if np.linalg.norm(new_residual) < np.linalg.norm(residual):
-            # print('residual norm went down!')
+        if np.linalg.norm(new_residual / new_z[-1]) < np.linalg.norm(residual / z[-1]):
             cache = new_cache
             z = new_z
             residual = new_residual
-            max_lsqr_iters *= 1.1
-
-            # if np.linalg.norm(new_residual) / np.linalg.norm(residual) < .1:
-            #     max_lsqr_iters *= 1.1
-            # else:
-            #     max_lsqr_iters *= .8
-            #lambda_var /= 2.
+            #max_lsqr_iters *= 1.1
+            #btol = btol * .9
         else:
-            # print('residual norm didnt go down!')
-            # print(max_lsqr_iters)
-            if num_lsqr_iters < 2:
+            if (num_lsqr_iters < 2):
                 if verbose:
                     print_footer("Can't make the residual smaller.")
                 return z / np.abs(z[-1])
-            max_lsqr_iters *= .5
-            # if lambda_var > 1E32:
-            #     print_footer("Can't make lambda larger.")
-            #     return z
-            # lambda_var *= 2.
+            # if verbose:
+            #     print_footer("Can't make the residual smaller.")
+            # return z / np.abs(z[-1])
+            #max_lsqr_iters *= .5
+            #btol = 1. - (1. - btol) * .5
 
         if (time.time() - start_time) > max_runtime:
             if verbose:

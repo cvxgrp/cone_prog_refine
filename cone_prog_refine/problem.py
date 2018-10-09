@@ -109,7 +109,7 @@ def residual_DT(z, dres, A, b, c, cones_caches):
                            cones_caches) + dres
 
 
-@jit
+#@jit
 def residual_and_uv(z, A, b, c, cones):
     m, n = A.shape
     u, cache = embedded_cone_Pi(z, cones, n)
@@ -117,7 +117,7 @@ def residual_and_uv(z, A, b, c, cones):
     return Q_matvec(A, b, c, u) - v, u, v, cache
 
 
-@jit
+#@jit
 def residual(z, A, b, c, cones):
     res, u, v, cache = residual_and_uv(z, A, b, c, cones)
     return res, cache
@@ -215,6 +215,18 @@ def print_footer(message):
     print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
 
 
+def lsqr_D(z, dz, A, b, c, cache, residual):
+    return residual_D(z, dz, A, b, c, cache) / z[-1] - (residual /
+                                                        z[-1]**2) * dz[-1]
+
+
+def lsqr_DT(z, dres, A, b, c, cache, residual):
+    m, n = A.shape
+    e_minus1 = np.zeros(n + m + 1)
+    e_minus1[-1] = 1.
+    return residual_DT(z, dres, A, b, c, cache) / z[-1] - (dres@residual / z[-1]**2) * e_minus1
+
+
 def refine(A, b, c, cones, z,
            verbose=True,
            max_iters=10000,
@@ -248,17 +260,6 @@ def refine(A, b, c, cones, z,
                 print_footer('Residual orthogonal to derivative.')
             return z / np.abs(z[-1])
 
-        def lsqr_D(z, dz, A, b, c, cache, residual):
-            return residual_D(z, dz, A, b, c, cache) / z[-1] - (residual /
-                                                                z[-1]**2) * dz[-1]
-
-        e_minus1 = np.zeros(n + m + 1)
-        e_minus1[-1] = 1.
-
-        def lsqr_DT(z, dres, A, b, c, cache, residual):
-            return residual_DT(z, dres, A, b, c, cache) / z[-1] - (dres@residual
-                                                                   / z[-1]**2) * e_minus1
-
         # def lsqr_D(z, dz, A, b, c, cache, residual):
         #     return residual_D(z, dz, A, b, c, cache)
 
@@ -267,17 +268,11 @@ def refine(A, b, c, cones, z,
 
         # print('res norm: %.2e' % np.linalg.norm(residual / z[-1]))
         # print('1 - btol: %.2e' % (1. - btol))
-        returned = lsqr(lambda dz: lsqr_D(z, dz, A, b, c, cache, residual),  # residual_D(z, dz, A, b, c, cache),
-                        # residual_DT(z, dres, A, b, c, cache),
-                        lambda dres:  lsqr_DT(
-                            z, dres, A, b, c, cache, residual),
-                        n + m + 1,
-                        n + m + 1,
-                        residual / z[-1],  # residual,
+        returned = lsqr(A, b, c, cones, z,  # residual,
                         damp=0.,
                         atol=0.,
                         btol=btol,
-                        show=True,
+                        show=False,
                         iter_lim=None)  # )None)  # int(max_lsqr_iters))
 
         num_lsqr_iters = returned[2]

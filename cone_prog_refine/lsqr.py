@@ -98,8 +98,8 @@ def _sym_ortho(a, b):
     return c, s, r
 
 
-@jit
-def lsqr(matvec, rmatvec, m, n, b, damp=0.0, atol=1e-8, btol=1e-8, conlim=1e8,
+#@jit
+def lsqr(A_var, b_var, c_var, cones, z_var, damp=0.0, atol=1e-8, btol=1e-8, conlim=1e8,
          iter_lim=None, show=False, calc_var=False, x0=None):
     """Find the least-squares solution to a large, sparse, linear system
     of equations.
@@ -312,6 +312,17 @@ def lsqr(matvec, rmatvec, m, n, b, damp=0.0, atol=1e-8, btol=1e-8, conlim=1e8,
     """
     #A = aslinearoperator(A)
 
+    # compute A and b
+    from .problem import residual_and_uv, lsqr_D, lsqr_DT
+    residual, u_var, v_var, cache = residual_and_uv(
+        z_var, A_var, b_var, c_var, cones)
+    m_var, n_var = A_var.shape
+    n = m_var + n_var + 1
+    b = residual / z_var[-1]
+    matvec = lambda dz: lsqr_D(z_var, dz, A_var, b_var, c_var, cache, residual)
+    rmatvec = lambda dres: lsqr_DT(
+        z_var, dres, A_var, b_var, c_var, cache, residual)
+
     b = np.atleast_1d(b)
     if b.ndim > 1:
         b = b.squeeze()
@@ -459,6 +470,10 @@ def lsqr(matvec, rmatvec, m, n, b, damp=0.0, atol=1e-8, btol=1e-8, conlim=1e8,
 
         if calc_var:
             var = var + dk**2
+
+        # update matvec and rmatvec
+        # if prnt:
+        #    print('updating matrix..')
 
         # Use a plane rotation on the right to eliminate the
         # super-diagonal element (theta) of the upper-bidiagonal matrix.

@@ -472,8 +472,14 @@ def lsqr(A_var, b_var, c_var, cones, z_var, damp=0.0, atol=1e-8, btol=1e-8, conl
             var = var + dk**2
 
         # update matvec and rmatvec
-        # if prnt:
-        #    print('updating matrix..')
+        # if itn % 5 == 0 and itn > 0:
+        #     print('updating matrix..')
+        #     residual, u_var, v_var, cache = residual_and_uv(
+        #         z_var - x, A_var, b_var, c_var, cones)
+        #     matvec = lambda dz: lsqr_D(
+        #         z_var - x, dz, A_var, b_var, c_var, cache, residual)
+        #     rmatvec = lambda dres: lsqr_DT(
+        #         z_var - x, dres, A_var, b_var, c_var, cache, residual)
 
         # Use a plane rotation on the right to eliminate the
         # super-diagonal element (theta) of the upper-bidiagonal matrix.

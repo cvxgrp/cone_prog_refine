@@ -253,7 +253,19 @@ def refine(A, b, c, cones, z,
                     # lambda dres: residual_DT(z, dres, A, b, c, cache),
                     0, start_time)
 
+    start_z = []  # [np.copy(z)]
+    start_residual = []  # [np.copy(residual)]
+
+    end_z = []
+    enz_residual = []
+
     for i in range(max_iters):
+
+        # choose start z
+        pass
+
+        start_z.append(np.copy(z))
+        start_residual.append(np.copy(residual))
 
         if norm(residual_DT(z, residual, A, b, c, cache)) == 0.:
             if verbose:
@@ -271,23 +283,34 @@ def refine(A, b, c, cones, z,
         returned = lsqr(A, b, c, cones, z,  # residual,
                         damp=0.,
                         atol=0.,
-                        btol=btol,
+                        btol=0.9,  # btol,
                         show=False,
-                        iter_lim=None)  # )None)  # int(max_lsqr_iters))
+                        iter_lim=16)  # None)  # )None)  # int(max_lsqr_iters))
 
         num_lsqr_iters = returned[2]
         step = returned[0]
 
         new_z = z - step
         # new_z /= np.abs(new_z[-1])
-
         new_residual, u, v, new_cache = residual_and_uv(new_z, A, b, c, cones)
+
+        # backtracking
+        while np.linalg.norm(new_residual / new_z[-1]) > np.linalg.norm(residual / z[-1]):
+            # print('backtracking')
+            step /= 2.
+            new_z = z - step
+            new_residual, u, v, new_cache = residual_and_uv(
+                new_z, A, b, c, cones)
+
+        end_z.append(np.copy(new_z))
+        enz_residual.append(np.copy(new_residual))
 
         if verbose:  # and (i % 10 == 0):
             print_stats(i + 1, new_residual, new_z,
                         # lambda dres: residual_DT(
                         #     new_z, dres, A, b, c, new_cache),
                         num_lsqr_iters, start_time)
+            # print('1 - btol: %.3f' % (1 - btol))
 
         rel_res_change = (np.linalg.norm(residual / z[-1]) - np.linalg.norm(
             new_residual / new_z[-1])) / np.linalg.norm(residual / z[-1])
@@ -298,27 +321,36 @@ def refine(A, b, c, cones, z,
         #     btol = max(1. - rel_res_change, .1)
         # else:
         #     btol = 1. - (1. - btol) * 0.5
+        cache = new_cache
+        z = new_z
+        residual = new_residual
 
-        if np.linalg.norm(new_residual / new_z[-1]) < np.linalg.norm(residual / z[-1]):
-            cache = new_cache
-            z = new_z
-            residual = new_residual
-            # max_lsqr_iters *= 1.1
-            btol = max(1. - rel_res_change, .5)
-            # if (num_lsqr_iters < 2) and btol > 0.999:
-            #     if verbose:
-            #         print_footer("Expected residual change is too small.")
-            #     return z / np.abs(z[-1])
-        else:
-            btol = 1. - (1. - btol) * 0.5
+        if rel_res_change < 1E-8:
+            if verbose:
+                print_footer('Residual change too small.')
+            return z / np.abs(z[-1])
 
-            if btol > (1 - 1E-8):
-                if verbose:
-                    print_stats(i + 1, residual, z,
-                                num_lsqr_iters, start_time)
-                    print_footer("Residual change is too small.")
+        # if np.linalg.norm(new_residual / new_z[-1]) < np.linalg.norm(residual / z[-1]):
+        #     cache = new_cache
+        #     z = new_z
+        #     residual = new_residual
+        #     # max_lsqr_iters *= 1.1
+        #     btol = max(1. - (1. - btol) * 2., .5)
+        #     #btol = max(1. - rel_res_change, .5)
+        #     # if (num_lsqr_iters < 2) and btol > 0.999:
+        #     #     if verbose:
+        #     #         print_footer("Expected residual change is too small.")
+        #     #     return z / np.abs(z[-1])
+        # else:
+        #     btol = 1. - (1. - btol) * 0.5
 
-                return z / np.abs(z[-1])
+        #     if btol > (1 - 1E-8):
+        #         if verbose:
+        #             print_stats(i + 1, residual, z,
+        #                         num_lsqr_iters, start_time)
+        #             print_footer("Residual change is too small.")
+
+        #         return z / np.abs(z[-1])
 
             # if (num_lsqr_iters < 2):
             #     if verbose:

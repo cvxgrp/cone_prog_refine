@@ -110,7 +110,7 @@ class ProblemTest(unittest.TestCase):
     def test_residual_der(self):
         dim_dict = {'f': 2, 'l': 10, 'q': [2, 3], 's': [3, 4]}
         A, b, c, x_true, s_true, y_true = generate_problem(
-            dim_dict, density=.3)
+            dim_dict, density=.3, random_scale_max=1.)
         m, n = A.shape
         cones = dim2cones(dim_dict)
         u_true, v_true = xsy2uv(x_true, s_true, y_true, 1., 0.)

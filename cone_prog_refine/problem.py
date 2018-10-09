@@ -183,7 +183,7 @@ def print_header(z, norm_Q):
     print(' len(z) = %d,  ||z|| = %.2e,  ||Q||_2 = %.2e ' %
           (len(z), np.linalg.norm(z), norm_Q))
     print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-    print("it.   ||R(z)/z[-1]||_2  z[-1]  LSQR it.  1-btol   time")
+    print("it.   ||R(z)/z[-1]||_2  z[-1]  LSQR it.  btol   time")
     print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
 
 
@@ -202,9 +202,9 @@ def subopt_stats(A, b, c, x, s, y):
 @jit
 # def print_stats(i, residual, residual_DT, num_lsqr_iters, start_time):
 def print_stats(i, residual, z, num_lsqr_iters, start_time, btol):
-    print('%d\t%.2e\t%.1e\t%d\t%.2e\t%.2f' %
+    print('%d\t%.2e\t%.1e\t%d\t%.3f\t%.2f' %
           (i, np.linalg.norm(residual / z[-1]), z[-1],
-           num_lsqr_iters, 1. - btol,
+           num_lsqr_iters, btol,
            time.time() - start_time))
 
 
@@ -221,7 +221,7 @@ def refine(A, b, c, cones, z,
            max_lsqr_iters=100,
            max_runtime=5.):
 
-    btol = .8
+    btol = .5
 
     m, n = A.shape
 
@@ -277,8 +277,8 @@ def refine(A, b, c, cones, z,
                         damp=0.,
                         atol=0.,
                         btol=btol,
-                        # show=True,
-                        iter_lim=None)  # )None)  # int(max_lsqr_iters))
+                        show=False,
+                        iter_lim=25)  # )None)  # int(max_lsqr_iters))
 
         num_lsqr_iters = returned[2]
         step = returned[0]
@@ -294,8 +294,13 @@ def refine(A, b, c, cones, z,
                         #     new_z, dres, A, b, c, new_cache),
                         num_lsqr_iters, start_time, btol)
 
+        rel_res_change = (np.linalg.norm(residual / z[-1]) - np.linalg.norm(
+            new_residual / new_z[-1])) / np.linalg.norm(residual / z[-1])
+        #print('rel residual change : %.2f' % rel_res_change)
+
         if np.linalg.norm(new_residual / new_z[-1]) < np.linalg.norm(residual / z[-1]):
-            btol = 1. - (1. - btol) * 1.1
+            # max(1. - (1. - btol) * 1.1, .5)
+            btol = max(1. - rel_res_change, .1)
         else:
             btol = 1. - (1. - btol) * 0.5
 
@@ -305,6 +310,10 @@ def refine(A, b, c, cones, z,
             residual = new_residual
             #max_lsqr_iters *= 1.1
             #btol = btol * .9
+            if (num_lsqr_iters < 2) and btol > 0.999:
+                if verbose:
+                    print_footer("Expected residual change is too small.")
+                return z / np.abs(z[-1])
         else:
             if (num_lsqr_iters < 2):
                 if verbose:
@@ -331,7 +340,7 @@ def solve(A, b, c, dim_dict,
           solver_options={},
           refine_solver_time_ratio=1.,
           max_iters=1000,
-          verbose=True,
+          verbose=False,
           max_lsqr_iters=100,
           return_z=False):
 

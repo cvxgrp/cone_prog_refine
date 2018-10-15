@@ -97,22 +97,22 @@ def norm_Q(A, b, c):
 
 @jit
 def residual_D(z, dz, A, b, c, cones_caches):
-    du = embedded_cone_D(z, dz, cones_caches)
+    du = embedded_cone.D(z, dz, cones_caches)
     dv = du - dz
     return Q_matvec(A, b, c, du) - dv
 
 
 @jit
 def residual_DT(z, dres, A, b, c, cones_caches):
-    return embedded_cone_D(z,
-                           -Q_matvec(A, b, c, dres) - dres,
-                           cones_caches) + dres
+    return embedded_cone.DT(z,
+                            -Q_matvec(A, b, c, dres) - dres,
+                            cones_caches) + dres
 
 
 #@jit
 def residual_and_uv(z, A, b, c, cones):
     m, n = A.shape
-    u, cache = embedded_cone_Pi(z, cones, n)
+    u, cache = embedded_cone.Pi(z, cones, n)
     v = u - z
     return Q_matvec(A, b, c, u) - v, u, v, cache
 
@@ -183,7 +183,7 @@ def print_header(z, norm_Q):
     print(' len(z) = %d,  ||z|| = %.2e,  ||Q||_2 = %.2e ' %
           (len(z), np.linalg.norm(z), norm_Q))
     print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-    print("it.   ||R(z)/z[-1]||_2    z[-1]      LSQR it.     time")
+    print("it.   ||R(z)/z[-1]||_2    z[-1]   LSQR   btrks    time")
     print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
 
 
@@ -201,10 +201,10 @@ def subopt_stats(A, b, c, x, s, y):
 
 @jit
 # def print_stats(i, residual, residual_DT, num_lsqr_iters, start_time):
-def print_stats(i, residual, z, num_lsqr_iters, start_time):
-    print('%d\t%.2e\t%.0e\t\t%d\t%.2f' %
+def print_stats(i, residual, z, num_lsqr_iters, backtracks, start_time):
+    print('%d\t%.2e\t%.0e\t  %d\t%d\t%.2f' %
           (i, np.linalg.norm(residual / z[-1]), z[-1],
-           num_lsqr_iters,
+           num_lsqr_iters, backtracks,
            time.time() - start_time))
 
 
@@ -224,14 +224,23 @@ def lsqr_DT(z, dres, A, b, c, cache, residual):
     m, n = A.shape
     e_minus1 = np.zeros(n + m + 1)
     e_minus1[-1] = 1.
-    return residual_DT(z, dres, A, b, c, cache) / z[-1] - (dres@residual / z[-1]**2) * e_minus1
+    return residual_DT(z, dres, A, b, c, cache) / z[-1] - (dres@residual /
+                                                           z[-1]**2) * e_minus1
+
+
+# def lsqr_D(z, dz, A, b, c, cache, residual):
+#     return residual_D(z, dz, A, b, c, cache)
+
+
+# def lsqr_DT(z, dres, A, b, c, cache, residual):
+#     return residual_DT(z, dres, A, b, c, cache)
 
 
 def refine(A, b, c, cones, z,
            verbose=True,
            max_iters=10000,
            max_lsqr_iters=100,
-           max_runtime=5.):
+           max_runtime=1.):
 
     btol = .5
 
@@ -251,21 +260,77 @@ def refine(A, b, c, cones, z,
     if verbose:
         print_stats(0, residual, z,
                     # lambda dres: residual_DT(z, dres, A, b, c, cache),
-                    0, start_time)
+                    0, 0, start_time)
 
-    start_z = []  # [np.copy(z)]
-    start_residual = []  # [np.copy(residual)]
+    # mem_anderson = 2
 
-    end_z = []
-    enz_residual = []
+    # samples_an = np.zeros((len(z), mem_anderson))  # [np.copy(z)]
+    # residuals_an = np.zeros((len(z), mem_anderson))
+
+    #start_z[:, i % mem_anderson] = z
+    # start_residual = []  # [np.copy(residual)]
+
+    #end_z = np.zeros((len(z), mem_anderson))
+    #end_residual = []
+
+    # mem_anderson_step = 5
+    # steps_anderson = np.zeros((len(z), mem_anderson_step))
+    # arrivals_anderson = np.zeros((len(z), mem_anderson_step))
 
     for i in range(max_iters):
 
-        # choose start z
-        pass
+        # if i >= mem_anderson_step:
+        #     import cvxpy as cvx
+        #     w = cvx.Variable(mem_anderson_step)
+        #     obj = cvx.Minimize(cvx.norm(steps_anderson @ w))
+        #     const = [cvx.sum(w) == 1.]
+        #     cvx.Problem(obj, const).solve(verbose=False)
 
-        start_z.append(np.copy(z))
-        start_residual.append(np.copy(residual))
+        #     anderson_z = (arrivals_anderson - steps_anderson / 2.) @ w.value
+        #     anderson_residual, u, v, anderson_cache = residual_and_uv(
+        #         anderson_z, A, b, c, cones)
+
+        #     an_norm = np.linalg.norm(anderson_residual / anderson_z[-1])
+        #     cur_norm = np.linalg.norm(residual / z[-1])
+        #     print('an norm / cur_norm', (an_norm / cur_norm))
+
+        #     # while np.linalg.norm(anderson_residual / anderson_z[-1]) > \
+        #     #         np.linalg.norm(residual / z[-1]):
+        #     #     print('backtracking')
+        #     #     anderson_z = z + (anderson_z - z) / 2
+        #     #     anderson_residual, u, v, anderson_cache = residual_and_uv(
+        #     #         anderson_z, A, b, c, cones)
+
+        #     if np.linalg.norm(anderson_residual / anderson_z[-1]) < cur_norm:
+        #         print('swapping with anderson')
+        #         z = anderson_z
+        #         residual = anderson_residual
+        #         cache = anderson_cache
+
+        # samples_an[:, i % mem_anderson] = z
+        # residuals_an[:, i % mem_anderson] = residual
+        # start_residual.append(np.copy(residual))
+
+        # if i > mem_anderson - 1:
+        #     import cvxpy as cvx
+        #     w = cvx.Variable(mem_anderson)
+        #     obj = cvx.Minimize(cvx.sum_squares(residuals_an @ w))
+        #     const = [cvx.sum(w) == 1.]
+        #     cvx.Problem(obj, const).solve(verbose=False)
+
+        #     anderson_z = samples_an @ w.value
+        #     anderson_residual, u, v, anderson_cache = residual_and_uv(
+        #         anderson_z, A, b, c, cones)
+
+        #     an_norm = np.linalg.norm(anderson_residual / anderson_z[-1])
+        #     cur_norm = np.linalg.norm(residual / z[-1])
+        #     print('an norm / cur_norm', (an_norm/cur_norm))
+
+        #     if an_norm < np.linalg.norm(residual / z[-1]):
+        #         print('swapping with anderson')
+        #         z = anderson_z
+        #         residual = anderson_residual
+        #         cache = anderson_cache
 
         if norm(residual_DT(z, residual, A, b, c, cache)) == 0.:
             if verbose:
@@ -282,10 +347,10 @@ def refine(A, b, c, cones, z,
         # print('1 - btol: %.2e' % (1. - btol))
         returned = lsqr(A, b, c, cones, z,  # residual,
                         damp=0.,
-                        atol=0.,
-                        btol=0.9,  # btol,
+                        atol=max(10**(-1 - i), 1E-8),
+                        btol=max(10**(-1 - i), 1E-8),  # btol,
                         show=False,
-                        iter_lim=16)  # None)  # )None)  # int(max_lsqr_iters))
+                        iter_lim=None)  # None)  # )None)  # int(max_lsqr_iters))
 
         num_lsqr_iters = returned[2]
         step = returned[0]
@@ -294,33 +359,55 @@ def refine(A, b, c, cones, z,
         # new_z /= np.abs(new_z[-1])
         new_residual, u, v, new_cache = residual_and_uv(new_z, A, b, c, cones)
 
+        backtracks = 0
         # backtracking
         while np.linalg.norm(new_residual / new_z[-1]) > np.linalg.norm(residual / z[-1]):
             # print('backtracking')
             step /= 2.
+            backtracks += 1
             new_z = z - step
             new_residual, u, v, new_cache = residual_and_uv(
                 new_z, A, b, c, cones)
 
-        end_z.append(np.copy(new_z))
-        enz_residual.append(np.copy(new_residual))
+        # try one more divide by 2
+        test_z = z - step / 2.
+        test_residual, u, v, test_cache = residual_and_uv(
+            test_z, A, b, c, cones)
+        if np.linalg.norm(test_residual / test_z[-1]) < np.linalg.norm(new_residual / new_z[-1]):
+            #print('swapping with shorter step')
+            new_z = test_z
+            new_residual = test_residual
+            new_cache = test_cache
+            backtracks += 1
+
+            # end_z.append(np.copy(new_z))
+        #end_z[:, i % mem_anderson] = new_z
+
+        # enz_residual.append(np.copy(new_residual))
 
         if verbose:  # and (i % 10 == 0):
             print_stats(i + 1, new_residual, new_z,
                         # lambda dres: residual_DT(
                         #     new_z, dres, A, b, c, new_cache),
-                        num_lsqr_iters, start_time)
+                        num_lsqr_iters, backtracks, start_time)
             # print('1 - btol: %.3f' % (1 - btol))
 
         rel_res_change = (np.linalg.norm(residual / z[-1]) - np.linalg.norm(
             new_residual / new_z[-1])) / np.linalg.norm(residual / z[-1])
-        # print('rel residual change : %.2f' % rel_res_change)
+
+        #print('rel residual change : %.2e' % rel_res_change)
 
         # if np.linalg.norm(new_residual / new_z[-1]) < np.linalg.norm(residual / z[-1]):
         #     # max(1. - (1. - btol) * 1.1, .5)
         #     btol = max(1. - rel_res_change, .1)
         # else:
         #     btol = 1. - (1. - btol) * 0.5
+
+        # steps_anderson[:, i % mem_anderson_step] = new_z - z
+        # arrivals_anderson[:, i % mem_anderson_step] = new_z
+
+        old_z = np.copy(z)
+
         cache = new_cache
         z = new_z
         residual = new_residual
@@ -364,8 +451,8 @@ def refine(A, b, c, cones, z,
 
         if (time.time() - start_time) > max_runtime:
             if verbose:
-                print_stats(i + 1, residual, z,
-                            num_lsqr_iters, start_time)
+                # print_stats(i + 1, residual, z,
+                #             num_lsqr_iters, start_time)
                 print_footer('Max. refinement runtime reached.')
 
             return z / np.abs(z[-1])

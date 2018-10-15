@@ -1,5 +1,8 @@
 """
-Enzo Busseti, Walaa Moursi, Stephen Boyd, 2018
+Enzo Busseti, Walaa Moursi, Stephen Boyd, 2018.
+
+Some parts (exponential cone projection) are adapted
+from Brendan O'Donoghue's scs-python.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -40,7 +43,7 @@ def check_right_size(x, n):
         raise DimensionError
 
 
-cone = namedtuple('cone', ['Pi', 'D'])
+cone = namedtuple('cone', ['Pi', 'D', 'DT'])
 
 
 @njit
@@ -56,7 +59,7 @@ def free(z):
     return np.copy(z), cache
 
 
-free_cone = cone(free, id_op)
+free_cone = cone(free, id_op, id_op)
 
 
 @njit
@@ -71,7 +74,7 @@ def zero_Pi(z):
     cache = None
     return np.zeros_like(z), cache
 
-zero_cone = cone(zero_Pi, zero_D)
+zero_cone = cone(zero_Pi, zero_D, zero_D)
 
 
 @njit
@@ -89,7 +92,7 @@ def non_neg_Pi(z):
     return np.maximum(z, 0.), cache
 
 
-non_neg_cone = cone(non_neg_Pi, non_neg_D)
+non_neg_cone = cone(non_neg_Pi, non_neg_D, non_neg_D)
 
 
 @njit
@@ -134,7 +137,321 @@ def sec_ord_Pi(z):
     return np.concatenate([[1.], x / norm_x]) * (norm_x + rho) / 2., cache
 
 
-sec_ord_cone = cone(sec_ord_Pi, sec_ord_D)
+sec_ord_cone = cone(sec_ord_Pi, sec_ord_D, sec_ord_D)
+
+
+@njit
+def _g_exp(z):
+    """Function used for exp. cone proj."""
+    r = z[0]
+    s = z[1]
+    t = z[2]
+    return s * np.exp(r / s) - t
+
+
+@njit
+def _gradient_g_exp(z):
+    """Gradient of function used for exp. cone proj."""
+    r = z[0]
+    s = z[1]
+    t = z[2]
+    result = np.empty(3)
+    result[0] = np.exp(r / s)
+    result[1] = result[0] * (1. - r / s)
+    result[2] = -1.
+    return result
+
+
+@njit
+def _hessian_g_exp(z):
+    """Hessian of function used for exp. cone proj."""
+    r = z[0]
+    s = z[1]
+    t = z[2]
+    result = np.zeros((3, 3))
+    ers = np.exp(r / s)
+    result[0, 0] = ers / s
+    result[0, 1] = - ers * r / s**2
+    result[1, 1] = ers * r**2 / s**3
+    result[1, 0] = result[0, 1]
+    return result
+
+
+@njit
+def _exp_residual(z_0, z, lambda_var):
+    """Residual of system for exp. cone projection."""
+    result = np.empty(4)
+    result[:3] = z - z_0 + lambda_var * _gradient_g_exp(z)
+    result[3] = _g_exp(z)
+    return result
+
+
+@njit
+def _exp_newt_matrix(z, lambda_var):
+    """Matrix used for exp. cone projection."""
+    result = np.empty((4, 4))
+    result[:3, :3] = lambda_var * _hessian_g_exp(z)
+    result[0, 0] += 1.
+    result[1, 1] += 1.
+    result[2, 2] += 1.
+    grad = _gradient_g_exp(z)
+    result[:3, 0] = grad
+    result[0, :3] = grad
+    result[3, 3] = 0.
+    return result
+
+# def project_exp_bisection(v):
+#   v = copy(v)
+#   r = v[0]
+#   s = v[1]
+#   t = v[2]
+#   # v in cl(Kexp)
+#   if (s * exp(r / s) <= t and s > 0) or (r <= 0 and s == 0 and t >= 0):
+#     return v
+#   # -v in Kexp^*
+#   if (-r < 0 and r * exp(s / r) <= -exp(1) * t) or (-r == 0 and -s >= 0 and
+#                                                     -t >= 0):
+#     return zeros(3,)
+#   # special case with analytical solution
+#   if r < 0 and s < 0:
+#     v[1] = 0
+#     v[2] = max(v[2], 0)
+#     return v
+
+#   x = copy(v)
+#   ub, lb = get_rho_ub(v)
+#   for iter in range(0, 100):
+#     rho = (ub + lb) / 2
+#     g, x = calc_grad(v, rho, x)
+#     if g > 0:
+#       lb = rho
+#     else:
+#       ub = rho
+#     if ub - lb < 1e-6:
+#       break
+#   return x
+
+
+@njit
+def newton_exp_onz(rho, y_hat, z_hat, w):
+    t = max(max(w - z_hat, -z_hat), 1e-6)
+    for iter in np.arange(0, 100):
+        f = (1 / rho**2) * t * (t + z_hat) - y_hat / rho + np.log(t / rho) + 1
+        fp = (1 / rho**2) * (2 * t + z_hat) + 1 / t
+
+        t = t - f / fp
+        if t <= -z_hat:
+            t = -z_hat
+            break
+        elif t <= 0:
+            t = 0
+            break
+        elif np.abs(f) < 1e-6:
+            break
+    return t + z_hat
+
+
+@njit
+def solve_with_rho(v, rho, w):
+    x = np.zeros(3)
+    x[2] = newton_exp_onz(rho, v[1], v[2], w)
+    x[1] = (1 / rho) * (x[2] - v[2]) * x[2]
+    x[0] = v[0] - rho
+    return x
+
+
+@njit
+def calc_grad(v, rho, warm_start):
+    x = solve_with_rho(v, rho, warm_start[1])
+    if x[1] == 0:
+        g = x[0]
+    else:
+        g = (x[0] + x[1] * np.log(x[1] / x[2]))
+    return g, x
+
+
+@njit
+def get_rho_ub(v):
+    lb = 0
+    rho = 2**(-3)
+    g, z = calc_grad(v, rho, v)
+    while g > 0:
+        lb = rho
+        rho = rho * 2
+        g, z = calc_grad(v, rho, z)
+    ub = rho
+    return ub, lb
+
+
+@njit
+def exp_pri_Pi(z):
+    """Projection on exp. primal cone, and cache."""
+    z = np.copy(z)
+    # cache = None
+    r = z[0]
+    s = z[1]
+    t = z[2]
+
+    # first case
+    if (s > 0 and s * np.exp(r / s) <= t) or \
+            (r <= 0 and s == 0 and t >= 0):
+        return z, np.copy(z)
+
+    # second case
+    if (-r < 0 and r * np.exp(s / r) <= -np.exp(1) * t) or \
+            (r == 0 and -s >= 0 and -t >= 0):
+        return np.zeros(3), np.zeros(3)
+
+    # third case
+    if r < 0 and s < 0:
+        z[1] = 0
+        z[2] = max(z[2], 0)
+        return z, np.copy(z)
+
+    # fourth case
+    # z_proj = np.copy(z)
+    # lambda_var = 1.
+    # residual = _exp_residual(z, z_proj, lambda_var)
+    # resnorm = np.linalg.norm(residual)
+    # print('init. residual', residual)
+    # print('init resnorm', resnorm)
+    # j = 0.
+    # while not np.allclose(0., residual, atol=1E-6):
+    #     step = np.linalg.solve(
+    #         _exp_newt_matrix(z_proj, lambda_var),
+    #         residual)
+    #     print('\nstep', step)
+
+    #     alpha = 1.
+    #     old_proj = np.copy(z_proj)
+    #     old_lambda = np.copy(lambda_var)
+    #     old_res_norm = np.copy(resnorm)
+    #     j += 1
+    #     if j > 100:
+    #         break
+    #     i = 0.
+    #     while True:
+    #         print('alpha', alpha)
+    #         z_proj = old_proj - alpha * step[:3]
+    #         lambda_var = old_lambda - alpha * step[3]
+    #         residual = _exp_residual(z, z_proj, lambda_var)
+    #         resnorm = np.linalg.norm(residual)
+    #         print('new_residual btrk', residual)
+    #         print('new_res_norm', resnorm)
+    #         print('oldres_norm', old_res_norm)
+    #         if (resnorm < old_res_norm) \
+    #                 and z_proj[1] > 0.:
+    #             break
+    #         alpha /= 2.
+    #         i += 1
+    #         if i > 100:
+    #             break
+
+    x = np.copy(z)
+    ub, lb = get_rho_ub(x)
+    for i in range(0, 1000):
+        rho = (ub + lb) / 2
+        g, x = calc_grad(z, rho, x)
+        if g > 0:
+            lb = rho
+        else:
+            ub = rho
+        if ub - lb < 1e-16:
+            break
+    return x, np.copy(x)
+
+
+@njit
+def exp_pri_D(z_0, dz, cache):
+    """Derivative of proj. on exp. primal cone."""
+    # z = np.copy(z)
+    # cache = None
+    r = z_0[0]
+    s = z_0[1]
+    t = z_0[2]
+
+    dr = dz[0]
+    ds = dz[1]
+    dt = dz[2]
+
+    x = cache[0]
+    y = cache[1]
+    z = cache[2]
+
+    # first case
+    if (s > 0 and s * np.exp(r / s) == t) or \
+            (r == 0 and s == 0 and t >= 0) or \
+            (r <= 0 and s == 0 and t == 0):
+        raise NonDifferentiable
+
+    if (s > 0 and s * np.exp(r / s) < t) or \
+            (r < 0 and s == 0 and t > 0):
+        return np.copy(dz)
+
+    if (-r < 0 and r * np.exp(s / r) == -np.exp(1) * t) or \
+            (r == 0 and -s == 0 and -t >= 0) or \
+            (r == 0 and -s >= 0 and -t == 0):
+        raise NonDifferentiable
+
+    # second case
+    if (-r < 0 and r * np.exp(s / r) < -np.exp(1) * t) or \
+            (r == 0 and -s > 0 and -t > 0):
+        return np.zeros(3)
+
+    # third case
+    if r < 0 and s < 0:
+        result = np.zeros(3)
+        result[0] = dz[0]
+        result[2] = dz[2] if t > 0 else 0.
+        return result
+
+    # fourth case
+    mat = np.zeros((3, 3))
+    rhs = np.zeros(3)
+    # first eq.
+    mat[0, 0] = 2 * x - r
+    mat[0, 1] = 2 * y - s
+    mat[0, 2] = 2 * z - t
+    rhs[0] = x * dr + y * ds + z * dt
+    # second eq.
+    mat[1, 0] = np.exp(x / y)
+    mat[1, 1] = np.exp(x / y) * (1 - x / y)
+    mat[1, 2] = -1.
+    # third eq.
+    mat[2, 0] = y
+    mat[2, 1] = x - r
+    mat[2, 2] = 2 * z - t
+    rhs[2] = y * dr + z * dt
+
+    return np.linalg.solve(mat, rhs)
+
+# @njit
+# def exp_pri_DT(z, x, cache):
+#     """Derivative of proj. transp. on exp. primal cone."""
+#     pass
+
+exp_pri_cone = cone(exp_pri_Pi, exp_pri_D, exp_pri_D)  # exp_pri_DT)
+
+
+@njit
+def exp_dua_Pi(z):
+    """Projection on exp. dual cone, and cache."""
+    pi, cache = exp_pri_Pi(z)
+    return pi - np.copy(z), cache
+
+
+@njit
+def exp_dua_D(z, x, cache):
+    """Derivative of projection on exp. dual cone."""
+    return exp_pri_D(z, x, cache) - np.copy(x)
+
+
+# @njit
+# def exp_dua_DT(z, x, cache):
+#     """Derivative of proj. transp. on exp. dual cone."""
+#     return exp_pri_DT(z, x, cache) - np.copy(x)
+
+exp_dua_cone = cone(exp_dua_Pi, exp_dua_D, exp_dua_D)
 
 
 @jit
@@ -160,7 +477,7 @@ def prod_cone_Pi(z, cones):
     return result, cones_caches
 
 
-prod_cone = cone(prod_cone_Pi, prod_cone_D)
+prod_cone = cone(prod_cone_Pi, prod_cone_D, prod_cone_D)
 
 
 # def proj_sdp(z, n):
@@ -270,16 +587,18 @@ def semidef_cone_D(z, dz, cache):
 
 @jit
 def embedded_cone_D(z, dz, cache):
+    """Der. of proj. on the cone of the primal-dual embedding."""
     return dz - prod_cone.D(-z, dz, cache)
 
 
 @jit
 def embedded_cone_Pi(z, cones, n):
+    """Projection on the cone of the primal-dual embedding."""
     emb_cones = [[zero_cone, n]] + cones + [[non_neg_cone, 1]]
     v, cache = prod_cone.Pi(-z, emb_cones)
     return v + z, cache
 
-embedded_cone = cone(embedded_cone_Pi, embedded_cone_D)
+embedded_cone = cone(embedded_cone_Pi, embedded_cone_D, embedded_cone_D)
 
 
 #     def __matmul__new(self, dz):
@@ -323,7 +642,7 @@ embedded_cone = cone(embedded_cone_Pi, embedded_cone_D)
 
 @jit
 def semidef_cone_Pi(z):
-    #check_right_size(z, self.n)
+    # check_right_size(z, self.n)
     Z = vec2mat(z)
     # TODO cache this and do it only once..
     eival, eivec = np.linalg.eigh(Z)
@@ -333,8 +652,4 @@ def semidef_cone_Pi(z):
     # print(result)
     return result, (eivec, eival)
 
-semi_def_cone = cone(semidef_cone_Pi, semidef_cone_D)
-
-# TODO
-exp_pri_cone = None
-exp_dua_cone = None
+semi_def_cone = cone(semidef_cone_Pi, semidef_cone_D, semidef_cone_D)

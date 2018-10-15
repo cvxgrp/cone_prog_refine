@@ -281,6 +281,9 @@ class ProblemTest(unittest.TestCase):
 
     def test_scs(self):
         self.check_refine_scs({'l': 20, 'q': [10] * 5})
+        self.check_refine_scs({'l': 20, 'q': [10] * 5, 'ep': 20})
+        self.check_refine_scs({'l': 20, 'q': [10] * 5, 'ed': 20})
+
         #self.check_refine_scs({'s': [20]})
         #self.check_refine_scs({'s': [10]})
         self.check_refine_scs({'q': [50]})

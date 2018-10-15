@@ -41,13 +41,11 @@ def dim2cones(dim):
             if s > 0:
                 cones.append([semi_def_cone, s * (s + 1) // 2])
     if 'ep' in dim:
-        for ep in dim['ep']:
-            if s > 0:
-                cones.append([exp_pri_cone, 3])
+        for i in range(dim['ep']):
+            cones.append([exp_pri_cone, 3])
     if 'ed' in dim:
-        for ed in dim['ed']:
-            if s > 0:
-                cones.append([exp_dua_cone, 3])
+        for i in range(dim['ed']):
+            cones.append([exp_dua_cone, 3])
     return cones
 
 

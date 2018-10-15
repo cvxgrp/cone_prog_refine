@@ -139,6 +139,48 @@ class TestZero(BaseTestCone):
     sample_vecs_are_diff = [True] * len(sample_vecs)
 
 
+class TestExpPri(BaseTestCone):
+
+    test_cone = exp_pri_cone
+    sample_vecs = [np.array([0., 0., 0.]),
+                   np.array([-10., -10., -10.]),
+                   np.array([10., 10., 10.]),
+                   np.array([1., 2., 3.]),
+                   np.array([100., 2., 300.]),
+                   np.array([-1., -2., -3.]),
+                   np.array([-10., -10., 10.])]
+    sample_vec_proj = [np.array([0., 0., 0.]),
+                       np.array([-10., 0., 0.]),
+                       np.array([4.26306172,  7.51672777, 13.25366605]),
+                       np.array([0.8899428, 1.94041882, 3.06957225]),
+                       np.array([73.77502858,  33.51053837, 302.90131756]),
+                       np.array([-1., 0., 0.]),
+                       np.array([-10., 0., 10.])]
+    sample_vecs_are_in = [True, False, False, False, False, False]
+    sample_vecs_are_diff = [False, True, True, True, True, True]
+
+
+class TestExpDua(BaseTestCone):
+
+    test_cone = exp_dua_cone
+    sample_vecs = [np.array([0., 0., 0.]),
+                   np.array([-10., -10., -10.]),
+                   np.array([10., 10., 10.]),
+                   np.array([1., 2., 3.]),
+                   np.array([100., 2., 300.]),
+                   np.array([-1., -2., -3.]),
+                   np.array([-10., -10., 10.])]
+    sample_vec_proj = [np.array([0., 0., 0.]),
+                       np.array([-10., 0., 0.]),
+                       np.array([4.26306172,  7.51672777, 13.25366605]),
+                       np.array([0.8899428, 1.94041882, 3.06957225]),
+                       np.array([73.77502858,  33.51053837, 302.90131756]),
+                       np.array([-1., 0., 0.]),
+                       np.array([-10., 0., 10.])]
+    sample_vecs_are_in = [True, False, False, False, False, False]
+    sample_vecs_are_diff = [False, True, True, True, True, True]
+
+
 class TestSecondOrder(BaseTestCone):
 
     test_cone = sec_ord_cone

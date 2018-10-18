@@ -102,7 +102,7 @@ def residual_D(z, dz, A, b, c, cones_caches):
     return Q_matvec(A, b, c, du) - dv
 
 
-@jit
+#@jit
 def residual_DT(z, dres, A, b, c, cones_caches):
     return embedded_cone.DT(z,
                             -Q_matvec(A, b, c, dres) - dres,
@@ -156,7 +156,8 @@ def scs_solve(A, b, c, dim_dict, **kwargs):
 def ecos_solve(A, b, c, dim_dict, **kwargs):
     """Wraps ecos.solve for convenience."""
     ecos_cones = {'l': dim_dict['l'] if 'l' in dim_dict else 0,
-                  'q': dim_dict['q'] if 'q' in dim_dict else []}
+                  'q': dim_dict['q'] if 'q' in dim_dict else [],
+                  'e': dim_dict['ep'] if 'ep' in dim_dict else 0}
     # TODO check and block other cones
     zero = 0 if 'z' not in dim_dict else dim_dict['z']
     ecos_A, ecos_G = A[:zero, :], A[zero:, :]
@@ -347,10 +348,10 @@ def refine(A, b, c, cones, z,
         # print('1 - btol: %.2e' % (1. - btol))
         returned = lsqr(A, b, c, cones, z,  # residual,
                         damp=0.,
-                        atol=max(10**(-1 - i), 1E-8),
-                        btol=max(10**(-1 - i), 1E-8),  # btol,
+                        atol=0.,  # max(10**(-1 - i), 1E-8),
+                        btol=0.,  # max(10**(-1 - i), 1E-8),  # btol,
                         show=False,
-                        iter_lim=None)  # None)  # )None)  # int(max_lsqr_iters))
+                        iter_lim=100)  # None)  # )None)  # int(max_lsqr_iters))
 
         num_lsqr_iters = returned[2]
         step = returned[0]
@@ -483,6 +484,15 @@ def solve(A, b, c, dim_dict,
 
     cones = dim2cones(dim_dict)
 
+    new_residual, u, v, _ = residual_and_uv(z, A, b, c, cones)
+    x, s, y, tau, kappa = uv2xsytaukappa(u, v, A.shape[1])
+
+    pres = np.linalg.norm(A@x + s - b) / (1 + np.linalg.norm(b))
+    dres = np.linalg.norm(A.T@y + c) / (1 + np.linalg.norm(c))
+    gap = np.abs(c@x + b@y) / (1 + np.abs(c@x) + np.abs(b@y))
+
+    print('pres %.2e, dres %.2e, gap %.2e' % (pres, dres, gap))
+
     z_plus = refine(A, b, c, cones, z,
                     verbose=verbose,
                     max_iters=max_iters,
@@ -494,4 +504,8 @@ def solve(A, b, c, dim_dict,
     else:
         new_residual, u, v, _ = residual_and_uv(z_plus, A, b, c, cones)
         x, s, y, tau, kappa = uv2xsytaukappa(u, v, A.shape[1])
+        pres = np.linalg.norm(A@x + s - b) / (1 + np.linalg.norm(b))
+        dres = np.linalg.norm(A.T@y + c) / (1 + np.linalg.norm(c))
+        gap = np.abs(c@x + b@y) / (1 + np.abs(c@x) + np.abs(b@y))
+        print('pres %.2e, dres %.2e, gap %.2e' % (pres, dres, gap))
         return x, s, y, info

@@ -140,65 +140,65 @@ def sec_ord_Pi(z):
 sec_ord_cone = cone(sec_ord_Pi, sec_ord_D, sec_ord_D)
 
 
-@njit
-def _g_exp(z):
-    """Function used for exp. cone proj."""
-    r = z[0]
-    s = z[1]
-    t = z[2]
-    return s * np.exp(r / s) - t
+# @njit
+# def _g_exp(z):
+#     """Function used for exp. cone proj."""
+#     r = z[0]
+#     s = z[1]
+#     t = z[2]
+#     return s * np.exp(r / s) - t
 
 
-@njit
-def _gradient_g_exp(z):
-    """Gradient of function used for exp. cone proj."""
-    r = z[0]
-    s = z[1]
-    t = z[2]
-    result = np.empty(3)
-    result[0] = np.exp(r / s)
-    result[1] = result[0] * (1. - r / s)
-    result[2] = -1.
-    return result
+# @njit
+# def _gradient_g_exp(z):
+#     """Gradient of function used for exp. cone proj."""
+#     r = z[0]
+#     s = z[1]
+#     t = z[2]
+#     result = np.empty(3)
+#     result[0] = np.exp(r / s)
+#     result[1] = result[0] * (1. - r / s)
+#     result[2] = -1.
+#     return result
 
 
-@njit
-def _hessian_g_exp(z):
-    """Hessian of function used for exp. cone proj."""
-    r = z[0]
-    s = z[1]
-    t = z[2]
-    result = np.zeros((3, 3))
-    ers = np.exp(r / s)
-    result[0, 0] = ers / s
-    result[0, 1] = - ers * r / s**2
-    result[1, 1] = ers * r**2 / s**3
-    result[1, 0] = result[0, 1]
-    return result
+# @njit
+# def _hessian_g_exp(z):
+#     """Hessian of function used for exp. cone proj."""
+#     r = z[0]
+#     s = z[1]
+#     t = z[2]
+#     result = np.zeros((3, 3))
+#     ers = np.exp(r / s)
+#     result[0, 0] = ers / s
+#     result[0, 1] = - ers * r / s**2
+#     result[1, 1] = ers * r**2 / s**3
+#     result[1, 0] = result[0, 1]
+#     return result
 
 
-@njit
-def _exp_residual(z_0, z, lambda_var):
-    """Residual of system for exp. cone projection."""
-    result = np.empty(4)
-    result[:3] = z - z_0 + lambda_var * _gradient_g_exp(z)
-    result[3] = _g_exp(z)
-    return result
+# @njit
+# def _exp_residual(z_0, z, lambda_var):
+#     """Residual of system for exp. cone projection."""
+#     result = np.empty(4)
+#     result[:3] = z - z_0 + lambda_var * _gradient_g_exp(z)
+#     result[3] = _g_exp(z)
+#     return result
 
 
-@njit
-def _exp_newt_matrix(z, lambda_var):
-    """Matrix used for exp. cone projection."""
-    result = np.empty((4, 4))
-    result[:3, :3] = lambda_var * _hessian_g_exp(z)
-    result[0, 0] += 1.
-    result[1, 1] += 1.
-    result[2, 2] += 1.
-    grad = _gradient_g_exp(z)
-    result[:3, 0] = grad
-    result[0, :3] = grad
-    result[3, 3] = 0.
-    return result
+# @njit
+# def _exp_newt_matrix(z, lambda_var):
+#     """Matrix used for exp. cone projection."""
+#     result = np.empty((4, 4))
+#     result[:3, :3] = lambda_var * _hessian_g_exp(z)
+#     result[0, 0] += 1.
+#     result[1, 1] += 1.
+#     result[2, 2] += 1.
+#     grad = _gradient_g_exp(z)
+#     result[:3, 0] = grad
+#     result[0, :3] = grad
+#     result[3, 3] = 0.
+#     return result
 
 # def project_exp_bisection(v):
 #   v = copy(v)
@@ -284,7 +284,137 @@ def get_rho_ub(v):
 
 
 @njit
+def fourth_case_brendan(z):
+    x = np.copy(z)
+    ub, lb = get_rho_ub(x)
+    #print('initial ub, lb', ub, lb)
+    for i in range(0, 100):
+        rho = (ub + lb) / 2
+        g, x = calc_grad(z, rho, x)
+        #print('g, x', g, x)
+        if g > 0:
+            lb = rho
+        else:
+            ub = rho
+        #print('new ub, lb', ub, lb)
+        if ub - lb < 1e-8:
+            break
+    #print('result:', x)
+    return x, np.copy(x)
+
+
+# Here it is my work on exp proj D
+@njit
+def make_mat(r, s, t, x, y, z):
+    mat = np.zeros((3, 3))
+    # first eq.
+    mat[0, 0] = 2 * x - r
+    mat[0, 1] = 2 * y - s
+    mat[0, 2] = 2 * z - t
+    mat[1, 0] = np.exp(x / y)
+    mat[1, 1] = np.exp(x / y) * (1 - x / y)
+    mat[1, 2] = -1.
+    mat[2, 0] = y
+    mat[2, 1] = x - r
+    mat[2, 2] = 2 * z - t
+    return mat
+
+
+@njit
+def make_error(r, s, t, x, y, z):
+    error = np.zeros(3)
+    error[0] = x * (x - r) + y * (y - s) + z * (z - t)
+    error[1] = y * np.exp(x / y) - z
+    error[2] = y * (x - r) + z * (z - t)
+    #print('error', error)
+    return error
+
+
+@njit
+def make_rhs(x, y, z, dr, ds, dt):
+    rhs = np.zeros(3)
+    rhs[0] = x * dr + y * ds + z * dt
+    rhs[2] = y * dr + z * dt
+    return rhs
+
+
+@njit
+def fourth_case_D(r, s, t, x, y, z, dr, ds, dt):
+
+    #print('fourth case D')
+
+    error = make_error(r, s, t, x, y, z)
+    rhs = make_rhs(x, y, z, dr, ds, dt)
+    #print('base rhs', rhs)
+
+    result = np.linalg.solve(make_mat(r, s, t, x, y, z),
+                             rhs - error)
+    #print('result', result)
+    return result
+
+
+@njit
+def fourth_case_enzo(z):
+
+    real_result, _ = fourth_case_brendan(z)
+    z = np.copy(z)
+    r = z[0]
+    s = z[1]
+    t = z[2]
+
+    #print('fourth case enzo', z)
+
+    #print('real_result', real_result)
+
+    # if s > 0:
+    #     x = r
+    #     y = s
+    #     z = s * np.exp(r / s)
+
+    # else:
+    #     assert r > 0.
+    #     assert t > 0.
+    #     x = r
+    #     y = 1E-1
+    #     z = y * np.exp(x / y)
+
+    x, y, z = real_result
+    if y == 0.:
+        y = 1E-8
+
+    #print('candidate:', (x, y, z))
+
+    for i in range(20):
+        error = make_error(r, s, t, x, y, z)
+        correction = np.linalg.solve(
+            make_mat(r, s, t, x, y, z),
+            -error)
+
+        if np.linalg.norm(correction) < 1E-12:
+            break
+
+        #print('correction', correction)
+
+        x += correction[0]
+        y += correction[1]
+        z += correction[2]
+        #print('current:', (x, y, z))
+
+    #print('result:', np.array([x, y, z]))
+
+    result = np.empty(3)
+    result[0] = x
+    result[1] = y
+    result[2] = z
+
+    return result, np.copy(result)
+
+
+#@njit
+
+@njit
 def exp_pri_Pi(z):
+    #print('\nprojecting %s' % z)
     """Projection on exp. primal cone, and cache."""
     z = np.copy(z)
     # cache = None
@@ -295,15 +425,18 @@ def exp_pri_Pi(z):
     # first case
     if (s > 0 and s * np.exp(r / s) <= t) or \
             (r <= 0 and s == 0 and t >= 0):
+        #print('first case')
         return z, np.copy(z)
 
     # second case
     if (-r < 0 and r * np.exp(s / r) <= -np.exp(1) * t) or \
             (r == 0 and -s >= 0 and -t >= 0):
+        #print('second case')
         return np.zeros(3), np.zeros(3)
 
     # third case
     if r < 0 and s < 0:
+        #print('third case')
         z[1] = 0
         z[2] = max(z[2], 0)
         return z, np.copy(z)
@@ -347,18 +480,9 @@ def exp_pri_Pi(z):
     #         if i > 100:
     #             break
 
-    x = np.copy(z)
-    ub, lb = get_rho_ub(x)
-    for i in range(0, 1000):
-        rho = (ub + lb) / 2
-        g, x = calc_grad(z, rho, x)
-        if g > 0:
-            lb = rho
-        else:
-            ub = rho
-        if ub - lb < 1e-16:
-            break
-    return x, np.copy(x)
+    #print('fourth case')
+    # return fourth_case_brendan(z)
+    return fourth_case_enzo(z)
 
 
 @njit
@@ -374,56 +498,77 @@ def exp_pri_D(z_0, dz, cache):
     ds = dz[1]
     dt = dz[2]
 
+    # projection of z_0
     x = cache[0]
     y = cache[1]
     z = cache[2]
+    # print('\nrst', r, s, t)
+    # print('dr ds dt', dr, ds, dt)
+    # print('xyz', x, y, z)
 
     # first case
+    # if on the cone boundary, non-diff
     if (s > 0 and s * np.exp(r / s) == t) or \
-            (r == 0 and s == 0 and t >= 0) or \
-            (r <= 0 and s == 0 and t == 0):
+            (r <= 0 and s == 0 and t >= 0):  # or \
+            #(r <= 0 and s == 0 and t == 0):
         raise NonDifferentiable
 
-    if (s > 0 and s * np.exp(r / s) < t) or \
-            (r < 0 and s == 0 and t > 0):
+    if (s > 0 and s * np.exp(r / s) < t):
+        #print('first case')
         return np.copy(dz)
 
-    if (-r < 0 and r * np.exp(s / r) == -np.exp(1) * t) or \
-            (r == 0 and -s == 0 and -t >= 0) or \
-            (r == 0 and -s >= 0 and -t == 0):
-        raise NonDifferentiable
+    # if (r < 0 and s == 0 and t > 0):
+    #     # i think no
+    #     return np.copy(dz)
 
     # second case
-    if (-r < 0 and r * np.exp(s / r) < -np.exp(1) * t) or \
-            (r == 0 and -s > 0 and -t > 0):
+    # if on cone bound, then non-diff
+    if (-r < 0 and r * np.exp(s / r) == -np.exp(1) * t) or \
+            (r == 0 and -s >= 0 and -t >= 0):  # or \
+        #(r == 0 and -s >= 0 and -t == 0):
+        raise NonDifferentiable
+
+    if (-r < 0 and r * np.exp(s / r) < -np.exp(1) * t):  # or \
+           # (r == 0 and -s > 0 and -t > 0):
+        #print('second case')
         return np.zeros(3)
+
+    if r < 0 and s < 0 and t == 0:
+        raise NonDifferentiable
 
     # third case
     if r < 0 and s < 0:
+        #print('third case')
         result = np.zeros(3)
         result[0] = dz[0]
         result[2] = dz[2] if t > 0 else 0.
+        #print('result', result)
         return result
 
     # fourth case
-    mat = np.zeros((3, 3))
-    rhs = np.zeros(3)
-    # first eq.
-    mat[0, 0] = 2 * x - r
-    mat[0, 1] = 2 * y - s
-    mat[0, 2] = 2 * z - t
-    rhs[0] = x * dr + y * ds + z * dt
-    # second eq.
-    mat[1, 0] = np.exp(x / y)
-    mat[1, 1] = np.exp(x / y) * (1 - x / y)
-    mat[1, 2] = -1.
-    # third eq.
-    mat[2, 0] = y
-    mat[2, 1] = x - r
-    mat[2, 2] = 2 * z - t
-    rhs[2] = y * dr + z * dt
+    #print('fourth case')
+    return fourth_case_D(r, s, t, x, y, z, dr, ds, dt)
+    # mat = np.zeros((3, 3))
+    # rhs = np.zeros(3)
+    # # first eq.
+    # mat[0, 0] = 2 * x - r
+    # mat[0, 1] = 2 * y - s
+    # mat[0, 2] = 2 * z - t
+    # rhs[0] = x * dr + y * ds + z * dt
+    # # second eq.
+    # mat[1, 0] = np.exp(x / y)
+    # mat[1, 1] = np.exp(x / y) * (1 - x / y)
+    # mat[1, 2] = -1.
+    # # third eq.
+    # mat[2, 0] = y
+    # mat[2, 1] = x - r
+    # mat[2, 2] = 2 * z - t
+    # rhs[2] = y * dr + z * dt
 
-    return np.linalg.solve(mat, rhs)
+    # result = np.linalg.solve(mat, rhs)
+    # print('result', result)
+    # return result
+
 
 # @njit
 # def exp_pri_DT(z, x, cache):
@@ -433,17 +578,18 @@ def exp_pri_D(z_0, dz, cache):
 exp_pri_cone = cone(exp_pri_Pi, exp_pri_D, exp_pri_D)  # exp_pri_DT)
 
 
-@njit
+#@njit
 def exp_dua_Pi(z):
     """Projection on exp. dual cone, and cache."""
-    pi, cache = exp_pri_Pi(z)
-    return pi - np.copy(z), cache
+    minuspi, cache = exp_pri_Pi(-z)
+    return np.copy(z) + minuspi, cache
 
 
-@njit
+#@njit
 def exp_dua_D(z, x, cache):
     """Derivative of projection on exp. dual cone."""
-    return exp_pri_D(z, x, cache) - np.copy(x)
+    #res = exp_pri_D(z, x, cache)
+    return np.copy(x) + exp_pri_D(-z, -x, cache)
 
 
 # @njit

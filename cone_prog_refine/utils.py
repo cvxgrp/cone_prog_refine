@@ -18,6 +18,8 @@ import scs
 import ecos
 import scipy.sparse as sp
 
+from numba import jit, njit
+
 
 from .cones import *
 from .problem import *
@@ -46,6 +48,10 @@ def dim2cones(dim):
     if 'ed' in dim:
         for i in range(dim['ed']):
             cones.append([exp_dua_cone, 3])
+    # if 'e' in dim:
+    #     assert (not 'ep' in dim)
+    #     for i in range(dim['e']):
+    #         cones.append([exp_pri_cone, 3])
     return cones
 
 

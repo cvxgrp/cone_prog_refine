@@ -148,37 +148,36 @@ class TestExpPri(BaseTestCone):
                    np.array([1., 2., 3.]),
                    np.array([100., 2., 300.]),
                    np.array([-1., -2., -3.]),
-                   np.array([-10., -10., 10.])]
+                   np.array([-10., -10., 10.]),
+                   np.array([1., -1.,  1.]),
+                   np.array([0.08755124, -1.22543552, 0.84436298])]
     sample_vec_proj = [np.array([0., 0., 0.]),
                        np.array([-10., 0., 0.]),
                        np.array([4.26306172,  7.51672777, 13.25366605]),
                        np.array([0.8899428, 1.94041882, 3.06957225]),
                        np.array([73.77502858,  33.51053837, 302.90131756]),
                        np.array([-1., 0., 0.]),
-                       np.array([-10., 0., 10.])]
-    sample_vecs_are_in = [True, False, False, False, False, False]
-    sample_vecs_are_diff = [False, True, True, True, True, True]
+                       np.array([-10., 0., 10.]),
+                       np.array([0.22972088, 0.09487128, 1.06839895]),
+                       np.array([3.88378507e-06, 2.58963810e-07, 0.84436298])]
+    sample_vecs_are_in = [True, False, False,
+                          False, False, False, False, False]
+    sample_vecs_are_diff = [False, True, True, True, True, True, True, True]
 
 
 class TestExpDua(BaseTestCone):
 
     test_cone = exp_dua_cone
     sample_vecs = [np.array([0., 0., 0.]),
-                   np.array([-10., -10., -10.]),
-                   np.array([10., 10., 10.]),
-                   np.array([1., 2., 3.]),
-                   np.array([100., 2., 300.]),
-                   np.array([-1., -2., -3.]),
-                   np.array([-10., -10., 10.])]
+                   np.array([-1., 1., 100.]),
+                   np.array([1., 1., 100.]),
+                   np.array([-1., -2., -3.])]
     sample_vec_proj = [np.array([0., 0., 0.]),
-                       np.array([-10., 0., 0.]),
-                       np.array([4.26306172,  7.51672777, 13.25366605]),
-                       np.array([0.8899428, 1.94041882, 3.06957225]),
-                       np.array([73.77502858,  33.51053837, 302.90131756]),
-                       np.array([-1., 0., 0.]),
-                       np.array([-10., 0., 10.])]
-    sample_vecs_are_in = [True, False, False, False, False, False]
-    sample_vecs_are_diff = [False, True, True, True, True, True]
+                       np.array([-1., 1., 100.]),
+                       np.array([0., 1., 100.]),
+                       np.array([-0.1100572, -0.05958119,  0.06957226])]
+    sample_vecs_are_in = [True, True, False, False]
+    sample_vecs_are_diff = [False, True, True, True]
 
 
 class TestSecondOrder(BaseTestCone):

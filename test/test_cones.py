@@ -73,6 +73,9 @@ class BaseTestCone(unittest.TestCase):
 
             if not isdiff:
                 pass
+                # delta = np.random.randn(size_vec(x)) * 0.0001
+                # self.assertRaises(NonDifferentiable,
+                #                   self.test_cone.D(x, delta, cache))
 
             else:
                 delta = np.random.randn(size_vec(x)) * 0.0001

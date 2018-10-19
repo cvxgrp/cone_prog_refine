@@ -62,7 +62,7 @@ from math import sqrt
 eps = np.finfo(np.float64).eps
 
 
-#@njit
+@njit
 def _sym_ortho(a, b):
     """
     Stable implementation of Givens rotation.

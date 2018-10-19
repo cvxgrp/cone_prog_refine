@@ -130,7 +130,7 @@ class ProblemTest(unittest.TestCase):
 
         self.assertTrue(np.allclose(
             res + dres,
-            residual_z_plus_delta))
+            residual_z_plus_delta, atol=1e-5))
 
         # print('testing DT')
         # res, cones_caches = residual(z_true, A, b, c, cones)
@@ -257,9 +257,9 @@ class ProblemTest(unittest.TestCase):
                                       'verbose': True},
                                   refine_solver_time_ratio=5,
                                   verbose=True)
-            self.assertTrue(np.allclose(A@x + s - b, 0))
-            self.assertTrue(np.allclose(A.T@y + c, 0))
-            self.assertTrue(np.allclose(b.T@y + c.T@x, 0))
+            self.assertTrue(np.allclose(A@x + s - b, 0, atol=1e-5))
+            self.assertTrue(np.allclose(A.T@y + c, 0, atol=1e-5))
+            self.assertTrue(np.allclose(b.T@y + c.T@x, 0, atol=1e-5))
 
     def test_infeasible(self):
         self.check_refine_scs({'l': 20, 'q': [10] * 5}, mode='infeasible')

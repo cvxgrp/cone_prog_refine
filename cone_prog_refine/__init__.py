@@ -16,3 +16,4 @@ limitations under the License.
 from .cones import *
 from .problem import *
 from .utils import *
+from .lsqr import lsqr

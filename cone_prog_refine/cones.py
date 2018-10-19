@@ -31,16 +31,16 @@ class NonDifferentiable(Exception):
     pass
 
 
-def check_non_neg_int(n):
-    if not isinstance(n, int):
-        raise TypeError
-    if n < 0:
-        raise DimensionError
+# def check_non_neg_int(n):
+#     if not isinstance(n, int):
+#         raise TypeError
+#     if n < 0:
+#         raise DimensionError
 
 
-def check_right_size(x, n):
-    if (n > 1) and not (len(x) == n):
-        raise DimensionError
+# def check_right_size(x, n):
+#     if (n > 1) and not (len(x) == n):
+#         raise DimensionError
 
 
 cone = namedtuple('cone', ['Pi', 'D', 'DT'])
@@ -119,7 +119,7 @@ def sec_ord_D(z, x, cache):
     return result
 
 
-@jit
+@njit
 def sec_ord_Pi(z):
     """Projection on second-order cone."""
 
@@ -134,7 +134,13 @@ def sec_ord_Pi(z):
     if norm_x <= -rho:
         return np.zeros_like(z), cache
 
-    return np.concatenate([[1.], x / norm_x]) * (norm_x + rho) / 2., cache
+    result = np.empty_like(z)
+
+    result[0] = 1.
+    result[1:] = x / norm_x
+    result *= (norm_x + rho) / 2.
+
+    return result, cache
 
 
 sec_ord_cone = cone(sec_ord_Pi, sec_ord_D, sec_ord_D)
@@ -354,13 +360,13 @@ def fourth_case_D(r, s, t, x, y, z, dr, ds, dt):
 
 
 @njit
-def fourth_case_enzo(z):
+def fourth_case_enzo(z_var):
 
-    real_result, _ = fourth_case_brendan(z)
-    z = np.copy(z)
-    r = z[0]
-    s = z[1]
-    t = z[2]
+    real_result, _ = fourth_case_brendan(z_var)
+    z_var = np.copy(z_var)
+    r = z_var[0]
+    s = z_var[1]
+    t = z_var[2]
 
     #print('fourth case enzo', z)
 
@@ -375,7 +381,7 @@ def fourth_case_enzo(z):
     #     assert r > 0.
     #     assert t > 0.
     #     x = r
-    #     y = 1E-1
+    #     y = 1.
     #     z = y * np.exp(x / y)
 
     x, y, z = real_result
@@ -384,8 +390,15 @@ def fourth_case_enzo(z):
 
     #print('candidate:', (x, y, z))
 
-    for i in range(20):
+    for i in range(10):
+
         error = make_error(r, s, t, x, y, z)
+
+        #print('it %d, error norm %.2e' % (i, np.linalg.norm(error)))
+
+        if np.linalg.norm(error) < 1E-14:
+            break
+
         correction = np.linalg.solve(
             make_mat(r, s, t, x, y, z),
             -error)
@@ -395,9 +408,26 @@ def fourth_case_enzo(z):
 
         #print('correction', correction)
 
-        x += correction[0]
-        y += correction[1]
-        z += correction[2]
+        step = 1.
+
+        while True:
+
+            new_x = x + step * correction[0]
+            new_y = y + step * correction[1]
+            new_z = z + step * correction[2]
+            new_error = make_error(r, s, t, new_x, new_y, new_z)
+
+            if (np.linalg.norm(new_error) <= np.linalg.norm(error)) and \
+                    new_y > 0:
+                # accept
+                x = new_x
+                y = new_y
+                z = new_z
+                break
+
+            step /= 2.
+        #print('final step', step)
+
         #print('current:', (x, y, z))
 
     #print('result:', np.array([x, y, z]))
@@ -578,14 +608,14 @@ def exp_pri_D(z_0, dz, cache):
 exp_pri_cone = cone(exp_pri_Pi, exp_pri_D, exp_pri_D)  # exp_pri_DT)
 
 
-#@njit
+@njit
 def exp_dua_Pi(z):
     """Projection on exp. dual cone, and cache."""
     minuspi, cache = exp_pri_Pi(-z)
     return np.copy(z) + minuspi, cache
 
 
-#@njit
+@njit
 def exp_dua_D(z, x, cache):
     """Derivative of projection on exp. dual cone."""
     #res = exp_pri_D(z, x, cache)
@@ -649,7 +679,8 @@ prod_cone = cone(prod_cone_Pi, prod_cone_D, prod_cone_D)
 #     return z
 
 
-@lru_cache(3)
+#@lru_cache(3)
+@njit
 def sizevec2sizemat(n):
     m = int(np.sqrt(2 * n))
     if not n == (m * (m + 1) / 2.):

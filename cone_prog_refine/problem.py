@@ -102,14 +102,14 @@ def residual_D(z, dz, A, b, c, cones_caches):
     return Q_matvec(A, b, c, du) - dv
 
 
-#@jit
+@jit
 def residual_DT(z, dres, A, b, c, cones_caches):
     return embedded_cone.DT(z,
                             -Q_matvec(A, b, c, dres) - dres,
                             cones_caches) + dres
 
 
-#@jit
+@jit
 def residual_and_uv(z, A, b, c, cones):
     m, n = A.shape
     u, cache = embedded_cone.Pi(z, cones, n)
@@ -216,11 +216,13 @@ def print_footer(message):
     print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
 
 
+@jit
 def lsqr_D(z, dz, A, b, c, cache, residual):
     return residual_D(z, dz, A, b, c, cache) / z[-1] - (residual /
                                                         z[-1]**2) * dz[-1]
 
 
+@jit
 def lsqr_DT(z, dres, A, b, c, cache, residual):
     m, n = A.shape
     e_minus1 = np.zeros(n + m + 1)
@@ -236,14 +238,14 @@ def lsqr_DT(z, dres, A, b, c, cache, residual):
 # def lsqr_DT(z, dres, A, b, c, cache, residual):
 #     return residual_DT(z, dres, A, b, c, cache)
 
-
+@jit
 def refine(A, b, c, cones, z,
+           iters=10,
+           lsqr_iters=20,
            verbose=True,
-           max_iters=10000,
-           max_lsqr_iters=100,
            max_runtime=1.):
 
-    btol = .5
+    #btol = .5
 
     m, n = A.shape
 
@@ -278,7 +280,7 @@ def refine(A, b, c, cones, z,
     # steps_anderson = np.zeros((len(z), mem_anderson_step))
     # arrivals_anderson = np.zeros((len(z), mem_anderson_step))
 
-    for i in range(max_iters):
+    for i in range(iters):
 
         # if i >= mem_anderson_step:
         #     import cvxpy as cvx
@@ -351,7 +353,7 @@ def refine(A, b, c, cones, z,
                         atol=0.,  # max(10**(-1 - i), 1E-8),
                         btol=0.,  # max(10**(-1 - i), 1E-8),  # btol,
                         show=False,
-                        iter_lim=100)  # None)  # )None)  # int(max_lsqr_iters))
+                        iter_lim=lsqr_iters)  # None)  # )None)  # int(max_lsqr_iters))
 
         num_lsqr_iters = returned[2]
         step = returned[0]
@@ -450,13 +452,13 @@ def refine(A, b, c, cones, z,
             # max_lsqr_iters *= .5
             # btol = 1. - (1. - btol) * .5
 
-        if (time.time() - start_time) > max_runtime:
-            if verbose:
-                # print_stats(i + 1, residual, z,
-                #             num_lsqr_iters, start_time)
-                print_footer('Max. refinement runtime reached.')
+        # if (time.time() - start_time) > max_runtime:
+        #     if verbose:
+        #         # print_stats(i + 1, residual, z,
+        #         #             num_lsqr_iters, start_time)
+        #         print_footer('Max. refinement runtime reached.')
 
-            return z / np.abs(z[-1])
+        #     return z / np.abs(z[-1])
 
     if verbose:
         print_footer('Max num. refinement iters reached.')
@@ -467,9 +469,9 @@ def solve(A, b, c, dim_dict,
           solver='scs',
           solver_options={},
           refine_solver_time_ratio=1.,
-          max_iters=1000,
+          max_iters=10,
           verbose=False,
-          max_lsqr_iters=100,
+          max_lsqr_iters=20,
           return_z=False):
 
     solver_start = time.time()
@@ -495,9 +497,9 @@ def solve(A, b, c, dim_dict,
 
     z_plus = refine(A, b, c, cones, z,
                     verbose=verbose,
-                    max_iters=max_iters,
-                    max_lsqr_iters=max_lsqr_iters,
-                    max_runtime=solver_time * refine_solver_time_ratio)
+                    iters=max_iters,
+                    lsqr_iters=max_lsqr_iters)  # ,
+    # max_runtime=solver_time * refine_solver_time_ratio)
 
     if return_z:
         return z_plus, info

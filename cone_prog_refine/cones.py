@@ -359,7 +359,7 @@ def fourth_case_D(r, s, t, x, y, z, dr, ds, dt):
     return result
 
 
-@njit
+#@njit
 def fourth_case_enzo(z_var):
 
     real_result, _ = fourth_case_brendan(z_var)
@@ -379,10 +379,16 @@ def fourth_case_enzo(z_var):
 
     # else:
     #     assert r > 0.
-    #     assert t > 0.
-    #     x = r
     #     y = 1.
-    #     z = y * np.exp(x / y)
+    #     if t > 0.:
+    #         z = t
+    #         x = np.log(t)
+    #     else:
+    #         x = r
+    #         z = np.exp(x)
+
+    #     # y = 1.
+    #     # z = y * np.exp(x / y)
 
     x, y, z = real_result
     if y == 0.:
@@ -390,13 +396,13 @@ def fourth_case_enzo(z_var):
 
     #print('candidate:', (x, y, z))
 
-    for i in range(10):
+    for i in range(20):
 
         error = make_error(r, s, t, x, y, z)
 
         #print('it %d, error norm %.2e' % (i, np.linalg.norm(error)))
 
-        if np.linalg.norm(error) < 1E-14:
+        if np.linalg.norm(error) < 1E-12:
             break
 
         correction = np.linalg.solve(
@@ -442,7 +448,7 @@ def fourth_case_enzo(z_var):
 
 #@njit
 
-@njit
+#@njit
 def exp_pri_Pi(z):
     #print('\nprojecting %s' % z)
     """Projection on exp. primal cone, and cache."""
@@ -515,7 +521,7 @@ def exp_pri_Pi(z):
     return fourth_case_enzo(z)
 
 
-@njit
+#@njit
 def exp_pri_D(z_0, dz, cache):
     """Derivative of proj. on exp. primal cone."""
     # z = np.copy(z)
@@ -608,14 +614,14 @@ def exp_pri_D(z_0, dz, cache):
 exp_pri_cone = cone(exp_pri_Pi, exp_pri_D, exp_pri_D)  # exp_pri_DT)
 
 
-@njit
+#@njit
 def exp_dua_Pi(z):
     """Projection on exp. dual cone, and cache."""
     minuspi, cache = exp_pri_Pi(-z)
     return np.copy(z) + minuspi, cache
 
 
-@njit
+#@njit
 def exp_dua_D(z, x, cache):
     """Derivative of projection on exp. dual cone."""
     #res = exp_pri_D(z, x, cache)

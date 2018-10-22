@@ -240,8 +240,8 @@ def lsqr_DT(z, dres, A, b, c, cache, residual):
 
 @jit
 def refine(A, b, c, cones, z,
-           iters=10,
-           lsqr_iters=20,
+           iters=2,
+           lsqr_iters=30,
            verbose=True,
            max_runtime=1.):
 

@@ -27,7 +27,8 @@ class ProblemTest(unittest.TestCase):
 
     def test_Q(self):
         dim_dict = {'f': 10, 'l': 20, 'q': [10]}
-        A, b, c, x_true, s_true, y_true = generate_problem(dim_dict)
+        A, b, c, _, x_true, s_true, y_true = generate_problem(dim_dict,
+                                                              mode='solvable')
 
         cones = dim2cones(dim_dict)
 
@@ -39,7 +40,8 @@ class ProblemTest(unittest.TestCase):
 
     def test_embedded_vars(self):
         dim_dict = {'f': 2, 'l': 3, 'q': [4], 's': [3]}
-        A, b, c, x_true, s_true, y_true = generate_problem(dim_dict)
+        A, b, c, _, x_true, s_true, y_true = generate_problem(dim_dict,
+                                                              mode='solvable')
         m, n = A.shape
         cones = dim2cones(dim_dict)
         # problem = ConicProblem(A, b, c, cones)
@@ -72,7 +74,8 @@ class ProblemTest(unittest.TestCase):
 
     def test_embedded_cone_der_proj(self):
         dim_dict = {'f': 2, 'l': 20, 'q': [2, 3, 5], 's': [3, 4]}
-        A, b, c, x_true, s_true, y_true = generate_problem(dim_dict)
+        A, b, c, _, x_true, s_true, y_true = generate_problem(
+            dim_dict, mode='solvable')
         m, n = A.shape
         cones = dim2cones(dim_dict)
         #problem = ConicProblem(A, b, c, cones)
@@ -108,9 +111,9 @@ class ProblemTest(unittest.TestCase):
             u_plus_delta))
 
     def test_residual_der(self):
-        dim_dict = {'f': 2, 'l': 10, 'q': [2, 3], 's': [3, 4]}
-        A, b, c, x_true, s_true, y_true = generate_problem(
-            dim_dict, density=.3, random_scale_max=1.)
+        dim_dict = {'l': 10, 'q': [5, 10], 's': [3, 4]}
+        A, b, c, _, x_true, s_true, y_true = generate_problem(
+            dim_dict, mode='solvable', density=.3)
         m, n = A.shape
         cones = dim2cones(dim_dict)
         u_true, v_true = xsy2uv(x_true, s_true, y_true, 1., 0.)
@@ -152,7 +155,8 @@ class ProblemTest(unittest.TestCase):
 
     def check_refine_ecos(self, dim_dict):
         print('generating problem')
-        A, b, c, x_true, s_true, y_true = generate_problem(dim_dict)
+        A, b, c, _, x_true, s_true, y_true = generate_problem(dim_dict,
+                                                              mode='solvable')
         m, n = A.shape
 
         cones = dim2cones(dim_dict)
@@ -194,10 +198,13 @@ class ProblemTest(unittest.TestCase):
 
     def check_refine_scs(self, dim_dict, **kwargs):
         solvable = True
-        if ('mode' in kwargs) and (kwargs['mode'] != 'solvable'):
+        if not ('mode' in kwargs):
+            kwargs['mode'] = 'solvable'
+        if (kwargs['mode'] != 'solvable'):
             solvable = False
         print('generating problem')
-        A, b, c, x_true, s_true, y_true = generate_problem(dim_dict, **kwargs)
+        A, b, c, _, x_true, s_true, y_true = generate_problem(
+            dim_dict, **kwargs)
         m, n = A.shape
 
         cones = dim2cones(dim_dict)
@@ -242,8 +249,8 @@ class ProblemTest(unittest.TestCase):
                      #{'l': 1000},
                      {'l': 50, 'q': [10] * 5, 's':[20] * 1}]:
             np.random.seed(1)
-            A, b, c, x_true, s_true, y_true = generate_problem(
-                dims, random_scale_max=2.)
+            A, b, c, _, x_true, s_true, y_true = generate_problem(
+                dims, mode='solvable')
             m, n = A.shape
 
             self.assertTrue(np.allclose(A@x_true + s_true - b, 0))
@@ -270,14 +277,14 @@ class ProblemTest(unittest.TestCase):
     def test_unbound(self):
         self.check_refine_scs({'l': 20, 'q': [10] * 5}, mode='unbounded')
         #self.check_refine_scs({'s': [20]}, mode='unbounded')
-        self.check_refine_scs({'s': [10]}, mode='unbounded')
-        self.check_refine_scs({'q': [50]}, mode='unbounded')
+        self.check_refine_scs({'s': [10], 'q': [5]}, mode='unbounded')
+        self.check_refine_scs({'q': [50, 5]}, mode='unbounded')
 
-    def test_nondiff(self):
-        self.check_refine_scs({'l': 20, 'q': [10] * 5}, nondiff_point=True)
-       # self.check_refine_scs({'s': [20]}, nondiff_point=True)
-        self.check_refine_scs({'s': [10]}, nondiff_point=True)
-        self.check_refine_scs({'q': [50]}, nondiff_point=True)
+    # def test_nondiff(self):
+    #     self.check_refine_scs({'l': 20, 'q': [10] * 5}, nondiff_point=True)
+    #    # self.check_refine_scs({'s': [20]}, nondiff_point=True)
+    #     self.check_refine_scs({'s': [10]}, nondiff_point=True)
+    #     self.check_refine_scs({'q': [50]}, nondiff_point=True)
 
     def test_scs(self):
         self.check_refine_scs({'l': 20, 'q': [10] * 5})

@@ -153,14 +153,19 @@ class ProblemTest(unittest.TestCase):
         #     new_res - res,
         #     delta))
 
-    def check_refine_ecos(self, dim_dict):
+    def check_refine_ecos(self, dim_dict, **kwargs):
+        solvable = True
+        if not ('mode' in kwargs):
+            kwargs['mode'] = 'solvable'
+        if (kwargs['mode'] != 'solvable'):
+            solvable = False
         print('generating problem')
         A, b, c, _, x_true, s_true, y_true = generate_problem(dim_dict,
-                                                              mode='solvable')
+                                                              **kwargs)
         m, n = A.shape
 
         cones = dim2cones(dim_dict)
-        u, v = xsy2uv(x_true, s_true, y_true, 1., 0.)
+        u, v = xsy2uv(x_true, s_true, y_true, solvable, not solvable)
 
         embedded_res, _ = residual(u - v, A, b, c, cones)
         self.assertTrue(np.allclose(embedded_res, 0.))
@@ -172,7 +177,8 @@ class ProblemTest(unittest.TestCase):
                              feastol=1e-15,
                              reltol=1e-15,
                              abstol=1e-15,
-                             max_iters=5)
+                             # max_iters=10
+                             )
         solver_end = time.time()
         pridua_res, _ = residual(z, A, b, c, cones)
         if not (np.alltrue(pridua_res == 0.)):
@@ -270,15 +276,19 @@ class ProblemTest(unittest.TestCase):
 
     def test_infeasible(self):
         self.check_refine_scs({'l': 20, 'q': [10] * 5}, mode='infeasible')
+        self.check_refine_ecos({'l': 20, 'q': [10] * 5}, mode='infeasible')
         #self.check_refine_scs({'s': [20]}, mode='infeasible')
         self.check_refine_scs({'s': [10]}, mode='infeasible')
         self.check_refine_scs({'q': [50]}, mode='infeasible')
+        self.check_refine_ecos({'q': [50]}, mode='infeasible')
 
     def test_unbound(self):
         self.check_refine_scs({'l': 20, 'q': [10] * 5}, mode='unbounded')
+        self.check_refine_ecos({'l': 20, 'q': [10] * 5}, mode='unbounded')
         #self.check_refine_scs({'s': [20]}, mode='unbounded')
         self.check_refine_scs({'s': [10], 'q': [5]}, mode='unbounded')
         self.check_refine_scs({'q': [50, 5]}, mode='unbounded')
+        self.check_refine_ecos({'q': [50, 5]}, mode='unbounded')
 
     # def test_nondiff(self):
     #     self.check_refine_scs({'l': 20, 'q': [10] * 5}, nondiff_point=True)

@@ -53,7 +53,7 @@ from __future__ import division, print_function, absolute_import
 
 __all__ = ['lsqr']
 
-from numba import jit, njit
+from .jit import jit, njit
 
 import numpy as np
 from math import sqrt
@@ -99,7 +99,7 @@ def _sym_ortho(a, b):
 
 
 #@jit
-def lsqr(A_var, b_var, c_var, cones, z_var, damp=0.0, atol=1e-8, btol=1e-8, conlim=1e8,
+def lsqr(A_var, b_var, c_var, cones, z_var, residual_var, damp=0.0, atol=1e-8, btol=1e-8, conlim=1e8,
          iter_lim=None, show=False, calc_var=False, x0=None):
     """Find the least-squares solution to a large, sparse, linear system
     of equations.
@@ -326,6 +326,8 @@ def lsqr(A_var, b_var, c_var, cones, z_var, damp=0.0, atol=1e-8, btol=1e-8, conl
     b = np.atleast_1d(b)
     if b.ndim > 1:
         b = b.squeeze()
+
+    m = len(b)
 
     #m, n = A.shape
     if iter_lim is None:

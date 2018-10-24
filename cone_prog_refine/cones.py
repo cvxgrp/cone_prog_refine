@@ -19,7 +19,10 @@ limitations under the License.
 import numpy as np
 import scipy.sparse as sp
 from collections import namedtuple
-from numba import njit, jit
+from .jit import njit, jit
+from numba import jit
+
+
 from functools import lru_cache
 
 
@@ -293,19 +296,19 @@ def get_rho_ub(v):
 def fourth_case_brendan(z):
     x = np.copy(z)
     ub, lb = get_rho_ub(x)
-    #print('initial ub, lb', ub, lb)
+    # print('initial ub, lb', ub, lb)
     for i in range(0, 100):
         rho = (ub + lb) / 2
         g, x = calc_grad(z, rho, x)
-        #print('g, x', g, x)
+        # print('g, x', g, x)
         if g > 0:
             lb = rho
         else:
             ub = rho
-        #print('new ub, lb', ub, lb)
+        # print('new ub, lb', ub, lb)
         if ub - lb < 1e-8:
             break
-    #print('result:', x)
+    # print('result:', x)
     return x, np.copy(x)
 
 
@@ -332,7 +335,7 @@ def make_error(r, s, t, x, y, z):
     error[0] = x * (x - r) + y * (y - s) + z * (z - t)
     error[1] = y * np.exp(x / y) - z
     error[2] = y * (x - r) + z * (z - t)
-    #print('error', error)
+    # print('error', error)
     return error
 
 
@@ -347,15 +350,22 @@ def make_rhs(x, y, z, dr, ds, dt):
 @njit
 def fourth_case_D(r, s, t, x, y, z, dr, ds, dt):
 
-    #print('fourth case D')
+    if np.linalg.norm((r, s, t)) < 1E-12:
+        return np.zeros(3)
+
+    # print('fourth case D')
 
     error = make_error(r, s, t, x, y, z)
     rhs = make_rhs(x, y, z, dr, ds, dt)
-    #print('base rhs', rhs)
+    # print('base rhs', rhs)
+    assert not True in np.isnan(error)
+    assert not True in np.isnan(rhs)
 
-    result = np.linalg.solve(make_mat(r, s, t, x, y, z),
+    result = np.linalg.solve(make_mat(r, s, t, x, y, z) + np.eye(3) * 1E-8,
                              rhs - error)
-    #print('result', result)
+    if True in np.isnan(result):
+        return np.zeros(3)
+    # print('result', result)
     return result
 
 
@@ -368,9 +378,9 @@ def fourth_case_enzo(z_var):
     s = z_var[1]
     t = z_var[2]
 
-    #print('fourth case enzo', z)
+    # print('fourth case enzo', z)
 
-    #print('real_result', real_result)
+    # print('real_result', real_result)
 
     # if s > 0:
     #     x = r
@@ -391,32 +401,35 @@ def fourth_case_enzo(z_var):
     #     # z = y * np.exp(x / y)
 
     x, y, z = real_result
-    if y == 0.:
+    if y < 1E-12:
         y = 1E-8
 
-    #print('candidate:', (x, y, z))
+    # print('candidate:', (x, y, z))
 
     for i in range(20):
 
         error = make_error(r, s, t, x, y, z)
 
-        #print('it %d, error norm %.2e' % (i, np.linalg.norm(error)))
+        # print('it %d, error norm %.2e' % (i, np.linalg.norm(error)))
 
-        if np.linalg.norm(error) < 1E-12:
+        if np.linalg.norm(error) < 1E-10:
             break
 
         correction = np.linalg.solve(
             make_mat(r, s, t, x, y, z),
             -error)
 
-        if np.linalg.norm(correction) < 1E-12:
+        if True in np.isnan(correction):
             break
 
-        #print('correction', correction)
+        if np.linalg.norm(correction) < 1E-10:
+            break
+
+        # print('correction', correction)
 
         step = 1.
 
-        while True:
+        for j in range(10):
 
             new_x = x + step * correction[0]
             new_y = y + step * correction[1]
@@ -426,17 +439,17 @@ def fourth_case_enzo(z_var):
             if (np.linalg.norm(new_error) <= np.linalg.norm(error)) and \
                     new_y > 0:
                 # accept
-                x = new_x
-                y = new_y
-                z = new_z
                 break
-
             step /= 2.
-        #print('final step', step)
 
-        #print('current:', (x, y, z))
+        x = new_x
+        y = new_y
+        z = new_z
+        # print('final step', step)
 
-    #print('result:', np.array([x, y, z]))
+        # print('current:', (x, y, z))
+
+    # print('result:', np.array([x, y, z]))
 
     result = np.empty(3)
     result[0] = x
@@ -450,7 +463,7 @@ def fourth_case_enzo(z_var):
 
 #@njit
 def exp_pri_Pi(z):
-    #print('\nprojecting %s' % z)
+    # print('\nprojecting %s' % z)
     """Projection on exp. primal cone, and cache."""
     z = np.copy(z)
     # cache = None
@@ -461,18 +474,18 @@ def exp_pri_Pi(z):
     # first case
     if (s > 0 and s * np.exp(r / s) <= t) or \
             (r <= 0 and s == 0 and t >= 0):
-        #print('first case')
+        # print('first case')
         return z, np.copy(z)
 
     # second case
     if (-r < 0 and r * np.exp(s / r) <= -np.exp(1) * t) or \
             (r == 0 and -s >= 0 and -t >= 0):
-        #print('second case')
+        # print('second case')
         return np.zeros(3), np.zeros(3)
 
     # third case
     if r < 0 and s < 0:
-        #print('third case')
+        # print('third case')
         z[1] = 0
         z[2] = max(z[2], 0)
         return z, np.copy(z)
@@ -516,12 +529,15 @@ def exp_pri_Pi(z):
     #         if i > 100:
     #             break
 
-    #print('fourth case')
+    # print('fourth case')
     # return fourth_case_brendan(z)
-    return fourth_case_enzo(z)
-
+    pi = fourth_case_enzo(z)
+    assert not True in np.isnan(pi)
+    return pi
 
 #@njit
+
+
 def exp_pri_D(z_0, dz, cache):
     """Derivative of proj. on exp. primal cone."""
     # z = np.copy(z)
@@ -547,7 +563,8 @@ def exp_pri_D(z_0, dz, cache):
     if (s > 0 and s * np.exp(r / s) == t) or \
             (r <= 0 and s == 0 and t >= 0):  # or \
             #(r <= 0 and s == 0 and t == 0):
-        raise NonDifferentiable
+        #raise NonDifferentiable
+        return np.zeros(3)
 
     if (s > 0 and s * np.exp(r / s) < t):
         #print('first case')
@@ -562,7 +579,8 @@ def exp_pri_D(z_0, dz, cache):
     if (-r < 0 and r * np.exp(s / r) == -np.exp(1) * t) or \
             (r == 0 and -s >= 0 and -t >= 0):  # or \
         #(r == 0 and -s >= 0 and -t == 0):
-        raise NonDifferentiable
+        #raise NonDifferentiable
+        return np.zeros(3)
 
     if (-r < 0 and r * np.exp(s / r) < -np.exp(1) * t):  # or \
            # (r == 0 and -s > 0 and -t > 0):
@@ -570,7 +588,8 @@ def exp_pri_D(z_0, dz, cache):
         return np.zeros(3)
 
     if r < 0 and s < 0 and t == 0:
-        raise NonDifferentiable
+        #raise NonDifferentiable
+        return np.zeros(3)
 
     # third case
     if r < 0 and s < 0:
@@ -582,8 +601,10 @@ def exp_pri_D(z_0, dz, cache):
         return result
 
     # fourth case
-    #print('fourth case')
-    return fourth_case_D(r, s, t, x, y, z, dr, ds, dt)
+    # print('fourth case')
+    fourth = fourth_case_D(r, s, t, x, y, z, dr, ds, dt)
+    assert not True in np.isnan(fourth)
+    return fourth
     # mat = np.zeros((3, 3))
     # rhs = np.zeros(3)
     # # first eq.
@@ -624,7 +645,7 @@ def exp_dua_Pi(z):
 #@njit
 def exp_dua_D(z, x, cache):
     """Derivative of projection on exp. dual cone."""
-    #res = exp_pri_D(z, x, cache)
+    # res = exp_pri_D(z, x, cache)
     return np.copy(x) + exp_pri_D(-z, -x, cache)
 
 

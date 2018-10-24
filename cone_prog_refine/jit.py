@@ -13,8 +13,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from .cones import *
-from .problem import *
-from .utils import *
-#from .lsqr import lsqr
-from .solvers import *
+#from numba import jit, njit
+
+ENABLE_JIT = False
+ENABLE_NJIT = False
+
+identity_decorator = lambda x: x
+
+jit = identity_decorator
+njit = identity_decorator
+
+if not ENABLE_JIT:
+    jit = identity_decorator
+
+if not ENABLE_NJIT:
+    njit = identity_decorator

@@ -14,12 +14,9 @@ limitations under the License.
 """
 
 import numpy as np
-import scs
-import ecos
+# import scs
+# import ecos
 import scipy.sparse as sp
-
-from numba import jit, njit
-
 
 from .cones import *
 from .problem import *
@@ -30,8 +27,8 @@ def dim2cones(dim):
     cones = []
     if 'z' in dim and dim['z'] > 0:
         cones.append([zero_cone, dim['z']])
-    if 'f' in dim and dim['f'] > 0:
-        cones.append([free_cone, dim['f']])
+    # if 'f' in dim and dim['f'] > 0:
+    #     cones.append([free_cone, dim['f']])
     if 'l' in dim and dim['l'] > 0:
         cones.append([non_neg_cone, dim['l']])
     if 'q' in dim:
@@ -47,15 +44,17 @@ def dim2cones(dim):
             cones.append([exp_pri_cone, 3])
     if 'ed' in dim:
         for i in range(dim['ed']):
-            cones.append([exp_dua_cone, 3])
+            cones.append([exp_dua_cone, 3])  # TODO drop exp dua
     # if 'e' in dim:
     #     assert (not 'ep' in dim)
     #     for i in range(dim['e']):
-    #         cones.append([exp_pri_cone, 3])
+    #         cones.append([exp_pri_cone, 3])  # ep will be e
     return cones
 
 
-def generate_dim_dict(nonneg_num_min=0,
+def generate_dim_dict(zero_num_min=0,
+                      zero_num_max=100,
+                      nonneg_num_min=0,
                       nonneg_num_max=100,
                       lorentz_num_min=0,
                       lorentz_num_max=10,
@@ -64,22 +63,24 @@ def generate_dim_dict(nonneg_num_min=0,
                       semidef_num_min=0,
                       semidef_num_max=10,
                       semidef_size_min=1,
-                      semidef_size_max=20,
+                      semidef_size_max=10,
                       exp_num_min=0,
-                      exp_num_max=10):
+                      exp_num_max=20):
     result = {}
+    result['z'] = int(np.random.uniform(zero_num_min,
+                                        zero_num_max))
     result['l'] = int(np.random.uniform(nonneg_num_min,
                                         nonneg_num_max))
     num_q = int(np.random.uniform(lorentz_num_min,
                                   lorentz_num_max))
     result['q'] = [int(np.random.uniform(lorentz_size_min,
                                          lorentz_size_max))
-                   for i in num_q]
+                   for i in range(num_q)]
     num_s = int(np.random.uniform(semidef_num_min,
                                   semidef_num_max))
-    result['q'] = [int(np.random.uniform(semidef_size_min,
+    result['s'] = [int(np.random.uniform(semidef_size_min,
                                          semidef_size_max))
-                   for i in num_q]
+                   for i in range(num_s)]
     result['ep'] = int(np.random.uniform(exp_num_min,
                                          exp_num_max))
     return result
@@ -90,26 +91,25 @@ def generate_problem(dim_dict=None,
                      mode=None,  # TODO fix tests
                      # nondiff_point=False,
                      # random_scale_max=None,
-                     min_val_entries=-100,
-                     max_val_entries=100):  # TODO drop option
+                     min_val_entries=-1,
+                     max_val_entries=1):  # TODO drop option
     """Generate random problem with given cone and density."""
 
     if dim_dict is None:
         dim_dict = generate_dim_dict()
 
     if density is None:
-        density = np.random.uniform(.1, .3)
+        density = np.random.uniform(.2, .4)
 
     if mode is None:
         mode = np.random.choice(['solvable', 'infeasible', 'unbounded'])
 
     cones = dim2cones(dim_dict)
     m = sum([el[1] for el in cones])
-    n = m
+    n = int(np.random.uniform(1, m))
 
     # r = np.zeros(m) if nondiff_point else
-    r = np.random.uniform(min_val_entries,
-                          max_val_entries,
+    r = np.random.uniform(min_val_entries, max_val_entries,
                           size=m)  # np.random.randn(m)
 
     s, cache = prod_cone.Pi(r, cones)
@@ -119,7 +119,7 @@ def generate_problem(dim_dict=None,
     A.data = np.random.uniform(min_val_entries, max_val_entries, size=A.nnz)
     # np.random.randn(
     #     A.nnz) * np.random.uniform(1., 1. + random_scale_max)
-    #x = np.random.randn(n) * np.random.uniform(1., 1. + random_scale_max)
+    # x = np.random.randn(n) * np.random.uniform(1., 1. + random_scale_max)
     x = np.random.uniform(min_val_entries, max_val_entries, size=n)
 
     if mode == 'solvable':
@@ -136,7 +136,7 @@ def generate_problem(dim_dict=None,
             A[i, j] -= error[i] / x[j]
         assert np.allclose(A@x + s, 0.)
         # A = A - np.outer(s + A@x, x) / np.linalg.norm(x)**2  # dense...
-        #c = np.random.randn(n) * np.random.uniform(1., 1. + random_scale_max)
+        # c = np.random.randn(n) * np.random.uniform(1., 1. + random_scale_max)
         c = - x / (x@x)  # c / (c@x)
         assert np.allclose(c@x, -1)
         # np.random.randn(m)
@@ -147,18 +147,18 @@ def generate_problem(dim_dict=None,
     if mode == 'infeasible':
         error = A.T@y
         sparsity = np.array(A.todense() != 0, dtype=int)
-        #old_nnz = A.nnz
-        #D = np.array(A.todense() != 0, dtype=int)
+        # old_nnz = A.nnz
+        # D = np.array(A.todense() != 0, dtype=int)
         # B = sp.csc_matrix(np.multiply((A.T@y) / (D.T@y), D))
-        #A = A - B
+        # A = A - B
         for j in range(n):
             i = np.argmax(sparsity[:, j] * y**2)
             A[i, j] -= error[j] / y[i]
         assert np.allclose(A.T@y, 0.)
-        #assert old_nnz == A.nnz
+        # assert old_nnz == A.nnz
         # correction = A.T@y / sum(y)
         # A = A - np.outer(y, A.T@y) / np.linalg.norm(y)**2  # dense...
-        #b = np.random.randn(m) * np.random.uniform(1., 1. + random_scale_max)
+        # b = np.random.randn(m) * np.random.uniform(1., 1. + random_scale_max)
         b = - y / (y@y)  # - b / (b@y)
         # np.random.randn(n)
         c = np.random.uniform(min_val_entries, max_val_entries, size=n)

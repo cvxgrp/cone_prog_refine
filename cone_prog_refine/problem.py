@@ -312,10 +312,10 @@ def refine(A, b, c, cones, z,
             A, b, c, cones,
             max_iters=max_backtrack)
 
-        print('normres returned by BT %.2e' % normres)
-        res, u, v, cache = residual_and_uv(z, A, b, c, cones)
-        normres = normalized_resnorm(res,  z)
-        print('recomputed normres %.2e' % normres)
+        # print('normres returned by BT %.2e' % normres)
+        # res, u, v, cache = residual_and_uv(z, A, b, c, cones)
+        # normres = normalized_resnorm(res,  z)
+        # print('recomputed normres %.2e' % normres)
 
         if failed:
             if verbose:
@@ -388,14 +388,14 @@ def refine(A, b, c, cones, z,
             if verbose:
                 print_footer('Max num. refinement iters reached.')
 
-            print('normres after print %.2e' % normres)
-            res, u, v, cache = residual_and_uv(z, A, b, c, cones)
-            normres = normalized_resnorm(res,  z)
-            print('recomputed normres %.2e' % normres)
+            # print('normres after print %.2e' % normres)
+            # res, u, v, cache = residual_and_uv(z, A, b, c, cones)
+            # normres = normalized_resnorm(res,  z)
+            # print('recomputed normres %.2e' % normres)
 
-            myz = z / np.abs(z[-1])
-            new_residual, u, v, new_cache = residual_and_uv(
-                myz, A, b, c, cones)
-            print('norm of vec returned %.2e' %
-                  np.linalg.norm(new_residual))
+            # myz = z / np.abs(z[-1])
+            # new_residual, u, v, new_cache = residual_and_uv(
+            #     myz, A, b, c, cones)
+            # print('norm of vec returned %.2e' %
+            #       np.linalg.norm(new_residual))
             return z / np.abs(z[-1])

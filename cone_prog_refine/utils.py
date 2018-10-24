@@ -55,15 +55,15 @@ def dim2cones(dim):
 def generate_dim_dict(zero_num_min=0,
                       zero_num_max=100,
                       nonneg_num_min=0,
-                      nonneg_num_max=100,
+                      nonneg_num_max=200,
                       lorentz_num_min=0,
-                      lorentz_num_max=10,
+                      lorentz_num_max=50,
                       lorentz_size_min=1,
-                      lorentz_size_max=20,
+                      lorentz_size_max=50,
                       semidef_num_min=0,
                       semidef_num_max=10,
                       semidef_size_min=1,
-                      semidef_size_max=10,
+                      semidef_size_max=20,
                       exp_num_min=0,
                       exp_num_max=20):
     result = {}
@@ -120,6 +120,8 @@ def generate_problem(dim_dict=None,
     # np.random.randn(
     #     A.nnz) * np.random.uniform(1., 1. + random_scale_max)
     # x = np.random.randn(n) * np.random.uniform(1., 1. + random_scale_max)
+    A /= np.linalg.norm(A.data)
+
     x = np.random.uniform(min_val_entries, max_val_entries, size=n)
 
     if mode == 'solvable':

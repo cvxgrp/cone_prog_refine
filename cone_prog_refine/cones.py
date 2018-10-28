@@ -361,8 +361,8 @@ def fourth_case_D(r, s, t, x, y, z, dr, ds, dt):
     error = make_error(r, s, t, x, y, z)
     rhs = make_rhs(x, y, z, dr, ds, dt)
     # print('base rhs', rhs)
-    # assert not True in np.isnan(error)
-    # assert not True in np.isnan(rhs)
+    assert not np.any(np.isnan(error))
+    assert not np.any(np.isnan(rhs))
 
     result = np.linalg.solve(make_mat(r, s, t, x, y, z) + np.eye(3) * 1E-8,
                              rhs - error)
@@ -413,6 +413,8 @@ def fourth_case_enzo(z_var):
 
         error = make_error(r, s, t, x, y, z)
 
+        assert not np.any(np.isnan(error))
+
         # print('it %d, error norm %.2e' % (i, np.linalg.norm(error)))
 
         # if np.linalg.norm(error) < 1E-10:
@@ -421,6 +423,8 @@ def fourth_case_enzo(z_var):
         correction = np.linalg.solve(
             make_mat(r, s, t, x, y, z) + np.eye(3) * 1E-8,
             -error)
+
+        assert not np.any(np.isnan(error))
 
         x += correction[0]
         y += correction[1]
@@ -786,9 +790,9 @@ def semidef_cone_D(z, dz, cache):
     lambda_minus = -np.minimum(lambda_var, 0.)
     m = len(lambda_plus)
     k = np.sum(lambda_plus > 0)
-    if not (np.sum(lambda_minus > 0) + k == m):
-        # TODO can't throw excep. in numba
-        print('SD cone projection not differentiable!')
+    # if not (np.sum(lambda_minus > 0) + k == m):
+    # TODO can't throw excep. in numba
+    # print('SD cone projection not differentiable!')
     dS_tilde = np.empty((m, m))
 
     inner(m, lambda_plus, lambda_minus, dS_tilde, dZ_tilde)
@@ -800,6 +804,7 @@ def semidef_cone_D(z, dz, cache):
 @jit
 def embedded_cone_D(z, dz, cache):
     """Der. of proj. on the cone of the primal-dual embedding."""
+    #cache, n = cache
     return dz - prod_cone.D(-z, dz, cache)
 
 
@@ -808,7 +813,7 @@ def embedded_cone_Pi(z, cones, n):
     """Projection on the cone of the primal-dual embedding."""
     emb_cones = [[zero_cone, n]] + cones + [[non_neg_cone, 1]]
     v, cache = prod_cone.Pi(-z, emb_cones)
-    return v + z, cache
+    return v + z, cache  # + [n]
 
 embedded_cone = cone(embedded_cone_Pi, embedded_cone_D, embedded_cone_D)
 

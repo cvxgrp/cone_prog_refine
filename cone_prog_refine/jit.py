@@ -18,8 +18,8 @@ limitations under the License.
 ENABLE_JIT = False
 ENABLE_NJIT = False
 
-ENABLE_JIT = True
-ENABLE_NJIT = True
+# ENABLE_JIT = True
+# ENABLE_NJIT = True
 
 
 identity_decorator = lambda x: x

@@ -243,7 +243,7 @@ class TestProduct(BaseTestCone):
         self.assertTrue(np.alltrue(Pix == [1, 0, 0]))
 
         #cones = [[semi_def_cone, 3], [semi_def_cone, 1]]
-        cache = make_prod_cone_cache({'s': [3, 1]})
+        cache = make_prod_cone_cache({'s': [2, 1]})
         Pix = prod_cone.Pi(np.arange(4.), cache)
         self.assertTrue(np.allclose(Pix - np.array(
             [0.20412415, 0.90824829, 2.02062073, 3]), 0.))

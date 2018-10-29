@@ -706,31 +706,33 @@ def prod_cone_D(z, x, cache):
 
     # second order
     for index, size in enumerate(q):
-        result[cur:cur + size] = sec_ord_Pi(z[cur:cur + size],
-                                            x[cur:cur + size],
-                                            q_cache[index])
+        result[cur:cur + size] = sec_ord_D(z[cur:cur + size],
+                                           x[cur:cur + size],
+                                           q_cache[index])
         cur += size
 
     # semi-def
     for index, size in enumerate(s):
-        result[cur:cur + size] = semidef_cone_Pi(z[cur:cur + size],
-                                                 x[cur:cur + size],
-                                                 s_cache[index])
-        cur += size
+        vecsize = sizemat2sizevec(size)
+        result[cur:cur + vecsize] = semidef_cone_D(z[cur:cur + vecsize],
+                                                   x[cur:cur + vecsize],
+                                                   s_cache[index])
+        cur += vecsize
 
     # exp-pri
-    for index, size in enumerate(ep):
-        result[cur:cur + size] = exp_pri_Pi(z[cur:cur + size],
-                                            x[cur:cur + size],
-                                            ep_cache[index])
-        cur += size
+    for index in range(ep):
+        result[cur:cur + 3] = exp_pri_D(z[cur:cur + 3],
+                                        x[cur:cur + 3],
+                                        ep_cache[index])
+        cur += 3
 
     # exp-dua
-    for index, size in enumerate(ed):
-        result[cur:cur + size] = exp_dua_Pi(z[cur:cur + size],
-                                            x[cur:cur + size],
-                                            ed_cache[index])
-        cur += size
+    for index in range(ed):
+        size = 3
+        result[cur:cur + 3] = exp_dua_D(z[cur:cur + 3],
+                                        x[cur:cur + 3],
+                                        ed_cache[index])
+        cur += 3
 
     assert cur == len(z)
     return result
@@ -761,21 +763,22 @@ def prod_cone_Pi(z, cache):
 
     # semi-def
     for index, size in enumerate(s):
-        result[cur:cur + size] = semidef_cone_Pi(z[cur:cur + size],
-                                                 s_cache[index])
-        cur += size
+        vecsize = sizemat2sizevec(size)
+        result[cur:cur + vecsize] = semidef_cone_Pi(z[cur:cur + vecsize],
+                                                    s_cache[index])
+        cur += vecsize
 
     # exp-pri
-    for index, size in enumerate(ep):
-        result[cur:cur + size] = exp_pri_Pi(z[cur:cur + size],
-                                            ep_cache[index])
-        cur += size
+    for index in range(ep):
+        result[cur:cur + 3] = exp_pri_Pi(z[cur:cur + 3],
+                                         ep_cache[index])
+        cur += 3
 
     # exp-dua
-    for index, size in enumerate(ed):
-        result[cur:cur + size] = exp_dua_Pi(z[cur:cur + size],
-                                            ed_cache[index])
-        cur += size
+    for index in range(ed):
+        result[cur:cur + 3] = exp_dua_Pi(z[cur:cur + 3],
+                                         ed_cache[index])
+        cur += 3
 
     return result
 
@@ -800,56 +803,54 @@ def make_prod_cone_cache(dim_dict):
 
     s = dim_dict['s'] if 's' in dim_dict else np.empty(0)
     s_cache = []
-    for size in s:
-        m = sizevec2sizemat(size)
-        s_cache.append((np.zeros((m, m)),
-                        np.zeros(m))
+    for matrix_size in s:
+        s_cache.append((np.zeros((matrix_size, matrix_size)),
+                        np.zeros(matrix_size))
                        )
     # needed for numba
     if not len(s):
         s_cache.append((np.zeros((2, 2)), np.zeros(1)))
     s_cache = tuple(s_cache)
 
-    ep = dim_dict['ep'] if 'ep' in dim_dict else np.empty(0)
+    ep = dim_dict['ep'] if 'ep' in dim_dict else 0
     ep_cache = []
-    for size in ep:
-        ep_cache.append(np.zeros(1))
+    for i in range(ep):
+        ep_cache.append(np.zeros(3))
     # needed for numba
-    if not len(ep):
+    if not ep:
         ep_cache.append(np.zeros(1))
     ep_cache = tuple(ep_cache)
 
-    ed = dim_dict['ed'] if 'ed' in dim_dict else np.empty(0)
+    ed = dim_dict['ed'] if 'ed' in dim_dict else 0
     ed_cache = []
-    for size in ed:
-        ed_cache.append(np.empty(3))
+    for i in range(ed):
+        ed_cache.append(np.zeros(3))
     # needed for numba
-    if not len(ed):
-        ed_cache.append(np.empty(3))
+    if not ed:
+        ed_cache.append(np.zeros(1))
     ed_cache = tuple(ed_cache)
 
     return zero, l, q, q_cache, s, s_cache, ep, ep_cache, ed, ed_cache
 
 
 @jit
-def embedded_cone_D(z, dz, cache):
+def embedded_cone_D(z, dz, cones_cache, n):
     """Der. of proj. on the cone of the primal-dual embedding."""
     # return dz - prod_cone.D(-z, dz, cache)
-    cache, n = cache
     result = np.empty_like(dz)
 
     result[:n] = dz[:n]
 
-    ds = prod_cone.D(-z[n:-1], dz[n:-1], cache)
+    ds = prod_cone_D(-z[n:-1], dz[n:-1], cones_cache)
     result[n:-1] = ds + dz[n:-1]
 
-    result[-1:] = non_neg_cone.D(-z[-1:], dz[-1:], np.zeros(1)) + dz[-1:]
+    result[-1:] = non_neg_D(-z[-1:], dz[-1:], np.zeros(1)) + dz[-1:]
 
     return result
 
 
 @njit
-def embedded_cone_Pi(z, cones, n):
+def embedded_cone_Pi(z, cones_cache, n):
     """Projection on the cone of the primal-dual embedding."""
 
     # emb_cones = [[zero_cone, n]] + cones + [[non_neg_cone, 1]]
@@ -858,10 +859,10 @@ def embedded_cone_Pi(z, cones, n):
 
     result = np.empty_like(z)
     result[:n] = z[:n]
-    s, cache = prod_cone.Pi(-z[n:-1], cones)
+    s = prod_cone_Pi(-z[n:-1], cones_cache)
     result[n:-1] = s + z[n:-1]
-    kappa, _ = non_neg_cone.Pi(-z[-1:])
+    kappa = non_neg_Pi(-z[-1:])
     result[-1:] = kappa + z[-1:]
-    return result, (cache, n)
+    return result
 
 embedded_cone = cone(embedded_cone_Pi, embedded_cone_D, embedded_cone_D)

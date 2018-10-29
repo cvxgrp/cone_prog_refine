@@ -26,14 +26,14 @@ import time
 class ProblemTest(unittest.TestCase):
 
     def test_Q(self):
-        dim_dict = {'f': 10, 'l': 20, 'q': [10]}
+        dim_dict = {'f': 10, 'l': 20, 'q': [10], 's': [5], 'ep': 20, 'ed': 0}
         A, b, c, _, x_true, s_true, y_true = generate_problem(dim_dict,
                                                               mode='solvable')
 
-        cones = dim2cones(dim_dict)
-
+        #cones = dim2cones(dim_dict)
+        cone_caches = make_prod_cone_cache(dim_dict)
         u, v = xsy2uv(x_true, s_true, y_true)
-        res, _ = residual(u - v, A, b, c, cones)
+        res = residual(u - v, A, b, c, cone_caches)
 
         self.assertTrue(np.allclose(res[:-1], 0.))
         self.assertTrue(np.allclose(res[-1], 0.))
@@ -43,7 +43,7 @@ class ProblemTest(unittest.TestCase):
         A, b, c, _, x_true, s_true, y_true = generate_problem(dim_dict,
                                                               mode='solvable')
         m, n = A.shape
-        cones = dim2cones(dim_dict)
+        cone_caches = make_prod_cone_cache(dim_dict)
         # problem = ConicProblem(A, b, c, cones)
         u_true, v_true = xsy2uv(x_true, s_true, y_true, 1., 0.)
         x, s, y, _, _ = uv2xsytaukappa(u_true, v_true, len(x_true))
@@ -62,7 +62,7 @@ class ProblemTest(unittest.TestCase):
         z = u - v
         print('z', z)
 
-        proj_u, cache = embedded_cone_Pi(z, cones, n)
+        proj_u = embedded_cone_Pi(z, cone_caches, n)
         proj_v = proj_u - z
 
         print(' u = Pi z', proj_u)
@@ -73,26 +73,27 @@ class ProblemTest(unittest.TestCase):
         self.assertTrue(np.allclose(proj_u - proj_v, z))
 
     def test_embedded_cone_der_proj(self):
-        dim_dict = {'f': 2, 'l': 20, 'q': [2, 3, 5], 's': [3, 4]}
+        dim_dict = {'f': 2, 'l': 20, 'q': [2, 3, 5], 's': [3, 4], 'ep': 4}
         A, b, c, _, x_true, s_true, y_true = generate_problem(
             dim_dict, mode='solvable')
         m, n = A.shape
-        cones = dim2cones(dim_dict)
+        cone_caches = make_prod_cone_cache(dim_dict)
         #problem = ConicProblem(A, b, c, cones)
         u_true, v_true = xsy2uv(x_true, s_true, y_true, 1., 0.)
         z_true = u_true - v_true
 
         delta = np.random.randn(len(z_true)) * 1E-7
-        proj_u, cone_caches = embedded_cone_Pi(z_true, cones, n)
+        proj_u = embedded_cone_Pi(z_true, cone_caches, n)
         proj_v = proj_u - z_true
 
         self.assertTrue(np.allclose(proj_u - u_true, 0.))
         self.assertTrue(np.allclose(proj_v - v_true, 0.))
-        dproj = embedded_cone_D(z_true, delta, cone_caches)
+        dproj = embedded_cone_D(z_true, delta, cone_caches, n)
 
         #deriv = EmbeddedConeDerProj(problem.n, z_true, cone)
-        u_plus_delta, _ = embedded_cone_Pi(
-            z_true + delta, cones, n)
+        new_cone_caches = make_prod_cone_cache(dim_dict)
+        u_plus_delta = embedded_cone_Pi(
+            z_true + delta, new_cone_caches, n)
 
         #u_plus_delta, v_plus_delta = problem.embedded_cone_proj(z_true + delta)
         # dproj = deriv@delta

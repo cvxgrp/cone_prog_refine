@@ -83,11 +83,11 @@ def Q_rmatvec(A, b, c, u):
     return -Q_matvec(A, b, c, u)
 
 
-def Q(A, b, c):
-    m, n = A.shape
-    return LinearOperator(shape=(n + m + 1, n + m + 1),
-                          matvec=lambda u: Q_matvec(A, b, c, u),
-                          rmatvec=lambda v: - Q_matvec(A, b, c, v))
+# def Q(A, b, c):
+#     m, n = A.shape
+#     return LinearOperator(shape=(n + m + 1, n + m + 1),
+#                           matvec=lambda u: Q_matvec(A, b, c, u),
+#                           rmatvec=lambda v: - Q_matvec(A, b, c, v))
 
 
 @jit
@@ -97,30 +97,31 @@ def norm_Q(A, b, c):
 
 @jit
 def residual_D(z, dz, A, b, c, cones_caches):
-    du = embedded_cone.D(z, dz, cones_caches)
+    m, n = A.shape
+    du = embedded_cone_D(z, dz, cones_caches, n)
     dv = du - dz
     return Q_matvec(A, b, c, du) - dv
 
 
 @jit
 def residual_DT(z, dres, A, b, c, cones_caches):
-    return embedded_cone.DT(z,
-                            -Q_matvec(A, b, c, dres) - dres,
-                            cones_caches) + dres
+    m, n = A.shape
+    return embedded_cone_D(z, -Q_matvec(A, b, c, dres) - dres,
+                           cones_caches, n) + dres
 
 
 @jit
-def residual_and_uv(z, A, b, c, cones):
+def residual_and_uv(z, A, b, c, cones_caches):
     m, n = A.shape
-    u, cache = embedded_cone.Pi(z, cones, n)
+    u = embedded_cone_Pi(z, cones_caches, n)
     v = u - z
-    return Q_matvec(A, b, c, u) - v, u, v, cache
+    return Q_matvec(A, b, c, u) - v, u, v
 
 
-#@jit
-def residual(z, A, b, c, cones):
-    res, u, v, cache = residual_and_uv(z, A, b, c, cones)
-    return res, cache
+@jit
+def residual(z, A, b, c, cones_caches):
+    res, u, v = residual_and_uv(z, A, b, c, cones_caches)
+    return res
 
 
 # def scs_solve(A, b, c, dim_dict, **kwargs):

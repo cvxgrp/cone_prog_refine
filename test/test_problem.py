@@ -112,17 +112,18 @@ class ProblemTest(unittest.TestCase):
             u_plus_delta, atol=1E-6))
 
     def test_residual_der(self):
-        dim_dict = {'l': 10, 'q': [5, 10], 's': [3, 4]}
+        dim_dict = {'l': 10, 'q': [5, 10], 's': [3, 4], 'ep': 10, 'ed': 2}
         A, b, c, _, x_true, s_true, y_true = generate_problem(
             dim_dict, mode='solvable', density=.3)
         m, n = A.shape
-        cones = dim2cones(dim_dict)
+        cones_caches = make_prod_cone_cache(dim_dict)
         u_true, v_true = xsy2uv(x_true, s_true, y_true, 1., 0.)
         z_true = u_true - v_true
 
-        res, cones_caches = residual(z_true, A, b, c, cones)
+        res = residual(z_true, A, b, c, cones_caches)
         delta = np.random.randn(len(z_true)) * 1E-7
-        residual_z_plus_delta, _ = residual(z_true + delta, A, b, c, cones)
+        residual_z_plus_delta = residual(z_true + delta, A, b, c,
+                                         make_prod_cone_cache(dim_dict))
         dres = residual_D(z_true, delta, A, b, c, cones_caches)
 
         print('delta:')
@@ -161,14 +162,13 @@ class ProblemTest(unittest.TestCase):
         if (kwargs['mode'] != 'solvable'):
             solvable = False
         print('generating problem')
-        A, b, c, _, x_true, s_true, y_true = generate_problem(dim_dict,
-                                                              **kwargs)
+        A, b, c, dim_dict, x_true, s_true, y_true = generate_problem(dim_dict,
+                                                                     **kwargs)
         m, n = A.shape
 
-        cones = dim2cones(dim_dict)
         u, v = xsy2uv(x_true, s_true, y_true, solvable, not solvable)
 
-        embedded_res, _ = residual(u - v, A, b, c, cones)
+        embedded_res = residual(u - v, A, b, c, make_prod_cone_cache(dim_dict))
         self.assertTrue(np.allclose(embedded_res, 0.))
 
         print('calling solver')
@@ -178,16 +178,16 @@ class ProblemTest(unittest.TestCase):
                              feastol=1e-15,
                              reltol=1e-15,
                              abstol=1e-15,
-                             # max_iters=10
                              )
         solver_end = time.time()
-        pridua_res, _ = residual(z, A, b, c, cones)
+        pridua_res = residual(z, A, b, c, make_prod_cone_cache(dim_dict))
         if not (np.alltrue(pridua_res == 0.)):
             refine_start = time.time()
-            z_plus = refine(A, b, c, cones, z)
+            z_plus = refine(A, b, c, dim_dict, z)
             refine_end = time.time()
 
-            pridua_res_new, _ = residual(z_plus, A, b, c, cones)
+            pridua_res_new = residual(
+                z_plus, A, b, c, make_prod_cone_cache(dim_dict))
             print('\n\nSolver time: %.2e' % (solver_end - solver_start))
             print("||pridua_res before refinement||")
             oldnorm = np.linalg.norm(pridua_res)
@@ -214,10 +214,10 @@ class ProblemTest(unittest.TestCase):
             dim_dict, **kwargs)
         m, n = A.shape
 
-        cones = dim2cones(dim_dict)
         u, v = xsy2uv(x_true, s_true, y_true, solvable, not solvable)
 
-        embedded_res, _ = residual(u - v, A, b, c, cones)
+        embedded_res = residual(
+            u - v, A, b, c, make_prod_cone_cache(dim_dict))
         self.assertTrue(np.allclose(embedded_res, 0.))
 
         print('calling solver')
@@ -227,13 +227,14 @@ class ProblemTest(unittest.TestCase):
                             eps=1e-15,
                             max_iters=1000)
         solver_end = time.time()
-        pridua_res, _ = residual(z, A, b, c, cones)
+        pridua_res = residual(z, A, b, c, make_prod_cone_cache(dim_dict))
         if not (np.alltrue(pridua_res == 0.)):
             refine_start = time.time()
-            z_plus = refine(A, b, c, cones, z)
+            z_plus = refine(A, b, c, dim_dict, z)
             refine_end = time.time()
 
-            pridua_res_new, _ = residual(z_plus, A, b, c, cones)
+            pridua_res_new = residual(
+                z_plus, A, b, c, make_prod_cone_cache(dim_dict))
             print('\n\nSolver time: %.2e' % (solver_end - solver_start))
             print("||pridua_res before refinement||")
             oldnorm = np.linalg.norm(pridua_res)

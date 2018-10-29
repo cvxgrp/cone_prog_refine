@@ -83,11 +83,11 @@ def Q_rmatvec(A, b, c, u):
     return -Q_matvec(A, b, c, u)
 
 
-# def Q(A, b, c):
-#     m, n = A.shape
-#     return LinearOperator(shape=(n + m + 1, n + m + 1),
-#                           matvec=lambda u: Q_matvec(A, b, c, u),
-#                           rmatvec=lambda v: - Q_matvec(A, b, c, v))
+def Q(A, b, c):
+    m, n = A.shape
+    return LinearOperator(shape=(n + m + 1, n + m + 1),
+                          matvec=lambda u: Q_matvec(A, b, c, u),
+                          rmatvec=lambda v: - Q_matvec(A, b, c, v))
 
 
 @jit
@@ -254,24 +254,25 @@ def normalized_resnorm(residual, z):
 
 
 @jit
-def backtrack(z, res, normres, step, A, b, c, cones, max_iters):
+def backtrack(z, res, normres, step, A, b, c, dim_dict, max_iters):
 
+    local_cone_cache = make_prod_cone_cache(dim_dict)
     for j in range(max_iters):
 
         test_z = z - step * 2**(-j)
         test_z /= np.abs(test_z[-1])
 
-        test_res, u, v, test_cache = residual_and_uv(
-            test_z, A, b, c, cones)
+        test_res, u, v = residual_and_uv(
+            test_z, A, b, c, local_cone_cache)
         test_normres = np.linalg.norm(test_res)
         if test_normres < normres:
-            return test_z, test_res, test_normres, test_cache, j, False
+            return test_z, test_res, test_normres, local_cone_cache, j, False
 
     return z, res, normres, None, j, True
 
 
 @jit
-def refine(A, b, c, cones, z,
+def refine(A, b, c, dim_dict, z,
            iters=2,
            lsqr_iters=30,
            max_backtrack=10,
@@ -283,7 +284,8 @@ def refine(A, b, c, cones, z,
     if verbose:
         print_header(z, sp.linalg.svds(Q(A, b, c), k=1)[1][0])
 
-    res, u, v, cache = residual_and_uv(z, A, b, c, cones)
+    cones_caches = make_prod_cone_cache(dim_dict)
+    res, u, v = residual_and_uv(z, A, b, c, cones_caches)
     normres = np.linalg.norm(res)
 
     start_time = time.time()
@@ -293,12 +295,12 @@ def refine(A, b, c, cones, z,
 
     for i in range(iters):
 
-        if norm(residual_DT(z, res, A, b, c, cache)) == 0.:
+        if norm(residual_DT(z, res, A, b, c, cones_caches)) == 0.:
             if verbose:
                 print_footer('Residual orthogonal to derivative.')
             return z / np.abs(z[-1])
 
-        _ = lsqr(A, b, c, cones, z, res,
+        _ = lsqr(A, b, c, cones_caches, z, res,
                  damp=1E-8,
                  atol=0.,
                  btol=0.,
@@ -308,9 +310,9 @@ def refine(A, b, c, cones, z,
 
         assert not True in np.isnan(step)
 
-        z, res, normres, cache, backtracks, failed = backtrack(
+        z, res, normres, cones_caches, backtracks, failed = backtrack(
             z, res, normres, step,
-            A, b, c, cones,
+            A, b, c, dim_dict,
             max_iters=max_backtrack)
 
         # print('normres returned by BT %.2e' % normres)

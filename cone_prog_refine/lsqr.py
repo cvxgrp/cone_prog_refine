@@ -99,7 +99,7 @@ def _sym_ortho(a, b):
 
 
 #@jit
-def lsqr(A_var, b_var, c_var, cones, z_var, residual_var, damp=0.0, atol=1e-8, btol=1e-8, conlim=1e8,
+def lsqr(A_var, b_var, c_var, cones_caches, z_var, residual_var, damp=0.0, atol=1e-8, btol=1e-8, conlim=1e8,
          iter_lim=None, show=False, calc_var=False, x0=None):
     """Find the least-squares solution to a large, sparse, linear system
     of equations.
@@ -314,14 +314,15 @@ def lsqr(A_var, b_var, c_var, cones, z_var, residual_var, damp=0.0, atol=1e-8, b
 
     # compute A and b
     from .problem import residual_and_uv, lsqr_D, lsqr_DT
-    residual, u_var, v_var, cache = residual_and_uv(
-        z_var, A_var, b_var, c_var, cones)
+    residual, u_var, v_var = residual_and_uv(
+        z_var, A_var, b_var, c_var, cones_caches)
     m_var, n_var = A_var.shape
     n = m_var + n_var + 1
     b = residual / z_var[-1]
-    matvec = lambda dz: lsqr_D(z_var, dz, A_var, b_var, c_var, cache, residual)
+    matvec = lambda dz: lsqr_D(
+        z_var, dz, A_var, b_var, c_var, cones_caches, residual)
     rmatvec = lambda dres: lsqr_DT(
-        z_var, dres, A_var, b_var, c_var, cache, residual)
+        z_var, dres, A_var, b_var, c_var, cones_caches, residual)
 
     b = np.atleast_1d(b)
     if b.ndim > 1:

@@ -127,8 +127,8 @@ def ecos_solve(A, b, c, dim_dict, **kwargs):
         y /= -obj
 
         print('primal infeas. cert residual norm', np.linalg.norm(A.T@y))
-        cones = dim2cones(dim_dict)
-        proj, _ = prod_cone.Pi(-y, cones)
+        #cones = dim2cones(dim_dict)
+        proj = prod_cone.Pi(-y, make_prod_cone_cache(dim_dict))
         print('primal infeas dist from cone', np.linalg.norm(proj))
         # if not (np.linalg.norm(proj) == 0.) and sol['info']['exitFlag'] == 1.:
         #     raise SolverError
@@ -144,8 +144,7 @@ def ecos_solve(A, b, c, dim_dict, **kwargs):
         s /= -obj
 
         print('dual infeas. cert residual norm', np.linalg.norm(A@x + s))
-        cones = dim2cones(dim_dict)
-        proj, _ = prod_cone.Pi(s, cones)
+        proj = prod_cone.Pi(s, make_prod_cone_cache(dim_dict))
         print('dual infeas cert dist from cone', np.linalg.norm(s - proj))
         # if not (np.linalg.norm(s - proj) == 0.) and sol['info']['exitFlag'] == 2.:
         #     raise SolverError
@@ -181,9 +180,8 @@ def solve(A, b, c, dim_dict,
 
     solver_time = time.time() - solver_start
 
-    cones = dim2cones(dim_dict)
-
-    new_residual, u, v, _ = residual_and_uv(z, A, b, c, cones)
+    new_residual, u, v = residual_and_uv(
+        z, A, b, c, make_prod_cone_cache(dim_dict))
     x, s, y, tau, kappa = uv2xsytaukappa(u, v, A.shape[1])
 
     pres = np.linalg.norm(A@x + s - b) / (1 + np.linalg.norm(b))
@@ -192,7 +190,7 @@ def solve(A, b, c, dim_dict,
 
     print('pres %.2e, dres %.2e, gap %.2e' % (pres, dres, gap))
 
-    z_plus = refine(A, b, c, cones, z,
+    z_plus = refine(A, b, c, dim_dict, z,
                     verbose=verbose,
                     iters=max_iters,
                     lsqr_iters=max_lsqr_iters)  # ,
@@ -201,7 +199,8 @@ def solve(A, b, c, dim_dict,
     if return_z:
         return z_plus, info
     else:
-        new_residual, u, v, _ = residual_and_uv(z_plus, A, b, c, cones)
+        new_residual, u, v =\
+            residual_and_uv(z_plus, A, b, c, make_prod_cone_cache(dim_dict))
         x, s, y, tau, kappa = uv2xsytaukappa(u, v, A.shape[1])
         pres = np.linalg.norm(A@x + s - b) / (1 + np.linalg.norm(b))
         dres = np.linalg.norm(A.T@y + c) / (1 + np.linalg.norm(c))

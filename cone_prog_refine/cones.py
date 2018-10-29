@@ -359,6 +359,9 @@ def fourth_case_D(r, s, t, x, y, z, dr, ds, dt):
 
     # print('fourth case D')
     assert not y == 0
+    # if y == 0:
+    #     return np.zeros(3)
+
     error = make_error(r, s, t, x, y, z)
     rhs = make_rhs(x, y, z, dr, ds, dt)
     # print('base rhs', rhs)

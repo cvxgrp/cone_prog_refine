@@ -13,8 +13,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+# these should be disabled when developing
+
 ENABLE_JIT = False
 ENABLE_NJIT = False
+
+ENABLE_JIT = True
+ENABLE_NJIT = True
+
 
 identity_decorator = lambda x: x
 

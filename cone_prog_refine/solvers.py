@@ -59,18 +59,18 @@ def scs_solve(A, b, c, dim_dict, **kwargs):
         y = np.zeros_like(sol['y']) \
             if np.any(np.isnan(sol['y'])) else sol['y']
 
-        if np.allclose(y, 0.):
+        if np.allclose(y, 0.) and c@x < 0:
             obj = c@x
-            assert obj < 0
+            # assert obj < 0
             x /= -obj
             s /= -obj
-            print('primal res:', np.linalg.norm(A@x + s))
+            # print('primal res:', np.linalg.norm(A@x + s))
 
-        if np.allclose(s, 0.):
+        if np.allclose(s, 0.) and b@y < 0:
             obj = b@y
-            assert obj < 0
+            # assert obj < 0
             y /= -obj
-            print('dual res:', np.linalg.norm(A.T@y))
+            # print('dual res:', np.linalg.norm(A.T@y))
 
         # print('SCS NONSOLVED')
         # print('x', x)

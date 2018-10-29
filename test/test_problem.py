@@ -108,7 +108,7 @@ class ProblemTest(unittest.TestCase):
 
         self.assertTrue(np.allclose(
             u_true + dproj,
-            u_plus_delta))
+            u_plus_delta, atol=1E-6))
 
     def test_residual_der(self):
         dim_dict = {'l': 10, 'q': [5, 10], 's': [3, 4]}

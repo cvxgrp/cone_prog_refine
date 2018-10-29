@@ -53,7 +53,7 @@ class BaseTestCone(unittest.TestCase):
     sample_vecs_are_diff = []
 
     def make_cache(self, n):
-        if not self.test_cone is semi_def_cone:
+        if not self.test_cone is semi_def_cone_single_cache:
             return np.empty(n)
         m = sizevec2sizemat(n)
         return (np.empty((m, m)), np.empty(m))
@@ -283,7 +283,7 @@ class TestProduct(BaseTestCone):
 
 class TestSemiDefinite(BaseTestCone):
 
-    test_cone = semi_def_cone
+    test_cone = semi_def_cone_single_cache
     sample_vecs = [[2, 0, 0, 2, 0, 2], [1.], [-1],
                    np.array([10, 20., 10]),
                    np.array([10, 0., -3.]),

@@ -660,8 +660,8 @@ def inner(m, lambda_plus, lambda_minus, dS_tilde, dZ_tilde):
 
 
 @njit
-def semidef_cone_D(z, dz, cache):
-    U, lambda_var = cache
+def semidef_cone_D(z, dz, cache_eivec, cache_eival):
+    U, lambda_var = cache_eivec, cache_eival
     dZ = vec2mat(dz)
     dZ_tilde = U.T @ dZ @ U
     lambda_plus = np.maximum(lambda_var, 0.)
@@ -677,24 +677,37 @@ def semidef_cone_D(z, dz, cache):
 
 
 @njit
-def semidef_cone_Pi(z, cache):
+def semidef_cone_Pi(z, cache_eivec, cache_eival):
 
     Z = vec2mat(z)
     eival, eivec = np.linalg.eigh(Z)
     result = mat2vec(eivec @ np.diag(np.maximum(eival, 0.)) @ eivec.T)
 
-    cache[0][:, :] = eivec
-    cache[1][:] = eival
+    cache_eivec[:, :] = eivec
+    cache_eival[:] = eival
 
     return result
 
 semi_def_cone = cone(semidef_cone_Pi, semidef_cone_D, semidef_cone_D)
 
 
-@jit
+def semidef_cone_D_single_cache(z, dz, cache):
+    return semidef_cone_D(z, dz, cache[0], cache[1])
+
+
+def semidef_cone_Pi_single_cache(z, cache):
+    return semidef_cone_Pi(z, cache[0], cache[1])
+
+# used as test harness for functions below
+semi_def_cone_single_cache = \
+    cone(semidef_cone_Pi_single_cache, semidef_cone_D_single_cache,
+         semidef_cone_D_single_cache)
+
+
+@njit
 def prod_cone_D(z, x, cache):
 
-    zero, l, q, q_cache, s, s_cache, ep, ep_cache, ed, ed_cache = cache
+    zero, l, q, q_cache, s, s_cache_eivec, s_cache_eival, ep, ep_cache, ed, ed_cache = cache
 
     result = np.empty_like(z)
     cur = 0
@@ -719,7 +732,8 @@ def prod_cone_D(z, x, cache):
         vecsize = sizemat2sizevec(size)
         result[cur:cur + vecsize] = semidef_cone_D(z[cur:cur + vecsize],
                                                    x[cur:cur + vecsize],
-                                                   s_cache[index])
+                                                   s_cache_eivec[index],
+                                                   s_cache_eival[index])
         cur += vecsize
 
     # exp-pri
@@ -745,7 +759,7 @@ def prod_cone_D(z, x, cache):
 def prod_cone_Pi(z, cache):
     """Projection on product of zero, non-neg, sec. ord., sd, exp p., exp d."""
 
-    zero, l, q, q_cache, s, s_cache, ep, ep_cache, ed, ed_cache = cache
+    zero, l, q, q_cache, s, s_cache_eivec, s_cache_eival,  ep, ep_cache, ed, ed_cache = cache
 
     result = np.empty_like(z)
     cur = 0
@@ -768,7 +782,8 @@ def prod_cone_Pi(z, cache):
     for index, size in enumerate(s):
         vecsize = sizemat2sizevec(size)
         result[cur:cur + vecsize] = semidef_cone_Pi(z[cur:cur + vecsize],
-                                                    s_cache[index])
+                                                    s_cache_eivec[index],
+                                                    s_cache_eival[index])
         cur += vecsize
 
     # exp-pri
@@ -805,15 +820,18 @@ def make_prod_cone_cache(dim_dict):
     q_cache = tuple(q_cache)
 
     s = dim_dict['s'] if 's' in dim_dict else np.empty(0)
-    s_cache = []
+    s_cache_eivec = []
+    s_cache_eival = []
     for matrix_size in s:
-        s_cache.append((np.zeros((matrix_size, matrix_size)),
-                        np.zeros(matrix_size))
-                       )
+        s_cache_eivec.append(np.zeros((matrix_size, matrix_size)))
+        s_cache_eival.append(np.zeros(matrix_size))
+
     # needed for numba
     if not len(s):
-        s_cache.append((np.zeros((2, 2)), np.zeros(1)))
-    s_cache = tuple(s_cache)
+        s_cache_eivec.append(np.zeros((2, 2)))
+        s_cache_eival.append(np.zeros(1))
+    s_cache_eivec = tuple(s_cache_eivec)
+    s_cache_eival = tuple(s_cache_eival)
 
     ep = dim_dict['ep'] if 'ep' in dim_dict else 0
     ep_cache = []
@@ -833,7 +851,7 @@ def make_prod_cone_cache(dim_dict):
         ed_cache.append(np.zeros(1))
     ed_cache = tuple(ed_cache)
 
-    return zero, l, q, q_cache, s, s_cache, ep, ep_cache, ed, ed_cache
+    return zero, l, q, q_cache, s, s_cache_eivec, s_cache_eival, ep, ep_cache, ed, ed_cache
 
 
 @jit

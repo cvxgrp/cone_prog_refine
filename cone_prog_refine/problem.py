@@ -17,31 +17,36 @@ import time
 import numpy as np
 from numpy.linalg import norm
 import scipy.sparse as sp
-from scipy.sparse.linalg import LinearOperator
+import numba as nb
 
 from scipy.sparse.linalg import lsqr, LinearOperator
 
-from .cones import prod_cone, free_cone, zero_cone,\
-    non_neg_cone, sec_ord_cone, semi_def_cone
-
+from .cones import prod_cone
 from .utils import *
 
-from .jit import jit, njit
 
-
-@jit
+@nb.jit(nb.types.UniTuple(nb.double[:], 2)(
+    nb.double[:], nb.double[:], nb.double[:], nb.double, nb.double),
+    npython=True)
 def xsy2uv(x, s, y, tau=1., kappa=0.):
-    return np.concatenate([x, y, [tau]]), \
-        np.concatenate([np.zeros(len(x)), s, [kappa]])
+    n = len(x)
+    m = len(s)
+    u = np.empty(m + n + 1)
+    v = np.empty_like(u)
+    u[:n] = x
+    u[n:-1] = y
+    u[-1] = tau
+    v[:n] = 0
+    v[n:-1] = s
+    v[-1] = kappa
+    return u, v
 
 
-@jit
 def xsy2z(x, s, y, tau=1., kappa=0.):
     u, v = xsy2uv(x, s, y, tau, kappa)
     return u - v
 
 
-@jit
 def uv2xsytaukappa(u, v, n):
     tau = np.float(u[-1])
     kappa = np.float(v[-1])
@@ -51,13 +56,11 @@ def uv2xsytaukappa(u, v, n):
     return x, s, y, tau, kappa
 
 
-@jit
 def z2uv(z, n, cones):
     u, cache = embedded_cone_Pi(z, cones, n)
     return u, u - z, cache
 
 
-@jit
 def z2xsy(z, n, cones):
     # TODO implement infeasibility cert.
     u, cache = embedded_cone_Pi(z, cones, n)
@@ -66,7 +69,6 @@ def z2xsy(z, n, cones):
     return x, s, y
 
 
-@jit
 def Q_matvec(A, b, c, u):
     m, n = A.shape
     if len(u.shape) > 0:
@@ -78,7 +80,6 @@ def Q_matvec(A, b, c, u):
     return result
 
 
-@jit
 def Q_rmatvec(A, b, c, u):
     return -Q_matvec(A, b, c, u)
 
@@ -90,12 +91,10 @@ def Q(A, b, c):
                           rmatvec=lambda v: - Q_matvec(A, b, c, v))
 
 
-@jit
 def norm_Q(A, b, c):
     return sp.linalg.svds(Q(A, b, c), k=1)[1][0]
 
 
-@jit
 def residual_D(z, dz, A, b, c, cones_caches):
     m, n = A.shape
     du = embedded_cone_D(z, dz, cones_caches, n)
@@ -103,14 +102,12 @@ def residual_D(z, dz, A, b, c, cones_caches):
     return Q_matvec(A, b, c, du) - dv
 
 
-@jit
 def residual_DT(z, dres, A, b, c, cones_caches):
     m, n = A.shape
     return embedded_cone_D(z, -Q_matvec(A, b, c, dres) - dres,
                            cones_caches, n) + dres
 
 
-@jit
 def residual_and_uv(z, A, b, c, cones_caches):
     m, n = A.shape
     u = embedded_cone_Pi(z, cones_caches, n)
@@ -118,7 +115,6 @@ def residual_and_uv(z, A, b, c, cones_caches):
     return Q_matvec(A, b, c, u) - v, u, v
 
 
-@jit
 def residual(z, A, b, c, cones_caches):
     res, u, v = residual_and_uv(z, A, b, c, cones_caches)
     return res
@@ -182,7 +178,6 @@ def residual(z, A, b, c, cones_caches):
 #     return z, sol['info']
 
 
-@jit
 def print_header(z, norm_Q):
     print()
     print()
@@ -197,7 +192,6 @@ def print_header(z, norm_Q):
     print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
 
 
-@jit
 def subopt_stats(A, b, c, x, s, y):
     pri_res_norm = np.linalg.norm(
         A@x + s - b) / (1. + np.linalg.norm(b))
@@ -209,7 +203,6 @@ def subopt_stats(A, b, c, x, s, y):
     return pri_res_norm, dua_res_norm, rel_gap, compl_gap
 
 
-@jit
 # def print_stats(i, residual, residual_DT, num_lsqr_iters, start_time):
 def print_stats(i, residual, z, num_lsqr_iters, backtracks, start_time):
     print('%d\t%.2e\t%.0e\t  %d\t%d\t%.2f' %
@@ -218,20 +211,17 @@ def print_stats(i, residual, z, num_lsqr_iters, backtracks, start_time):
            time.time() - start_time))
 
 
-@jit
 def print_footer(message):
     print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
     print(message)
     print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
 
 
-@jit
 def lsqr_D(z, dz, A, b, c, cache, residual):
     return residual_D(z, dz, A, b, c, cache) / z[-1] - (residual /
                                                         z[-1]**2) * dz[-1]
 
 
-@jit
 def lsqr_DT(z, dres, A, b, c, cache, residual):
     m, n = A.shape
     e_minus1 = np.zeros(n + m + 1)
@@ -248,12 +238,10 @@ def lsqr_DT(z, dres, A, b, c, cache, residual):
 #     return residual_DT(z, dres, A, b, c, cache)
 
 
-@jit
 def normalized_resnorm(residual, z):
     return np.linalg.norm(residual / z[-1])
 
 
-@jit
 def backtrack(z, res, normres, step, A, b, c, dim_dict, max_iters):
 
     local_cone_cache = make_prod_cone_cache(dim_dict)
@@ -271,7 +259,6 @@ def backtrack(z, res, normres, step, A, b, c, dim_dict, max_iters):
     return z, res, normres, None, j, True
 
 
-@jit
 def refine(A, b, c, dim_dict, z,
            iters=2,
            lsqr_iters=30,

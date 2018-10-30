@@ -19,7 +19,7 @@ from numpy.linalg import norm
 import scipy.sparse as sp
 from scipy.sparse.linalg import LinearOperator
 
-from .lsqr import lsqr
+from scipy.sparse.linalg import lsqr, LinearOperator
 
 from .cones import prod_cone, free_cone, zero_cone,\
     non_neg_cone, sec_ord_cone, semi_def_cone
@@ -300,7 +300,16 @@ def refine(A, b, c, dim_dict, z,
                 print_footer('Residual orthogonal to derivative.')
             return z / np.abs(z[-1])
 
-        _ = lsqr(A, b, c, cones_caches, z, res,
+        residual, u, v = residual_and_uv(
+            z, A, b, c, cones_caches)
+
+        D = LinearOperator((m + n + 1, m + n + 1),
+                           matvec=lambda dz: lsqr_D(
+            z, dz, A, b, c, cones_caches, residual),
+            rmatvec=lambda dres: lsqr_DT(
+            z, dres, A, b, c, cones_caches, residual)
+        )
+        _ = lsqr(D, residual,
                  damp=1E-8,
                  atol=0.,
                  btol=0.,

@@ -35,11 +35,11 @@ class MiscTest(unittest.TestCase):
             [1, -np.sqrt(2), 0, 1, 0, 1]))
 
     def test_vec2mat(self):
-        self.assertTrue(np.alltrue(vec2mat(np.array([1, 0, 1])) == np.eye(2)))
+        self.assertTrue(np.alltrue(vec2mat(np.array([1, 0., 1])) == np.eye(2)))
         self.assertTrue(np.alltrue(
-            vec2mat(np.array([1, -np.sqrt(2), 1.])) == np.array([[1, -1], [-1, 1]])))
+            vec2mat(np.array([1, -np.sqrt(2), 1.])) == np.array([[1., -1], [-1, 1]])))
         self.assertTrue(np.alltrue(
-            vec2mat(np.array([1, -np.sqrt(2), 0, 1, 0, 1])) ==
+            vec2mat(np.array([1., -np.sqrt(2), 0, 1, 0, 1])) ==
             np.array([[1, -1, 0], [-1, 1, 0], [0, 0, 1]])))
 
 
@@ -114,7 +114,7 @@ class BaseTestCone(unittest.TestCase):
 
 class TestNonNeg(BaseTestCone):
 
-    test_cone = non_neg_cone
+    test_cone = non_neg_cone_cached
     sample_vecs = [np.array(el, dtype=float) for el in
                    [np.array([-1., 0., 1.]), [1.], [0.], [],
                     [-1.], [-2, 2.], [1, 1], np.arange(1, 100), [-2, -1, 1, 2]]]
@@ -129,7 +129,7 @@ class TestNonNeg(BaseTestCone):
 
 class TestFree(BaseTestCone):
 
-    test_cone = free_cone
+    test_cone = free_cone_cached
     sample_vecs = [np.array(el, dtype=float) for el in
                    [np.array([-1., 0., 1.]), [1.], [0.], [],
                     [-1.], [-2., 2.], [1, 1], np.arange(1, 100), [-2, -1, 1, 2]]]
@@ -140,7 +140,7 @@ class TestFree(BaseTestCone):
 
 class TestZero(BaseTestCone):
 
-    test_cone = zero_cone
+    test_cone = zero_cone_cached
     sample_vecs = [np.array(el, dtype=float) for el in
                    [np.array([-1., 0., 1.]), [1.],
                     [-1.], [-2., 2.], [1,
@@ -284,8 +284,8 @@ class TestProduct(BaseTestCone):
 class TestSemiDefinite(BaseTestCone):
 
     test_cone = semi_def_cone_single_cache
-    sample_vecs = [[2, 0, 0, 2, 0, 2], [1.], [-1],
-                   np.array([10, 20., 10]),
+    sample_vecs = [np.array([2, 0, 0, 2, 0, 2.]), np.array([1.]), np.array([-1.]),
+                   np.array([10, 20., 10.]),
                    np.array([10, 0., -3.]),
                    np.array([10, 20., 0., 10, 0., 10]),
                    np.array([1, 20., 30., 4, 50., 6]),

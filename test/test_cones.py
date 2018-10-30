@@ -35,11 +35,11 @@ class MiscTest(unittest.TestCase):
             [1, -np.sqrt(2), 0, 1, 0, 1]))
 
     def test_vec2mat(self):
-        self.assertTrue(np.alltrue(vec2mat(np.array([1, 0., 1])) == np.eye(2)))
+        self.assertTrue(np.alltrue(vec2mat(np.array([1, 0, 1])) == np.eye(2)))
         self.assertTrue(np.alltrue(
-            vec2mat(np.array([1, -np.sqrt(2), 1.])) == np.array([[1., -1], [-1, 1]])))
+            vec2mat(np.array([1, -np.sqrt(2), 1.])) == np.array([[1, -1], [-1, 1]])))
         self.assertTrue(np.alltrue(
-            vec2mat(np.array([1., -np.sqrt(2), 0, 1, 0, 1])) ==
+            vec2mat(np.array([1, -np.sqrt(2), 0, 1, 0, 1])) ==
             np.array([[1, -1, 0], [-1, 1, 0], [0, 0, 1]])))
 
 
@@ -52,31 +52,21 @@ class BaseTestCone(unittest.TestCase):
     sample_vecs_are_in = []
     sample_vecs_are_diff = []
 
-    def make_cache(self, n):
-        if not self.test_cone is semi_def_cone_single_cache:
-            return np.empty(n)
-        m = sizevec2sizemat(n)
-        return (np.empty((m, m)), np.empty(m))
-
     def test_contains(self):
         for x, isin in zip(self.sample_vecs, self.sample_vecs_are_in):
-            cache = self.make_cache(len(x))
-            res = self.test_cone.Pi(x, cache)
-            Pix = res
+            Pix, cache = self.test_cone.Pi(x)
             self.assertTrue(np.alltrue(Pix == x) == isin)
 
     def test_proj(self):
         for x, proj_x in zip(self.sample_vecs, self.sample_vec_proj):
-            cache = self.make_cache(len(x))
-            Pix = self.test_cone.Pi(x, cache)
+            Pix, cache = self.test_cone.Pi(x)
             self.assertTrue(np.allclose(Pix, proj_x))
 
     def test_derivative(self):
         for x, isdiff in zip(self.sample_vecs,
                              self.sample_vecs_are_diff):
 
-            cache = self.make_cache(len(x))
-            proj_x = self.test_cone.Pi(x, cache)
+            proj_x, cache = self.test_cone.Pi(x)
 
             print('\nx:', x)
             print('Pi x:', proj_x)
@@ -90,9 +80,7 @@ class BaseTestCone(unittest.TestCase):
             else:
                 delta = np.random.randn(size_vec(x)) * 0.0001
                 print('x + delta:', x + delta)
-                new_cache = self.make_cache(len(x))
-                proj_x_plus_delta = self.test_cone.Pi(x + delta, new_cache)
-                #proj_x_plus_delta, new_cache = self.test_cone.Pi(x + delta)
+                proj_x_plus_delta, new_cache = self.test_cone.Pi(x + delta)
                 print('x, delta, cache:', x, delta, cache)
                 dproj_x = self.test_cone.D(x, delta, cache)
 
@@ -114,7 +102,7 @@ class BaseTestCone(unittest.TestCase):
 
 class TestNonNeg(BaseTestCone):
 
-    test_cone = non_neg_cone_cached
+    test_cone = non_neg_cone
     sample_vecs = [np.array(el, dtype=float) for el in
                    [np.array([-1., 0., 1.]), [1.], [0.], [],
                     [-1.], [-2, 2.], [1, 1], np.arange(1, 100), [-2, -1, 1, 2]]]
@@ -129,7 +117,7 @@ class TestNonNeg(BaseTestCone):
 
 class TestFree(BaseTestCone):
 
-    test_cone = free_cone_cached
+    test_cone = free_cone
     sample_vecs = [np.array(el, dtype=float) for el in
                    [np.array([-1., 0., 1.]), [1.], [0.], [],
                     [-1.], [-2., 2.], [1, 1], np.arange(1, 100), [-2, -1, 1, 2]]]
@@ -140,7 +128,7 @@ class TestFree(BaseTestCone):
 
 class TestZero(BaseTestCone):
 
-    test_cone = zero_cone_cached
+    test_cone = zero_cone
     sample_vecs = [np.array(el, dtype=float) for el in
                    [np.array([-1., 0., 1.]), [1.],
                     [-1.], [-2., 2.], [1,
@@ -223,69 +211,34 @@ class TestSecondOrder(BaseTestCone):
 
 class TestProduct(BaseTestCone):
 
-    test_cone = prod_cone
-
     def test_baseProduct(self):
-
-        cache = make_prod_cone_cache({'l': 3})
-        Pix = prod_cone.Pi(np.arange(3.), cache)
+        cones = [[non_neg_cone, 2], [non_neg_cone, 1]]
+        Pix, cache = prod_cone.Pi(np.arange(3.), cones)
         self.assertTrue(np.alltrue(Pix == np.arange(3.)))
-
-        cache = make_prod_cone_cache({'l': 3})
-        Pix = prod_cone.Pi(np.array([1., -1., -1.]), cache)
+        Pix, cache = prod_cone.Pi(np.array([1., -1., -1.]), cones)
         self.assertTrue(np.alltrue(Pix == [1, 0, 0]))
 
-        #cones = [[non_neg_cone, 2], [semi_def_cone, 1]]
-        cache = make_prod_cone_cache({'l': 2, 's': [1]})
-        Pix = prod_cone.Pi(np.arange(3.), cache)
+        cones = [[non_neg_cone, 2], [semi_def_cone, 1]]
+        Pix, cache = prod_cone.Pi(np.arange(3.), cones)
         self.assertTrue(np.alltrue(Pix == range(3)))
-        Pix = prod_cone.Pi(np.array([1., -1., -1.]), cache)
+        Pix, cache = prod_cone.Pi(np.array([1., -1., -1.]), cones)
         self.assertTrue(np.alltrue(Pix == [1, 0, 0]))
 
-        #cones = [[semi_def_cone, 3], [semi_def_cone, 1]]
-        cache = make_prod_cone_cache({'s': [2, 1]})
-        Pix = prod_cone.Pi(np.arange(4.), cache)
+        cones = [[semi_def_cone, 3], [semi_def_cone, 1]]
+        Pix, cache = prod_cone.Pi(np.arange(4.), cones)
         self.assertTrue(np.allclose(Pix - np.array(
             [0.20412415, 0.90824829, 2.02062073, 3]), 0.))
-        Pix = prod_cone.Pi(np.array([1, -20., 1, -1]), cache)
+        Pix, cache = prod_cone.Pi(np.array([1, -20., 1, -1]), cones)
 
         self.assertTrue(np.allclose(Pix, np.array([7.57106781, -10.70710678,
                                                    7.57106781,   0.])))
 
-    def test_deriv_Product(self):
-
-        dims = {'l': 3}
-        cache = make_prod_cone_cache(dims)
-        samples = [np.array([-5.3, 2., 11]),
-                   np.array([-10.3, -22., 13.])]
-
-        for x in samples:
-            proj_x = prod_cone.Pi(x, cache)
-            delta = np.random.randn(size_vec(x)) * 0.0001
-            print('x + delta:', x + delta)
-            new_cache = make_prod_cone_cache(dims)
-            proj_x_plus_delta = prod_cone.Pi(x + delta, new_cache)
-
-            print('x, delta, cache:', x, delta, cache)
-            dproj_x = prod_cone.D(x, delta, cache)
-
-            print('delta:')
-            print(delta)
-            print('Pi (x + delta) - Pi(x):')
-            print(proj_x_plus_delta - proj_x)
-            print('DPi delta:')
-            print(dproj_x)
-
-            self.assertTrue(np.allclose(
-                proj_x + dproj_x,
-                proj_x_plus_delta))
-
 
 class TestSemiDefinite(BaseTestCone):
 
-    test_cone = semi_def_cone_single_cache
-    sample_vecs = [np.array([2, 0, 0, 2, 0, 2.]), np.array([1.]), np.array([-1.]),
-                   np.array([10, 20., 10.]),
+    test_cone = semi_def_cone
+    sample_vecs = [[2, 0, 0, 2, 0, 2], [1.], [-1],
+                   np.array([10, 20., 10]),
                    np.array([10, 0., -3.]),
                    np.array([10, 20., 0., 10, 0., 10]),
                    np.array([1, 20., 30., 4, 50., 6]),

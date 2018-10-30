@@ -26,14 +26,14 @@ import time
 class ProblemTest(unittest.TestCase):
 
     def test_Q(self):
-        dim_dict = {'f': 10, 'l': 20, 'q': [10], 's': [5], 'ep': 20, 'ed': 0}
+        dim_dict = {'f': 10, 'l': 20, 'q': [10]}
         A, b, c, _, x_true, s_true, y_true = generate_problem(dim_dict,
                                                               mode='solvable')
 
-        #cones = dim2cones(dim_dict)
-        cone_caches = make_prod_cone_cache(dim_dict)
+        cones = dim2cones(dim_dict)
+
         u, v = xsy2uv(x_true, s_true, y_true)
-        res = residual(u - v, A, b, c, cone_caches)
+        res, _ = residual(u - v, A, b, c, cones)
 
         self.assertTrue(np.allclose(res[:-1], 0.))
         self.assertTrue(np.allclose(res[-1], 0.))
@@ -43,7 +43,7 @@ class ProblemTest(unittest.TestCase):
         A, b, c, _, x_true, s_true, y_true = generate_problem(dim_dict,
                                                               mode='solvable')
         m, n = A.shape
-        cone_caches = make_prod_cone_cache(dim_dict)
+        cones = dim2cones(dim_dict)
         # problem = ConicProblem(A, b, c, cones)
         u_true, v_true = xsy2uv(x_true, s_true, y_true, 1., 0.)
         x, s, y, _, _ = uv2xsytaukappa(u_true, v_true, len(x_true))
@@ -62,7 +62,7 @@ class ProblemTest(unittest.TestCase):
         z = u - v
         print('z', z)
 
-        proj_u = embedded_cone_Pi(z, cone_caches, n)
+        proj_u, cache = embedded_cone_Pi(z, cones, n)
         proj_v = proj_u - z
 
         print(' u = Pi z', proj_u)
@@ -73,27 +73,26 @@ class ProblemTest(unittest.TestCase):
         self.assertTrue(np.allclose(proj_u - proj_v, z))
 
     def test_embedded_cone_der_proj(self):
-        dim_dict = {'f': 2, 'l': 20, 'q': [2, 3, 5], 's': [3, 4], 'ep': 4}
+        dim_dict = {'f': 2, 'l': 20, 'q': [2, 3, 5], 's': [3, 4]}
         A, b, c, _, x_true, s_true, y_true = generate_problem(
             dim_dict, mode='solvable')
         m, n = A.shape
-        cone_caches = make_prod_cone_cache(dim_dict)
+        cones = dim2cones(dim_dict)
         #problem = ConicProblem(A, b, c, cones)
         u_true, v_true = xsy2uv(x_true, s_true, y_true, 1., 0.)
         z_true = u_true - v_true
 
         delta = np.random.randn(len(z_true)) * 1E-7
-        proj_u = embedded_cone_Pi(z_true, cone_caches, n)
+        proj_u, cone_caches = embedded_cone_Pi(z_true, cones, n)
         proj_v = proj_u - z_true
 
         self.assertTrue(np.allclose(proj_u - u_true, 0.))
         self.assertTrue(np.allclose(proj_v - v_true, 0.))
-        dproj = embedded_cone_D(z_true, delta, cone_caches, n)
+        dproj = embedded_cone_D(z_true, delta, cone_caches)
 
         #deriv = EmbeddedConeDerProj(problem.n, z_true, cone)
-        new_cone_caches = make_prod_cone_cache(dim_dict)
-        u_plus_delta = embedded_cone_Pi(
-            z_true + delta, new_cone_caches, n)
+        u_plus_delta, _ = embedded_cone_Pi(
+            z_true + delta, cones, n)
 
         #u_plus_delta, v_plus_delta = problem.embedded_cone_proj(z_true + delta)
         # dproj = deriv@delta
@@ -109,21 +108,20 @@ class ProblemTest(unittest.TestCase):
 
         self.assertTrue(np.allclose(
             u_true + dproj,
-            u_plus_delta, atol=1E-6))
+            u_plus_delta))
 
     def test_residual_der(self):
-        dim_dict = {'l': 10, 'q': [5, 10], 's': [3, 4], 'ep': 10, 'ed': 2}
+        dim_dict = {'l': 10, 'q': [5, 10], 's': [3, 4]}
         A, b, c, _, x_true, s_true, y_true = generate_problem(
             dim_dict, mode='solvable', density=.3)
         m, n = A.shape
-        cones_caches = make_prod_cone_cache(dim_dict)
+        cones = dim2cones(dim_dict)
         u_true, v_true = xsy2uv(x_true, s_true, y_true, 1., 0.)
         z_true = u_true - v_true
 
-        res = residual(z_true, A, b, c, cones_caches)
+        res, cones_caches = residual(z_true, A, b, c, cones)
         delta = np.random.randn(len(z_true)) * 1E-7
-        residual_z_plus_delta = residual(z_true + delta, A, b, c,
-                                         make_prod_cone_cache(dim_dict))
+        residual_z_plus_delta, _ = residual(z_true + delta, A, b, c, cones)
         dres = residual_D(z_true, delta, A, b, c, cones_caches)
 
         print('delta:')
@@ -162,13 +160,14 @@ class ProblemTest(unittest.TestCase):
         if (kwargs['mode'] != 'solvable'):
             solvable = False
         print('generating problem')
-        A, b, c, dim_dict, x_true, s_true, y_true = generate_problem(dim_dict,
-                                                                     **kwargs)
+        A, b, c, _, x_true, s_true, y_true = generate_problem(dim_dict,
+                                                              **kwargs)
         m, n = A.shape
 
+        cones = dim2cones(dim_dict)
         u, v = xsy2uv(x_true, s_true, y_true, solvable, not solvable)
 
-        embedded_res = residual(u - v, A, b, c, make_prod_cone_cache(dim_dict))
+        embedded_res, _ = residual(u - v, A, b, c, cones)
         self.assertTrue(np.allclose(embedded_res, 0.))
 
         print('calling solver')
@@ -178,16 +177,16 @@ class ProblemTest(unittest.TestCase):
                              feastol=1e-15,
                              reltol=1e-15,
                              abstol=1e-15,
+                             # max_iters=10
                              )
         solver_end = time.time()
-        pridua_res = residual(z, A, b, c, make_prod_cone_cache(dim_dict))
+        pridua_res, _ = residual(z, A, b, c, cones)
         if not (np.alltrue(pridua_res == 0.)):
             refine_start = time.time()
-            z_plus = refine(A, b, c, dim_dict, z)
+            z_plus = refine(A, b, c, cones, z)
             refine_end = time.time()
 
-            pridua_res_new = residual(
-                z_plus, A, b, c, make_prod_cone_cache(dim_dict))
+            pridua_res_new, _ = residual(z_plus, A, b, c, cones)
             print('\n\nSolver time: %.2e' % (solver_end - solver_start))
             print("||pridua_res before refinement||")
             oldnorm = np.linalg.norm(pridua_res)
@@ -214,10 +213,10 @@ class ProblemTest(unittest.TestCase):
             dim_dict, **kwargs)
         m, n = A.shape
 
+        cones = dim2cones(dim_dict)
         u, v = xsy2uv(x_true, s_true, y_true, solvable, not solvable)
 
-        embedded_res = residual(
-            u - v, A, b, c, make_prod_cone_cache(dim_dict))
+        embedded_res, _ = residual(u - v, A, b, c, cones)
         self.assertTrue(np.allclose(embedded_res, 0.))
 
         print('calling solver')
@@ -227,14 +226,13 @@ class ProblemTest(unittest.TestCase):
                             eps=1e-15,
                             max_iters=1000)
         solver_end = time.time()
-        pridua_res = residual(z, A, b, c, make_prod_cone_cache(dim_dict))
+        pridua_res, _ = residual(z, A, b, c, cones)
         if not (np.alltrue(pridua_res == 0.)):
             refine_start = time.time()
-            z_plus = refine(A, b, c, dim_dict, z)
+            z_plus = refine(A, b, c, cones, z)
             refine_end = time.time()
 
-            pridua_res_new = residual(
-                z_plus, A, b, c, make_prod_cone_cache(dim_dict))
+            pridua_res_new, _ = residual(z_plus, A, b, c, cones)
             print('\n\nSolver time: %.2e' % (solver_end - solver_start))
             print("||pridua_res before refinement||")
             oldnorm = np.linalg.norm(pridua_res)

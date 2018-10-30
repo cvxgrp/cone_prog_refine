@@ -22,20 +22,50 @@ from .cones import *
 from .problem import *
 
 
+def dim2cones(dim):
+    """Transform dict in scs format to cones."""
+    cones = []
+    if 'z' in dim and dim['z'] > 0:
+        cones.append([zero_cone, dim['z']])
+    # if 'f' in dim and dim['f'] > 0:
+    #     cones.append([free_cone, dim['f']])
+    if 'l' in dim and dim['l'] > 0:
+        cones.append([non_neg_cone, dim['l']])
+    if 'q' in dim:
+        for q in dim['q']:
+            if q > 0:
+                cones.append([sec_ord_cone, q])
+    if 's' in dim:
+        for s in dim['s']:
+            if s > 0:
+                cones.append([semi_def_cone, s * (s + 1) // 2])
+    if 'ep' in dim:
+        for i in range(dim['ep']):
+            cones.append([exp_pri_cone, 3])
+    if 'ed' in dim:
+        for i in range(dim['ed']):
+            cones.append([exp_dua_cone, 3])  # TODO drop exp dua
+    # if 'e' in dim:
+    #     assert (not 'ep' in dim)
+    #     for i in range(dim['e']):
+    #         cones.append([exp_pri_cone, 3])  # ep will be e
+    return cones
+
+
 def generate_dim_dict(zero_num_min=0,
                       zero_num_max=100,
                       nonneg_num_min=0,
-                      nonneg_num_max=200,
+                      nonneg_num_max=100,
                       lorentz_num_min=0,
-                      lorentz_num_max=50,
+                      lorentz_num_max=10,
                       lorentz_size_min=1,
                       lorentz_size_max=20,
                       semidef_num_min=0,
-                      semidef_num_max=50,
+                      semidef_num_max=10,
                       semidef_size_min=1,
                       semidef_size_max=10,
                       exp_num_min=0,
-                      exp_num_max=50):
+                      exp_num_max=20):
     result = {}
     result['z'] = int(np.random.uniform(zero_num_min,
                                         zero_num_max))
@@ -74,21 +104,15 @@ def generate_problem(dim_dict=None,
     if mode is None:
         mode = np.random.choice(['solvable', 'infeasible', 'unbounded'])
 
-    m = (dim_dict['l'] if 'l' in dim_dict else 0) + \
-        (dim_dict['z'] if 'z' in dim_dict else 0) + \
-        (sum(dim_dict['q']) if 'q' in dim_dict else 0) + \
-        (sum([sizemat2sizevec(el) for el in dim_dict['s']]) if 's' in dim_dict else 0) + \
-        (3 * dim_dict['ep'] if 'ep' in dim_dict else 0) + \
-        (3 * dim_dict['ed'] if 'ed' in dim_dict else 0)
-
+    cones = dim2cones(dim_dict)
+    m = sum([el[1] for el in cones])
     n = int(np.random.uniform(1, m))
 
     # r = np.zeros(m) if nondiff_point else
     r = np.random.uniform(min_val_entries, max_val_entries,
                           size=m)  # np.random.randn(m)
 
-    cache = make_prod_cone_cache(dim_dict)
-    s = prod_cone.Pi(r, cache)
+    s, cache = prod_cone.Pi(r, cones)
     y = s - r
 
     A = sp.rand(m, n, density=density, format='csc')
@@ -96,8 +120,6 @@ def generate_problem(dim_dict=None,
     # np.random.randn(
     #     A.nnz) * np.random.uniform(1., 1. + random_scale_max)
     # x = np.random.randn(n) * np.random.uniform(1., 1. + random_scale_max)
-    A /= np.linalg.norm(A.data)
-
     x = np.random.uniform(min_val_entries, max_val_entries, size=n)
 
     if mode == 'solvable':

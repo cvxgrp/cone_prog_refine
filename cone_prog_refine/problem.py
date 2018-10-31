@@ -25,9 +25,11 @@ from .cones import prod_cone
 from .utils import *
 
 
-@nb.jit(nb.types.UniTuple(nb.double[:], 2)(
-    nb.double[:], nb.double[:], nb.double[:], nb.double, nb.double),
-    npython=True)
+# @nb.jit(nb.types.UniTuple(nb.double[:], 2)(
+#     nb.double[:], nb.double[:], nb.double[:],
+#     nb.optional(nb.double), nb.optional(nb.double)),
+#     nopython=True)
+@nb.jit(nopython=True)
 def xsy2uv(x, s, y, tau=1., kappa=0.):
     n = len(x)
     m = len(s)
@@ -42,9 +44,12 @@ def xsy2uv(x, s, y, tau=1., kappa=0.):
     return u, v
 
 
+@nb.jit(nopython=True)
 def xsy2z(x, s, y, tau=1., kappa=0.):
     u, v = xsy2uv(x, s, y, tau, kappa)
     return u - v
+
+# @nb.jit(nopython=True)
 
 
 def uv2xsytaukappa(u, v, n):
@@ -55,15 +60,17 @@ def uv2xsytaukappa(u, v, n):
     s = np.array(v[n:-1]) / tau if tau > 0 else kappa
     return x, s, y, tau, kappa
 
+# @nb.jit(nopython=True)
+
 
 def z2uv(z, n, cones):
-    u, cache = embedded_cone_Pi(z, cones, n)
+    u, cache = embedded_cone_Pi(z, *cones, n)
     return u, u - z, cache
 
 
 def z2xsy(z, n, cones):
     # TODO implement infeasibility cert.
-    u, cache = embedded_cone_Pi(z, cones, n)
+    u, cache = embedded_cone_Pi(z, *cones, n)
     v = u - z
     x, s, y, tau, kappa = uv2xsytaukappa(u, v, n)
     return x, s, y
@@ -97,7 +104,7 @@ def norm_Q(A, b, c):
 
 def residual_D(z, dz, A, b, c, cones_caches):
     m, n = A.shape
-    du = embedded_cone_D(z, dz, cones_caches, n)
+    du = embedded_cone_D(z, dz, *cones_caches, n)
     dv = du - dz
     return Q_matvec(A, b, c, du) - dv
 
@@ -105,12 +112,12 @@ def residual_D(z, dz, A, b, c, cones_caches):
 def residual_DT(z, dres, A, b, c, cones_caches):
     m, n = A.shape
     return embedded_cone_D(z, -Q_matvec(A, b, c, dres) - dres,
-                           cones_caches, n) + dres
+                           *cones_caches, n) + dres
 
 
 def residual_and_uv(z, A, b, c, cones_caches):
     m, n = A.shape
-    u = embedded_cone_Pi(z, cones_caches, n)
+    u = embedded_cone_Pi(z, *cones_caches, n)
     v = u - z
     return Q_matvec(A, b, c, u) - v, u, v
 
@@ -178,17 +185,17 @@ def residual(z, A, b, c, cones_caches):
 #     return z, sol['info']
 
 
-def print_header(z, norm_Q):
+def print_header():  # z, norm_Q):
     print()
     print()
     print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-    print('               Conic Solution Refinement              ')
-    print('            E. Busseti, W. Moursi, S. Boyd            ')
-    print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-    print(' len(z) = %d,  ||z|| = %.2e,  ||Q||_2 = %.2e ' %
-          (len(z), np.linalg.norm(z), norm_Q))
-    print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-    print("it.   ||R(z)/z[-1]||_2    z[-1]   LSQR   btrks    time")
+    print('               Conic Solution Refinement              \n')
+    # print('            E. Busseti, W. Moursi, S. Boyd            ')
+    # print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+    # print(' len(z) = %d,  ||z|| = %.2e,  ||Q||_2 = %.2e ' %
+    #       (len(z), np.linalg.norm(z), norm_Q))
+    # print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+    print("it.    ||N(z)||_2       z[-1]   LSQR  btrks     time")
     print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
 
 
@@ -217,46 +224,29 @@ def print_footer(message):
     print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
 
 
+# def lsqr_D(z, dz, A, b, c, cache, residual):
+#     return residual_D(z, dz, A, b, c, cache) / z[-1] - (residual /
+#                                                         z[-1]**2) * dz[-1]
+#
+#
+# def lsqr_DT(z, dres, A, b, c, cache, residual):
+#     m, n = A.shape
+#     e_minus1 = np.zeros(n + m + 1)
+#     e_minus1[-1] = 1.
+#     return residual_DT(z, dres, A, b, c, cache) / z[-1] - (dres@residual /
+#                                                            z[-1]**2) * e_minus1
+#
+
 def lsqr_D(z, dz, A, b, c, cache, residual):
-    return residual_D(z, dz, A, b, c, cache) / z[-1] - (residual /
-                                                        z[-1]**2) * dz[-1]
+    return residual_D(z, dz, A, b, c, cache)
 
 
 def lsqr_DT(z, dres, A, b, c, cache, residual):
-    m, n = A.shape
-    e_minus1 = np.zeros(n + m + 1)
-    e_minus1[-1] = 1.
-    return residual_DT(z, dres, A, b, c, cache) / z[-1] - (dres@residual /
-                                                           z[-1]**2) * e_minus1
-
-
-# def lsqr_D(z, dz, A, b, c, cache, residual):
-#     return residual_D(z, dz, A, b, c, cache)
-
-
-# def lsqr_DT(z, dres, A, b, c, cache, residual):
-#     return residual_DT(z, dres, A, b, c, cache)
+    return residual_DT(z, dres, A, b, c, cache)
 
 
 def normalized_resnorm(residual, z):
     return np.linalg.norm(residual / z[-1])
-
-
-def backtrack(z, res, normres, step, A, b, c, dim_dict, max_iters):
-
-    local_cone_cache = make_prod_cone_cache(dim_dict)
-    for j in range(max_iters):
-
-        test_z = z - step * 2**(-j)
-        test_z /= np.abs(test_z[-1])
-
-        test_res, u, v = residual_and_uv(
-            test_z, A, b, c, local_cone_cache)
-        test_normres = np.linalg.norm(test_res)
-        if test_normres < normres:
-            return test_z, test_res, test_normres, local_cone_cache, j, False
-
-    return z, res, normres, None, j, True
 
 
 def refine(A, b, c, dim_dict, z,
@@ -268,27 +258,27 @@ def refine(A, b, c, dim_dict, z,
     z = np.copy(z) / np.abs(z[-1])
     m, n = A.shape
 
-    if verbose:
-        print_header(z, sp.linalg.svds(Q(A, b, c), k=1)[1][0])
-
-    cones_caches = make_prod_cone_cache(dim_dict)
-    res, u, v = residual_and_uv(z, A, b, c, cones_caches)
-    normres = np.linalg.norm(res)
-
     start_time = time.time()
 
     if verbose:
-        print_stats(0, res, z, 0, 0, start_time)
+        print_header()  # z, sp.linalg.svds(Q(A, b, c), k=1)[1][0])
+
+    cones_caches = make_prod_cone_cache(dim_dict)
+    residual, u, v = residual_and_uv(z, A, b, c, cones_caches)
+    normres = np.linalg.norm(residual)
+
+    if verbose:
+        print_stats(0, residual, z, 0, 0, start_time)
 
     for i in range(iters):
 
-        if norm(residual_DT(z, res, A, b, c, cones_caches)) == 0.:
+        if norm(residual_DT(z, residual, A, b, c, cones_caches)) == 0.:
             if verbose:
                 print_footer('Residual orthogonal to derivative.')
             return z / np.abs(z[-1])
 
-        residual, u, v = residual_and_uv(
-            z, A, b, c, cones_caches)
+        # residual, u, v = residual_and_uv(
+        #     z, A, b, c, cones_caches)
 
         D = LinearOperator((m + n + 1, m + n + 1),
                            matvec=lambda dz: lsqr_D(
@@ -303,98 +293,32 @@ def refine(A, b, c, dim_dict, z,
                  show=False,
                  iter_lim=lsqr_iters)
         step, num_lsqr_iters = _[0], _[2]
-
         assert not True in np.isnan(step)
 
-        z, res, normres, cones_caches, backtracks, failed = backtrack(
-            z, res, normres, step,
-            A, b, c, dim_dict,
-            max_iters=max_backtrack)
+        def backtrack():
+            test_cone_cache = make_prod_cone_cache(dim_dict)
+            for j in range(max_backtrack):
+                test_z = z - step * 2**(-j)
+                test_z /= np.abs(test_z[-1])
+                test_res, u, v = residual_and_uv(test_z, A, b, c, test_cone_cache)
+                test_normres = np.linalg.norm(test_res)
+                if test_normres < normres:
+                    return test_z, test_res, test_cone_cache, test_normres, j, True
+            return z, residual, cones_caches, normres, j,  False
 
-        # print('normres returned by BT %.2e' % normres)
-        # res, u, v, cache = residual_and_uv(z, A, b, c, cones)
-        # normres = normalized_resnorm(res,  z)
-        # print('recomputed normres %.2e' % normres)
+        z, residual, cones_cache, normres, num_btrk, improved = backtrack()
 
-        if failed:
+        if not improved:
             if verbose:
                 print_footer('Hit maximum number of backtracks.')
             return z / np.abs(z[-1])
 
-        # backtracks = 0
-        # for j in range(max_backtrack):
-        #     test_z = z - step * 2**(-i)
-        #     test_res, u, v, test_cache = residual_and_uv(
-        #         test_z, A, b, c, cones)
-        #     test_normres = np.linalg.norm(test_res) / np.abs(test_z[-1])
-        #     if test_normres < normres:
-        #         break
-
-        # new_z = z - step
-        # # new_z /= np.abs(new_z[-1])
-        # new_residual, u, v, new_cache = residual_and_uv(new_z, A, b, c, cones)
-
-        # backtracks = 0
-        # # backtracking
-        # while np.linalg.norm(new_residual / new_z[-1]) > np.linalg.norm(residual / z[-1]):
-        #     # print('backtracking')
-        #     step /= 2.
-        #     backtracks += 1
-        #     new_z = z - step
-        #     new_residual, u, v, new_cache = residual_and_uv(
-        #         new_z, A, b, c, cones)
-
-        # # try one more divide by 2
-        # test_z = z - step / 2.
-        # test_residual, u, v, test_cache = residual_and_uv(
-        #     test_z, A, b, c, cones)
-        # if np.linalg.norm(test_residual / test_z[-1]) < np.linalg.norm(new_residual / new_z[-1]):
-        #     #print('swapping with shorter step')
-        #     new_z = test_z
-        #     new_residual = test_residual
-        #     new_cache = test_cache
-        #     backtracks += 1
-
-        # print('here i make stuff to go to screen')
-        # myz = new_z / np.abs(new_z[-1])
-        # myresidual, u, v, _ = residual_and_uv(
-        #     myz, A, b, c, cones)
-        # print('norm of vec returned %.2e' %
-        #       np.linalg.norm(myresidual))
-
-        # if verbose:
-        #     print_stats(i + 1, new_residual, new_z,
-        #                 num_lsqr_iters, backtracks, start_time)
         if verbose:
-            print_stats(i + 1, np.copy(res), np.copy(z),
-                        num_lsqr_iters, backtracks, start_time)
-
-        # rel_res_change = (np.linalg.norm(residual / z[-1]) - np.linalg.norm(
-        #     new_residual / new_z[-1])) / np.linalg.norm(residual / z[-1])
-
-        # old_z = np.copy(z)
-
-        # cache = new_cache
-        # z = new_z
-        # residual = new_residual
-
-        # if rel_res_change < 1E-8:
-        #     if verbose:
-        #         print_footer('Residual change too small.')
-        #     return z / np.abs(z[-1])
+            print_stats(i + 1, np.copy(residual), np.copy(z),
+                        num_lsqr_iters, num_btrk, start_time)
 
         if i == iters - 1:
             if verbose:
                 print_footer('Max num. refinement iters reached.')
 
-            # print('normres after print %.2e' % normres)
-            # res, u, v, cache = residual_and_uv(z, A, b, c, cones)
-            # normres = normalized_resnorm(res,  z)
-            # print('recomputed normres %.2e' % normres)
-
-            # myz = z / np.abs(z[-1])
-            # new_residual, u, v, new_cache = residual_and_uv(
-            #     myz, A, b, c, cones)
-            # print('norm of vec returned %.2e' %
-            #       np.linalg.norm(new_residual))
             return z / np.abs(z[-1])

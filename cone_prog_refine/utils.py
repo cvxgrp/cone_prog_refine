@@ -29,11 +29,11 @@ def generate_dim_dict(zero_num_min=0,
                       lorentz_num_min=0,
                       lorentz_num_max=50,
                       lorentz_size_min=1,
-                      lorentz_size_max=20,
+                      lorentz_size_max=50,
                       semidef_num_min=0,
                       semidef_num_max=50,
                       semidef_size_min=1,
-                      semidef_size_max=10,
+                      semidef_size_max=20,
                       exp_num_min=0,
                       exp_num_max=50):
     result = {}
@@ -52,6 +52,9 @@ def generate_dim_dict(zero_num_min=0,
                                          semidef_size_max))
                    for i in range(num_s)]
     result['ep'] = int(np.random.uniform(exp_num_min,
+                                         exp_num_max))
+
+    result['ed'] = int(np.random.uniform(exp_num_min,
                                          exp_num_max))
     return result
 
@@ -88,7 +91,7 @@ def generate_problem(dim_dict=None,
                           size=m)  # np.random.randn(m)
 
     cache = make_prod_cone_cache(dim_dict)
-    s = prod_cone.Pi(r, cache)
+    s = prod_cone.Pi(r, *cache)
     y = s - r
 
     A = sp.rand(m, n, density=density, format='csc')

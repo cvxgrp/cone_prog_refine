@@ -95,7 +95,7 @@ def ecos_solve(A, b, c, dim_dict, **kwargs):
 
     ecos_cones = {'l': dim_dict['l'] if 'l' in dim_dict else 0,
                   'q': dim_dict['q'] if 'q' in dim_dict else []}  # ,
-    #'e': dim_dict['ep'] if 'ep' in dim_dict else 0}
+    # 'e': dim_dict['ep'] if 'ep' in dim_dict else 0}
     # print(ecos_cones)
     if ('ep' in dim_dict and dim_dict['ep'] > 0
             or 's' in dim_dict and len(dim_dict['s']) > 0):
@@ -128,7 +128,7 @@ def ecos_solve(A, b, c, dim_dict, **kwargs):
 
         print('primal infeas. cert residual norm', np.linalg.norm(A.T@y))
         #cones = dim2cones(dim_dict)
-        proj = prod_cone.Pi(-y, make_prod_cone_cache(dim_dict))
+        proj = prod_cone.Pi(-y, *make_prod_cone_cache(dim_dict))
         print('primal infeas dist from cone', np.linalg.norm(proj))
         # if not (np.linalg.norm(proj) == 0.) and sol['info']['exitFlag'] == 1.:
         #     raise SolverError
@@ -144,7 +144,7 @@ def ecos_solve(A, b, c, dim_dict, **kwargs):
         s /= -obj
 
         print('dual infeas. cert residual norm', np.linalg.norm(A@x + s))
-        proj = prod_cone.Pi(s, make_prod_cone_cache(dim_dict))
+        proj = prod_cone.Pi(s, *make_prod_cone_cache(dim_dict))
         print('dual infeas cert dist from cone', np.linalg.norm(s - proj))
         # if not (np.linalg.norm(s - proj) == 0.) and sol['info']['exitFlag'] == 2.:
         #     raise SolverError

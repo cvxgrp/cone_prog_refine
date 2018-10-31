@@ -228,26 +228,26 @@ class TestProduct(BaseTestCone):
     def test_baseProduct(self):
 
         cache = make_prod_cone_cache({'l': 3})
-        Pix = prod_cone.Pi(np.arange(3.), cache)
+        Pix = prod_cone.Pi(np.arange(3.), *cache)
         self.assertTrue(np.alltrue(Pix == np.arange(3.)))
 
         cache = make_prod_cone_cache({'l': 3})
-        Pix = prod_cone.Pi(np.array([1., -1., -1.]), cache)
+        Pix = prod_cone.Pi(np.array([1., -1., -1.]), *cache)
         self.assertTrue(np.alltrue(Pix == [1, 0, 0]))
 
         #cones = [[non_neg_cone, 2], [semi_def_cone, 1]]
         cache = make_prod_cone_cache({'l': 2, 's': [1]})
-        Pix = prod_cone.Pi(np.arange(3.), cache)
+        Pix = prod_cone.Pi(np.arange(3.), *cache)
         self.assertTrue(np.alltrue(Pix == range(3)))
-        Pix = prod_cone.Pi(np.array([1., -1., -1.]), cache)
+        Pix = prod_cone.Pi(np.array([1., -1., -1.]), *cache)
         self.assertTrue(np.alltrue(Pix == [1, 0, 0]))
 
         #cones = [[semi_def_cone, 3], [semi_def_cone, 1]]
         cache = make_prod_cone_cache({'s': [2, 1]})
-        Pix = prod_cone.Pi(np.arange(4.), cache)
+        Pix = prod_cone.Pi(np.arange(4.), *cache)
         self.assertTrue(np.allclose(Pix - np.array(
             [0.20412415, 0.90824829, 2.02062073, 3]), 0.))
-        Pix = prod_cone.Pi(np.array([1, -20., 1, -1]), cache)
+        Pix = prod_cone.Pi(np.array([1, -20., 1, -1]), *cache)
 
         self.assertTrue(np.allclose(Pix, np.array([7.57106781, -10.70710678,
                                                    7.57106781,   0.])))
@@ -260,14 +260,14 @@ class TestProduct(BaseTestCone):
                    np.array([-10.3, -22., 13.])]
 
         for x in samples:
-            proj_x = prod_cone.Pi(x, cache)
+            proj_x = prod_cone.Pi(x, *cache)
             delta = np.random.randn(size_vec(x)) * 0.0001
             print('x + delta:', x + delta)
             new_cache = make_prod_cone_cache(dims)
-            proj_x_plus_delta = prod_cone.Pi(x + delta, new_cache)
+            proj_x_plus_delta = prod_cone.Pi(x + delta, *new_cache)
 
             print('x, delta, cache:', x, delta, cache)
-            dproj_x = prod_cone.D(x, delta, cache)
+            dproj_x = prod_cone.D(x, delta, *cache)
 
             print('delta:')
             print(delta)
@@ -303,6 +303,83 @@ class TestSemiDefinite(BaseTestCone):
                                  2.54829623,  69.3944742])]
     sample_vecs_are_in = [True, True, False, False, False, False, False, False]
     sample_vecs_are_diff = [True, True, True, True, True, True, True, True]
+
+
+class TestEmbeddedCone(unittest.TestCase):
+
+    def test_embedded_vars(self):
+        dim_dict = {'f': 2, 'l': 3, 'q': [4], 's': [3]}
+        A, b, c, _, x_true, s_true, y_true = generate_problem(dim_dict,
+                                                              mode='solvable')
+        m, n = A.shape
+        cone_caches = make_prod_cone_cache(dim_dict)
+        # problem = ConicProblem(A, b, c, cones)
+        u_true, v_true = xsy2uv(x_true, s_true, y_true, 1., 0.)
+        x, s, y, _, _ = uv2xsytaukappa(u_true, v_true, len(x_true))
+
+        self.assertTrue(np.alltrue(x == x_true))
+        self.assertTrue(np.alltrue(s == s_true))
+        self.assertTrue(np.alltrue(y == y_true))
+
+        u, v = xsy2uv(x, s, y, 1., 0.)
+
+        self.assertTrue(np.alltrue(u == u_true))
+        self.assertTrue(np.alltrue(v == v_true))
+
+        print('u', u)
+        print('v', v)
+        z = u - v
+        print('z', z)
+
+        proj_u = embedded_cone_Pi(z, *cone_caches, n)
+        proj_v = proj_u - z
+
+        print(' u = Pi z', proj_u)
+        print('v = Pi z - z', proj_v)
+        self.assertTrue(np.allclose(proj_u.T@proj_v, 0.))
+        self.assertTrue(np.allclose(proj_u - u, 0.))
+        self.assertTrue(np.allclose(proj_v - v, 0.))
+        self.assertTrue(np.allclose(proj_u - proj_v, z))
+
+    def test_embedded_cone_der_proj(self):
+        dim_dict = {'f': 2, 'l': 20, 'q': [2, 3, 5], 's': [3, 4], 'ep': 4}
+        A, b, c, _, x_true, s_true, y_true = generate_problem(
+            dim_dict, mode='solvable')
+        m, n = A.shape
+        cone_caches = make_prod_cone_cache(dim_dict)
+        #problem = ConicProblem(A, b, c, cones)
+        u_true, v_true = xsy2uv(x_true, s_true, y_true, 1., 0.)
+        z_true = u_true - v_true
+
+        delta = np.random.randn(len(z_true)) * 1E-7
+        proj_u = embedded_cone_Pi(z_true, *cone_caches, n)
+        proj_v = proj_u - z_true
+
+        self.assertTrue(np.allclose(proj_u - u_true, 0.))
+        self.assertTrue(np.allclose(proj_v - v_true, 0.))
+        dproj = embedded_cone_D(z_true, delta, *cone_caches, n)
+
+        #deriv = EmbeddedConeDerProj(problem.n, z_true, cone)
+        new_cone_caches = make_prod_cone_cache(dim_dict)
+        u_plus_delta = embedded_cone_Pi(
+            z_true + delta, *new_cone_caches, n)
+
+        #u_plus_delta, v_plus_delta = problem.embedded_cone_proj(z_true + delta)
+        # dproj = deriv@delta
+
+        print('delta:')
+        print(delta)
+        print('Pi (z + delta) - Pi(z):')
+        print(u_plus_delta - u_true)
+        print('DPi delta:')
+        print(dproj)
+        print('error:')
+        print(u_true + dproj - u_plus_delta)
+
+        self.assertTrue(np.allclose(
+            u_true + dproj,
+            u_plus_delta, atol=1E-6))
+
 
 if __name__ == '__main__':
     unittest.main()

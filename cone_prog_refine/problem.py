@@ -189,12 +189,8 @@ def print_header():  # z, norm_Q):
     print()
     print()
     print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-    print('               Conic Solution Refinement              \n')
-    # print('            E. Busseti, W. Moursi, S. Boyd            ')
-    # print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-    # print(' len(z) = %d,  ||z|| = %.2e,  ||Q||_2 = %.2e ' %
-    #       (len(z), np.linalg.norm(z), norm_Q))
-    # print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+    print('               Conic Solution Refinement              ')
+    print()
     print("it.    ||N(z)||_2       z[-1]   LSQR  btrks     time")
     print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
 

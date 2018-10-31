@@ -404,18 +404,18 @@ def make_rhs(x, y, z, dr, ds, dt):
     return rhs
 
 
-# @nb.jit(nb.double[:](nb.double, nb.double, nb.double, nb.double,
-#                      nb.double, nb.double, nb.double, nb.double, nb.double),
-#         nopython=True)
+@nb.jit(nb.double[:](nb.double, nb.double, nb.double, nb.double,
+                     nb.double, nb.double, nb.double, nb.double, nb.double),
+        nopython=True)
 def fourth_case_D(r, s, t, x, y, z, dr, ds, dt):
 
     test = np.zeros(3)
     test[0], test[1], test[2] = r, s, t
-
-    print('der. proj. Pi (%.2e, %.2e,%.2e) -> (%.2e, %.2e,%.2e)' %
-          (r, s, t, x, y, z))
-
-    print('and (u,v,w)', x - r, y - s, z - t)
+    #
+    # print('der. proj. Pi (%.2e, %.2e,%.2e) -> (%.2e, %.2e,%.2e)' %
+    #       (r, s, t, x, y, z))
+    #
+    # print('and (u,v,w)', x - r, y - s, z - t)
 
     # took it out now (oct 31.)
     # if np.linalg.norm(test) < 1E-12:
@@ -430,10 +430,10 @@ def fourth_case_D(r, s, t, x, y, z, dr, ds, dt):
     assert y >= 0
     assert u <= 0
     if y > 0:  # temporary fix?
-        print('computing error with e^(x/y)')
+        #print('computing error with e^(x/y)')
         error = make_error(r, s, t, x, y, z)
     else:
-        print('computing error with e^(v/u)')
+        #print('computing error with e^(v/u)')
         error = make_error_two(r, s, t, x, y, z)
 
     #error = make_error(r, s, t, x, y, z)
@@ -443,11 +443,11 @@ def fourth_case_D(r, s, t, x, y, z, dr, ds, dt):
     assert not np.any(np.isnan(rhs))
 
     if y > 0:  # temporary fix?
-        print('solving system with e^(x/y)')
+        #print('solving system with e^(x/y)')
         result = np.linalg.solve(make_mat(r, s, t, x, y, z),  # + np.eye(3) * 1E-8,
                                  rhs - error)
     else:
-        print('solving system with e^(v/u)')
+        #print('solving system with e^(v/u)')
         result = np.linalg.solve(make_mat_two(r, s, t, x, y, z),  # + np.eye(3) * 1E-8,
                                  rhs - error)
 
@@ -457,18 +457,18 @@ def fourth_case_D(r, s, t, x, y, z, dr, ds, dt):
     return result
 
 
-# @nb.jit(nb.double[:](nb.double[:]), nopython=True)
+@nb.jit(nb.double[:](nb.double[:]), nopython=True)
 def fourth_case_enzo(z_var):
 
-    print('fourth case Enzo')
+    #print('fourth case Enzo')
 
     real_result, _ = fourth_case_brendan(z_var)
-    print('brendan result: (x,y,z)', real_result)
+    #print('brendan result: (x,y,z)', real_result)
     z_var = np.copy(z_var)
     r = z_var[0]
     s = z_var[1]
     t = z_var[2]
-    print('brendan result: (u,v,w)', real_result - z_var)
+    #print('brendan result: (u,v,w)', real_result - z_var)
 
     x, y, z = real_result
     # if y < 1E-12:
@@ -482,34 +482,34 @@ def fourth_case_enzo(z_var):
         assert y >= 0
         assert u <= 0
         if y > -u:
-            print('computing error with e^(x/y)')
+            #print('computing error with e^(x/y)')
             error = make_error(r, s, t, x, y, z)
         else:
-            print('computing error with e^(v/u)')
+            #print('computing error with e^(v/u)')
             error = make_error_two(r, s, t, x, y, z)
 
-        print('error:', error)
-        print('error norm: %.2e' % np.linalg.norm(error))
+        #print('error:', error)
+        #print('error norm: %.2e' % np.linalg.norm(error))
 
-        if max(np.abs(error)) < 1e-12:
-            print('converged!')
+        if np.max(np.abs(error)) < 1e-12:
+            # print('converged!')
             break
 
         if np.any(np.isnan(error)):
             break
 
         if y > -u:
-            print('computing correction with e^(x/y)')
+            #print('computing correction with e^(x/y)')
             correction = np.linalg.solve(
                 make_mat(r, s, t, x, y, z) + np.eye(3) * 1E-8,
                 -error)
         else:
-            print('computing correction with e^(v/u)')
+            #print('computing correction with e^(v/u)')
             correction = np.linalg.solve(
                 make_mat_two(r, s, t, x, y, z) + np.eye(3) * 1E-8,
                 -error)
 
-        print('correction', correction)
+        #print('correction', correction)
 
         if np.any(np.isnan(correction)):
             break
@@ -526,7 +526,7 @@ def fourth_case_enzo(z_var):
     return result
 
 
-# @nb.jit(nb.double[:](nb.double[:], nb.double[:]), nopython=True)
+@nb.jit(nb.double[:](nb.double[:], nb.double[:]), nopython=True)
 def exp_pri_Pi(z, cache):
     """Projection on exp. primal cone, and cache."""
     z = np.copy(z)
@@ -558,7 +558,7 @@ def exp_pri_Pi(z, cache):
     return pi
 
 
-# @nb.jit(nb.double[:](nb.double[:], nb.double[:], nb.double[:]), nopython=True)
+@nb.jit(nb.double[:](nb.double[:], nb.double[:], nb.double[:]), nopython=True)
 def exp_pri_D(z_0, dz, cache):
     """Derivative of proj. on exp. primal cone."""
 
@@ -622,14 +622,14 @@ def exp_pri_D(z_0, dz, cache):
 exp_pri_cone = cone(exp_pri_Pi, exp_pri_D, exp_pri_D)
 
 
-# @nb.jit(nb.double[:](nb.double[:], nb.double[:]), nopython=True)
+@nb.jit(nb.double[:](nb.double[:], nb.double[:]), nopython=True)
 def exp_dua_Pi(z, cache):
     """Projection on exp. dual cone, and cache."""
     minuspi = exp_pri_Pi(-z, cache)
     return np.copy(z) + minuspi
 
 
-# @nb.jit(nb.double[:](nb.double[:], nb.double[:], nb.double[:]), nopython=True)
+@nb.jit(nb.double[:](nb.double[:], nb.double[:], nb.double[:]), nopython=True)
 def exp_dua_D(z, x, cache):
     """Derivative of projection on exp. dual cone."""
     # res = exp_pri_D(z, x, cache)
@@ -768,13 +768,13 @@ cache_types = nb.types.Tuple((nb.int64, nb.int64,  # z, l
                               nb.int64, nb.float64[:, :]))  # ed
 
 
-# @nb.jit(nb.double[:](nb.double[:], nb.double[:], nb.int64, nb.int64,  # z, l
-#                      nb.int64[:], nb.types.List(nb.float64[:]),  # q
-#                      nb.int64[:],  # s
-#                      nb.types.List(nb.float64[:, :]),
-#                      nb.types.List(nb.float64[:]),
-#                      nb.int64, nb.float64[:, :],  # ep
-#                      nb.int64, nb.float64[:, :]))
+@nb.jit(nb.double[:](nb.double[:], nb.double[:], nb.int64, nb.int64,  # z, l
+                     nb.int64[:], nb.types.List(nb.float64[:]),  # q
+                     nb.int64[:],  # s
+                     nb.types.List(nb.float64[:, :]),
+                     nb.types.List(nb.float64[:]),
+                     nb.int64, nb.float64[:, :],  # ep
+                     nb.int64, nb.float64[:, :]))
 def prod_cone_D(z, x, zero, l, q, q_cache, s, s_cache_eivec, s_cache_eival, ep, ep_cache, ed, ed_cache):
 
     result = np.empty_like(z)
@@ -822,13 +822,13 @@ def prod_cone_D(z, x, zero, l, q, q_cache, s, s_cache_eivec, s_cache_eival, ep, 
     return result
 
 
-# @nb.jit(nb.double[:](nb.double[:], nb.int64, nb.int64,  # z, l
-#                      nb.int64[:], nb.types.List(nb.float64[:]),  # q
-#                      nb.int64[:],  # s
-#                      nb.types.List(nb.float64[:, :]),
-#                      nb.types.List(nb.float64[:]),
-#                      nb.int64, nb.float64[:, :],  # ep
-#                      nb.int64, nb.float64[:, :]))
+@nb.jit(nb.double[:](nb.double[:], nb.int64, nb.int64,  # z, l
+                     nb.int64[:], nb.types.List(nb.float64[:]),  # q
+                     nb.int64[:],  # s
+                     nb.types.List(nb.float64[:, :]),
+                     nb.types.List(nb.float64[:]),
+                     nb.int64, nb.float64[:, :],  # ep
+                     nb.int64, nb.float64[:, :]))
 def prod_cone_Pi(z, zero, l, q, q_cache, s, s_cache_eivec, s_cache_eival,  ep,
                  ep_cache, ed, ed_cache):
     """Projection on product of zero, non-neg, sec. ord., sd, exp p., exp d."""

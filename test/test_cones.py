@@ -88,28 +88,29 @@ class BaseTestCone(unittest.TestCase):
                 #                   self.test_cone.D(x, delta, cache))
 
             else:
-                delta = np.random.randn(size_vec(x)) * 0.0001
-                print('x + delta:', x + delta)
-                new_cache = self.make_cache(len(x))
-                proj_x_plus_delta = self.test_cone.Pi(x + delta, new_cache)
-                #proj_x_plus_delta, new_cache = self.test_cone.Pi(x + delta)
-                print('x, delta, cache:', x, delta, cache)
-                dproj_x = self.test_cone.D(x, delta, cache)
+                for i in range(100):
+                    delta = np.random.randn(size_vec(x)) * 1E-7
+                    print('x + delta:', x + delta)
+                    new_cache = self.make_cache(len(x))
+                    proj_x_plus_delta = self.test_cone.Pi(x + delta, new_cache)
+                    #proj_x_plus_delta, new_cache = self.test_cone.Pi(x + delta)
+                    print('x, delta, cache:', x, delta, cache)
+                    dproj_x = self.test_cone.D(x, delta, cache)
 
-                print('delta:')
-                print(delta)
-                print('Pi (x + delta) - Pi(x):')
-                print(proj_x_plus_delta - proj_x)
-                print('DPi delta:')
-                print(dproj_x)
+                    print('delta:')
+                    print(delta)
+                    print('Pi (x + delta) - Pi(x):')
+                    print(proj_x_plus_delta - proj_x)
+                    print('DPi delta:')
+                    print(dproj_x)
 
-                self.assertTrue(np.allclose(
-                    proj_x + dproj_x,
-                    proj_x_plus_delta))
+                    self.assertTrue(np.allclose(
+                        proj_x + dproj_x,
+                        proj_x_plus_delta))
 
-                # self.assertTrue(np.allclose(
-                #     proj_x + deriv.T@delta,
-                #     proj_x_plus_delta))
+                    # self.assertTrue(np.allclose(
+                    #     proj_x + deriv.T@delta,
+                    #     proj_x_plus_delta))
 
 
 class TestNonNeg(BaseTestCone):

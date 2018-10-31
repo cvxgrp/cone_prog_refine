@@ -17,8 +17,6 @@ import unittest
 import numpy as np
 
 from cone_prog_refine import *
-from cone_prog_refine.problem import *
-from cone_prog_refine.utils import *
 
 import time
 
@@ -26,7 +24,7 @@ import time
 class ProblemTest(unittest.TestCase):
 
     def test_Q(self):
-        dim_dict = {'f': 10, 'l': 20, 'q': [10], 's': [5], 'ep': 20, 'ed': 0}
+        dim_dict = {'f': 10, 'l': 20, 'q': [10], 's': [5], 'ep': 10, 'ed': 10}
         A, b, c, _, x_true, s_true, y_true = generate_problem(dim_dict,
                                                               mode='solvable')
 
@@ -38,78 +36,78 @@ class ProblemTest(unittest.TestCase):
         self.assertTrue(np.allclose(res[:-1], 0.))
         self.assertTrue(np.allclose(res[-1], 0.))
 
-    def test_embedded_vars(self):
-        dim_dict = {'f': 2, 'l': 3, 'q': [4], 's': [3]}
-        A, b, c, _, x_true, s_true, y_true = generate_problem(dim_dict,
-                                                              mode='solvable')
-        m, n = A.shape
-        cone_caches = make_prod_cone_cache(dim_dict)
-        # problem = ConicProblem(A, b, c, cones)
-        u_true, v_true = xsy2uv(x_true, s_true, y_true, 1., 0.)
-        x, s, y, _, _ = uv2xsytaukappa(u_true, v_true, len(x_true))
+    # def test_embedded_vars(self):
+    #     dim_dict = {'f': 2, 'l': 3, 'q': [4], 's': [3]}
+    #     A, b, c, _, x_true, s_true, y_true = generate_problem(dim_dict,
+    #                                                           mode='solvable')
+    #     m, n = A.shape
+    #     cone_caches = make_prod_cone_cache(dim_dict)
+    #     # problem = ConicProblem(A, b, c, cones)
+    #     u_true, v_true = xsy2uv(x_true, s_true, y_true, 1., 0.)
+    #     x, s, y, _, _ = uv2xsytaukappa(u_true, v_true, len(x_true))
 
-        self.assertTrue(np.alltrue(x == x_true))
-        self.assertTrue(np.alltrue(s == s_true))
-        self.assertTrue(np.alltrue(y == y_true))
+    #     self.assertTrue(np.alltrue(x == x_true))
+    #     self.assertTrue(np.alltrue(s == s_true))
+    #     self.assertTrue(np.alltrue(y == y_true))
 
-        u, v = xsy2uv(x, s, y, 1., 0.)
+    #     u, v = xsy2uv(x, s, y, 1., 0.)
 
-        self.assertTrue(np.alltrue(u == u_true))
-        self.assertTrue(np.alltrue(v == v_true))
+    #     self.assertTrue(np.alltrue(u == u_true))
+    #     self.assertTrue(np.alltrue(v == v_true))
 
-        print('u', u)
-        print('v', v)
-        z = u - v
-        print('z', z)
+    #     print('u', u)
+    #     print('v', v)
+    #     z = u - v
+    #     print('z', z)
 
-        proj_u = embedded_cone_Pi(z, cone_caches, n)
-        proj_v = proj_u - z
+    #     proj_u = embedded_cone_Pi(z, cone_caches, n)
+    #     proj_v = proj_u - z
 
-        print(' u = Pi z', proj_u)
-        print('v = Pi z - z', proj_v)
-        self.assertTrue(np.allclose(proj_u.T@proj_v, 0.))
-        self.assertTrue(np.allclose(proj_u - u, 0.))
-        self.assertTrue(np.allclose(proj_v - v, 0.))
-        self.assertTrue(np.allclose(proj_u - proj_v, z))
+    #     print(' u = Pi z', proj_u)
+    #     print('v = Pi z - z', proj_v)
+    #     self.assertTrue(np.allclose(proj_u.T@proj_v, 0.))
+    #     self.assertTrue(np.allclose(proj_u - u, 0.))
+    #     self.assertTrue(np.allclose(proj_v - v, 0.))
+    #     self.assertTrue(np.allclose(proj_u - proj_v, z))
 
-    def test_embedded_cone_der_proj(self):
-        dim_dict = {'f': 2, 'l': 20, 'q': [2, 3, 5], 's': [3, 4], 'ep': 4}
-        A, b, c, _, x_true, s_true, y_true = generate_problem(
-            dim_dict, mode='solvable')
-        m, n = A.shape
-        cone_caches = make_prod_cone_cache(dim_dict)
-        #problem = ConicProblem(A, b, c, cones)
-        u_true, v_true = xsy2uv(x_true, s_true, y_true, 1., 0.)
-        z_true = u_true - v_true
+    # def test_embedded_cone_der_proj(self):
+    #     dim_dict = {'f': 2, 'l': 20, 'q': [2, 3, 5], 's': [3, 4], 'ep': 4}
+    #     A, b, c, _, x_true, s_true, y_true = generate_problem(
+    #         dim_dict, mode='solvable')
+    #     m, n = A.shape
+    #     cone_caches = make_prod_cone_cache(dim_dict)
+    #     #problem = ConicProblem(A, b, c, cones)
+    #     u_true, v_true = xsy2uv(x_true, s_true, y_true, 1., 0.)
+    #     z_true = u_true - v_true
 
-        delta = np.random.randn(len(z_true)) * 1E-7
-        proj_u = embedded_cone_Pi(z_true, cone_caches, n)
-        proj_v = proj_u - z_true
+    #     delta = np.random.randn(len(z_true)) * 1E-7
+    #     proj_u = embedded_cone_Pi(z_true, cone_caches, n)
+    #     proj_v = proj_u - z_true
 
-        self.assertTrue(np.allclose(proj_u - u_true, 0.))
-        self.assertTrue(np.allclose(proj_v - v_true, 0.))
-        dproj = embedded_cone_D(z_true, delta, cone_caches, n)
+    #     self.assertTrue(np.allclose(proj_u - u_true, 0.))
+    #     self.assertTrue(np.allclose(proj_v - v_true, 0.))
+    #     dproj = embedded_cone_D(z_true, delta, cone_caches, n)
 
-        #deriv = EmbeddedConeDerProj(problem.n, z_true, cone)
-        new_cone_caches = make_prod_cone_cache(dim_dict)
-        u_plus_delta = embedded_cone_Pi(
-            z_true + delta, new_cone_caches, n)
+    #     #deriv = EmbeddedConeDerProj(problem.n, z_true, cone)
+    #     new_cone_caches = make_prod_cone_cache(dim_dict)
+    #     u_plus_delta = embedded_cone_Pi(
+    #         z_true + delta, new_cone_caches, n)
 
-        #u_plus_delta, v_plus_delta = problem.embedded_cone_proj(z_true + delta)
-        # dproj = deriv@delta
+    #     #u_plus_delta, v_plus_delta = problem.embedded_cone_proj(z_true + delta)
+    #     # dproj = deriv@delta
 
-        print('delta:')
-        print(delta)
-        print('Pi (z + delta) - Pi(z):')
-        print(u_plus_delta - u_true)
-        print('DPi delta:')
-        print(dproj)
-        print('error:')
-        print(u_true + dproj - u_plus_delta)
+    #     print('delta:')
+    #     print(delta)
+    #     print('Pi (z + delta) - Pi(z):')
+    #     print(u_plus_delta - u_true)
+    #     print('DPi delta:')
+    #     print(dproj)
+    #     print('error:')
+    #     print(u_true + dproj - u_plus_delta)
 
-        self.assertTrue(np.allclose(
-            u_true + dproj,
-            u_plus_delta, atol=1E-6))
+    #     self.assertTrue(np.allclose(
+    #         u_true + dproj,
+    #         u_plus_delta, atol=1E-6))
 
     def test_residual_der(self):
         dim_dict = {'l': 10, 'q': [5, 10], 's': [3, 4], 'ep': 10, 'ed': 2}

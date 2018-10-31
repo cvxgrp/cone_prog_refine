@@ -22,20 +22,21 @@ from .cones import *
 from .problem import *
 
 
-def generate_dim_dict(zero_num_min=0,
-                      zero_num_max=100,
-                      nonneg_num_min=0,
-                      nonneg_num_max=200,
-                      lorentz_num_min=0,
-                      lorentz_num_max=50,
-                      lorentz_size_min=1,
-                      lorentz_size_max=50,
-                      semidef_num_min=0,
-                      semidef_num_max=50,
-                      semidef_size_min=1,
-                      semidef_size_max=20,
-                      exp_num_min=0,
-                      exp_num_max=50):
+def generate_dim_dict(zero_num_min=10,
+                      zero_num_max=50,
+                      nonneg_num_min=20,
+                      nonneg_num_max=100,
+                      lorentz_num_min=20,
+                      lorentz_num_max=100,
+                      lorentz_size_min=5,
+                      lorentz_size_max=20,
+                      semidef_num_min=5,
+                      semidef_num_max=20,
+                      semidef_size_min=2,
+                      semidef_size_max=10,
+                      exp_num_min=2,
+                      exp_num_max=10,
+                      random_ecos=.25):
     result = {}
     result['z'] = int(np.random.uniform(zero_num_min,
                                         zero_num_max))
@@ -56,6 +57,10 @@ def generate_dim_dict(zero_num_min=0,
 
     result['ed'] = int(np.random.uniform(exp_num_min,
                                          exp_num_max))
+    if np.random.uniform() < random_ecos:
+        result['s'] = []
+        result['ep'] = 0
+        result['ed'] = 0
     return result
 
 

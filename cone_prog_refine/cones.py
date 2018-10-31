@@ -373,9 +373,9 @@ def fourth_case_D(r, s, t, x, y, z, dr, ds, dt):
         return np.zeros(3)
 
     # print('fourth case D')
-    assert not y == 0
-    # if y == 0:
-    #     return np.zeros(3)
+    #assert not y == 0
+    if y < 1e-14:
+        return np.zeros(3)
 
     error = make_error(r, s, t, x, y, z)
     rhs = make_rhs(x, y, z, dr, ds, dt)
@@ -394,111 +394,44 @@ def fourth_case_D(r, s, t, x, y, z, dr, ds, dt):
 @nb.jit(nb.double[:](nb.double[:]), nopython=True)
 def fourth_case_enzo(z_var):
 
-    approx_result, _ = fourth_case_brendan(z_var)
+    real_result, _ = fourth_case_brendan(z_var)
     z_var = np.copy(z_var)
     r = z_var[0]
     s = z_var[1]
     t = z_var[2]
 
-    x, y, z = approx_result
+    x, y, z = real_result
     if y < 1E-12:
-        y = 1E-12
+        y = 1E-8
 
-    error = make_error(r, s, t, x, y, z)
-    assert not np.any(np.isnan(error))
-    error_norm = np.linalg.norm(error)
-
-    N_EXP_REF = 5
-    for i in range(N_EXP_REF):
-
-        if error_norm < 1E-16:
-            print('not doing ref exp cone proj b/c good enough.')
-            result = np.empty(3)
-            result[0], result[1], result[2] = x, y, z
-            return result
+    for i in range(50):
 
         if y < 1e-14:
             return np.zeros(3)
 
+        error = make_error(r, s, t, x, y, z)
+
+        if not np.any(np.isnan(error)):
+            break
+
         correction = np.linalg.solve(
-            make_mat(r, s, t, x, y, z) + np.eye(3) * 1E-8,
+            make_mat(r, s, t, x, y, z) + np.eye(3) * 1E-5,
             -error)
 
-        assert not np.any(np.isnan(correction))
+        if np.any(np.isnan(correction)):
+            break
 
-        def backtrack(x, y, z, test_x, test_y, test_z, correction, error_norm):
-            for j in range(10):
-                test_x = x + (2**(-j)) * correction[0]
-                test_y = y + (2**(-j)) * correction[1]
-                test_z = z + (2**(-j)) * correction[2]
-                test_error = make_error(r, s, t, test_x, test_y, test_z)
-                test_error_norm = np.linalg.norm(test_error)
-                # print('%.2f' % test_error_norm)
-                if test_error_norm < error_norm:
-                    return test_x, test_y, test_z, test_error, test_error_norm, True
-            return x, y, z,  error, error_norm, False
+        x += correction[0]
+        y += correction[1]
+        z += correction[2]
 
-        x, y, z, error, error_norm, improved = backtrack(
-            x, y, z, test_x, test_y, test_z, correction, error_norm)
+    result = np.empty(3)
+    result[0] = x
+    result[1] = y
+    result[2] = z
 
-        if not improved:
-            print("returning early from exp cone")
-            result = np.empty(3)
-            result[0], result[1], result[2] = x, y, z
-            return result
+    return result
 
-        if i == N_EXP_REF:
-            print("returning after exp cone ref.")
-            result = np.empty(3)
-            result[0], result[1], result[2] = x, y, z
-            return result
-    print('this should never print')
-    return z_var  # should never hit this
-    # x += correction[0]
-    # y += correction[1]
-    # z += correction[2]
-
-    # if np.any(np.isnan(correction)):
-    #     break
-
-    # if np.linalg.norm(correction) < 1E-10:
-    #     break
-
-    # print('correction', correction)
-
-    # step = 1.
-
-    # for j in range(10):
-
-    #     new_x = x + step * correction[0]
-    #     new_y = y + step * correction[1]
-    #     new_z = z + step * correction[2]
-    #     new_error = make_error(r, s, t, new_x, new_y, new_z)
-
-    #     if (np.linalg.norm(new_error) <= np.linalg.norm(error)) and \
-    #             new_y > 0:
-    #         # accept
-    #         break
-    #     step /= 2.
-
-    # x = new_x
-    # y = new_y
-    # z = new_z
-    # print('final step', step)
-
-    # print('current:', (x, y, z))
-
-    # print('result:', np.array([x, y, z]))
-
-    # result = np.empty(3)
-    # result[0] = x
-    # result[1] = y
-    # result[2] = z
-    #
-    # return result, np.copy(result)
-
-
-# @njit
 
 @nb.jit(nb.double[:](nb.double[:], nb.double[:]), nopython=True)
 def exp_pri_Pi(z, cache):
@@ -789,7 +722,6 @@ def prod_cone_D(z, x, zero, l, q, q_cache, s, s_cache_eivec, s_cache_eival, ep, 
 
     # exp-dua
     for index in range(ed):
-        size = 3
         result[cur:cur + 3] = exp_dua_D(z[cur:cur + 3],
                                         x[cur:cur + 3],
                                         ed_cache[index])
@@ -924,6 +856,15 @@ def embedded_cone_D(z, dz, zero, l, q, q_cache, s, s_cache_eivec,
 # @nb.jit(nb.double[:](nb.double[:], cache_types, nb.int64),
 #         nopython=True)
 # @nb.jit(nopython=True)
+# @nb.jit(nb.double[:](nb.double[:],
+#                      nb.int64, nb.int64,  # z, l
+#                      nb.int64[:], nb.types.List(nb.float64[:]),  # q
+#                      nb.int64[:],  # s
+#                      nb.types.List(nb.float64[:, :]),
+#                      nb.types.List(nb.float64[:]),
+#                      nb.int64, nb.float64[:, :],  # ep
+#                      nb.int64, nb.float64[:, :],
+#                      nb.int64), nopython=True)
 def embedded_cone_Pi(z, zero, l, q, q_cache, s, s_cache_eivec, s_cache_eival,
                      ep, ep_cache, ed, ed_cache, n):
     """Projection on the cone of the primal-dual embedding."""

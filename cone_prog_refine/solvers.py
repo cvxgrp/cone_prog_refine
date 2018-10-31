@@ -39,10 +39,6 @@ def scs_solve(A, b, c, dim_dict, **kwargs):
     sol = scs.solve({'A': A, 'b': b,
                      'c': c},
                     cone=scs_cones,
-                    use_indirect=True,
-                    # cg_rate=2.,
-                    normalize=True,
-                    scale=1.,
                     **kwargs)
     info = sol['info']
 

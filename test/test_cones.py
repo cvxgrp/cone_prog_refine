@@ -19,7 +19,7 @@ import numpy as np
 from cone_prog_refine import *
 
 HOW_MANY_DERIVATIVE_SAMPLES = 100
-HOW_LONG_DERIVATIVE_TEST_STEP = 1e-5
+HOW_LONG_DERIVATIVE_TEST_STEP = 1e-4
 
 
 def size_vec(x):
@@ -348,7 +348,8 @@ class TestEmbeddedCone(unittest.TestCase):
         self.assertTrue(np.allclose(proj_u - proj_v, z))
 
     def test_embedded_cone_der_proj(self):
-        dim_dict = {'f': 2, 'l': 20, 'q': [2, 3, 5], 's': [3, 4], 'ep': 4}
+        dim_dict = {'f': 2, 'l': 20,  'q': [2, 3, 5],
+                    's': [3, 4, 5], 'ep': 10, 'ed': 10}
         A, b, c, _, x_true, s_true, y_true = generate_problem(
             dim_dict, mode='solvable')
         m, n = A.shape
@@ -357,7 +358,7 @@ class TestEmbeddedCone(unittest.TestCase):
         u_true, v_true = xsy2uv(x_true, s_true, y_true, 1., 0.)
         z_true = u_true - v_true
 
-        for i in range(10):
+        for i in range(100):
             delta = np.random.randn(len(z_true)) * HOW_LONG_DERIVATIVE_TEST_STEP
             proj_u = embedded_cone_Pi(z_true, *cone_caches, n)
             proj_v = proj_u - z_true
@@ -381,11 +382,15 @@ class TestEmbeddedCone(unittest.TestCase):
             print('DPi delta:')
             print(dproj)
             print('error:')
-            print(u_true + dproj - u_plus_delta)
+            error = u_true + dproj - u_plus_delta
+            m, n = A.shape
+            print(error[:n])
+            print(error[n:-1])
+            print(error[-1])
 
             self.assertTrue(np.allclose(
                 u_true + dproj,
-                u_plus_delta, atol=1E-6))
+                u_plus_delta))
 
 
 if __name__ == '__main__':

@@ -106,28 +106,71 @@ non_neg_cone_cached = cone(lambda z, cache: non_neg_cone.Pi(z),
                            lambda z, x, cache: non_neg_cone.D(z, x))
 
 
+# @nb.jit(nb.double[:](nb.double[:], nb.double[:], nb.double[:]), nopython=True)
+# def sec_ord_D(z, x, cache):
+#     """Derivative of projection on second order cone."""
+#
+#     rho, s = z[0], z[1:]
+#     norm = cache[0]
+#
+#     if norm <= rho:
+#         return np.copy(x)
+#
+#     if norm <= -rho:
+#         return np.zeros_like(x)
+#
+#     y, t = x[1:], x[0]
+#     normalized_s = s / norm
+#     result = np.empty_like(x)
+#     result[1:] = ((rho / norm + 1) * y -
+#                   (rho / norm**3) * s *
+#                   s@y +
+#                   t * normalized_s) / 2.
+#     result[0] = (y@ normalized_s + t) / 2.
+#     return result
+
 @nb.jit(nb.double[:](nb.double[:], nb.double[:], nb.double[:]), nopython=True)
-def sec_ord_D(z, x, cache):
+def sec_ord_D(z, dz, cache):
     """Derivative of projection on second order cone."""
 
-    rho, s = z[0], z[1:]
-    norm = cache[0]
+    # point at which we derive
+    t = z[0]
+    x = z[1:]
+    # projection of point
+    s = cache[0]
+    y = cache[1:]
 
-    if norm <= rho:
-        return np.copy(x)
+    # logic for simple cases
+    norm = np.linalg.norm(x)
+    if norm <= t:
+        return np.copy(dz)
+    if norm <= -t:
+        return np.zeros_like(dz)
 
-    if norm <= -rho:
-        return np.zeros_like(x)
+    # big case
+    dx, dt = dz[1:], dz[0]
 
-    y, t = x[1:], x[0]
-    normalized_s = s / norm
-    result = np.empty_like(x)
-    result[1:] = ((rho / norm + 1) * y -
-                  (rho / norm**3) * s *
-                  s@y +
-                  t * normalized_s) / 2.
-    result[0] = (y@ normalized_s + t) / 2.
+    # from my notes (attach photo)
+    alpha = 2 * s - t
+    b = 2 * y - x
+    c = dt * s + dx @ y
+    d = dt * y + dx * s
+
+    ds = (c - b @ d / alpha)/(alpha - b @ b / alpha)
+    dy = (d - b * ds) / alpha
+
+    result = np.empty_like(dz)
+    result[1:], result[0] = dy, ds
     return result
+
+    # normalized_s = s / norm
+    # result = np.empty_like(x)
+    # result[1:] = ((rho / norm + 1) * y -
+    #               (rho / norm**3) * s *
+    #               s@y +
+    #               t * normalized_s) / 2.
+    # result[0] = (y@ normalized_s + t) / 2.
+    # return result
 
 
 @nb.jit(nb.double[:](nb.double[:], nb.double[:]), nopython=True)
@@ -138,7 +181,7 @@ def sec_ord_Pi(z, cache):
     # cache this?
     norm_x = np.linalg.norm(x)
     # cache = np.zeros(1)
-    cache[0] = norm_x
+    #cache[0] = norm_x
 
     if norm_x <= rho:
         return np.copy(z)
@@ -151,6 +194,8 @@ def sec_ord_Pi(z, cache):
     result[0] = 1.
     result[1:] = x / norm_x
     result *= (norm_x + rho) / 2.
+
+    cache[:] = result
 
     return result
 
@@ -427,9 +472,12 @@ def fourth_case_D(r, s, t, x, y, z, dr, ds, dt):
     #     return np.zeros(3)
 
     u = x - r
-    assert y >= 0
-    assert u <= 0
-    if y > 0:  # temporary fix?
+    # assert y >= 0
+    # assert u <= 0
+    if (y == 0. and u == 0.):
+        return np.zeros(3)
+
+    if y > 0.:  # temporary fix?
         #print('computing error with e^(x/y)')
         error = make_error(r, s, t, x, y, z)
     else:
@@ -439,8 +487,8 @@ def fourth_case_D(r, s, t, x, y, z, dr, ds, dt):
     #error = make_error(r, s, t, x, y, z)
     rhs = make_rhs(x, y, z, dr, ds, dt)
     # print('base rhs', rhs)
-    assert not np.any(np.isnan(error))
-    assert not np.any(np.isnan(rhs))
+    # assert not np.any(np.isnan(error))
+    # assert not np.any(np.isnan(rhs))
 
     if y > 0:  # temporary fix?
         #print('solving system with e^(x/y)')
@@ -479,9 +527,12 @@ def fourth_case_enzo(z_var):
         # if y < 1e-14:
         #     return np.zeros(3)
         u = x - r
-        assert y >= 0
-        assert u <= 0
-        if y > -u:
+        #assert y >= 0
+        #assert u <= 0
+        if (y <= 0. and u >= 0.):
+            return np.zeros(3)
+
+        if y > -u and not y == 0.:
             #print('computing error with e^(x/y)')
             error = make_error(r, s, t, x, y, z)
         else:
@@ -498,7 +549,7 @@ def fourth_case_enzo(z_var):
         if np.any(np.isnan(error)):
             break
 
-        if y > -u:
+        if y > -u and not y == 0.:
             #print('computing correction with e^(x/y)')
             correction = np.linalg.solve(
                 make_mat(r, s, t, x, y, z) + np.eye(3) * 1E-8,

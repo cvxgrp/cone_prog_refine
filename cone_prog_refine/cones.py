@@ -152,11 +152,16 @@ def sec_ord_D(z, dz, cache):
 
     # from my notes (attach photo)
     alpha = 2 * s - t
+    if alpha == 0.:
+        raise Exception('Second order cone derivative error')
     b = 2 * y - x
     c = dt * s + dx @ y
     d = dt * y + dx * s
 
-    ds = (c - b @ d / alpha)/(alpha - b @ b / alpha)
+    denom = (alpha - b @ b / alpha)
+    if denom == 0.:
+        raise Exception('Second order cone derivative error')
+    ds = (c - b @ d / alpha)/denom
     dy = (d - b * ds) / alpha
 
     result = np.empty_like(dz)
@@ -474,32 +479,34 @@ def fourth_case_D(r, s, t, x, y, z, dr, ds, dt):
     u = x - r
     # assert y >= 0
     # assert u <= 0
-    if (y == 0. and u == 0.):
+    # if (y == 0. and u == 0.):
+    if y < 1E-12:
         return np.zeros(3)
 
-    if y > 0.:  # temporary fix?
+    # if y > -u and not y == 0.:  # temporary fix?
         #print('computing error with e^(x/y)')
-        error = make_error(r, s, t, x, y, z)
-    else:
-        #print('computing error with e^(v/u)')
-        error = make_error_two(r, s, t, x, y, z)
+    error = make_error(r, s, t, x, y, z)
+    # else:
+    #print('computing error with e^(v/u)')
+    #    error = make_error_two(r, s, t, x, y, z)
 
     #error = make_error(r, s, t, x, y, z)
     rhs = make_rhs(x, y, z, dr, ds, dt)
     # print('base rhs', rhs)
-    # assert not np.any(np.isnan(error))
-    # assert not np.any(np.isnan(rhs))
+    if np.any(np.isnan(error)) or np.any(np.isinf(error)) or np.any(np.isnan(rhs)):
+        return np.zeros(3)
 
-    if y > 0:  # temporary fix?
+    # if y > -u and not y == 0.:  # temporary fix?
         #print('solving system with e^(x/y)')
-        result = np.linalg.solve(make_mat(r, s, t, x, y, z),  # + np.eye(3) * 1E-8,
-                                 rhs - error)
-    else:
-        #print('solving system with e^(v/u)')
-        result = np.linalg.solve(make_mat_two(r, s, t, x, y, z),  # + np.eye(3) * 1E-8,
-                                 rhs - error)
+    result = np.linalg.solve(make_mat(r, s, t, x, y, z) + np.eye(3) * 1E-8,
+                             rhs - error)
+    # else:
+    #print('solving system with e^(v/u)')
+    #    result = np.linalg.solve(make_mat_two(r, s, t, x, y, z),  # + np.eye(3) * 1E-8,
+    #                             rhs - error)
 
     if np.any(np.isnan(result)):
+        #raise Exception('Exp cone derivative error.')
         return np.zeros(3)
     # print('result', result)
     return result
@@ -537,6 +544,8 @@ def fourth_case_enzo(z_var):
             error = make_error(r, s, t, x, y, z)
         else:
             #print('computing error with e^(v/u)')
+            if u == 0:
+                break
             error = make_error_two(r, s, t, x, y, z)
 
         #print('error:', error)

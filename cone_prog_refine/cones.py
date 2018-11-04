@@ -594,6 +594,11 @@ def exp_pri_Pi(z, cache):
     s = z[1]
     t = z[2]
 
+    # temporary...
+    if np.linalg.norm(z) < 1E-12:
+        cache[:3] = 0.
+        return z
+
     # first case
     if (s > 0 and s * np.exp(r / s) <= t) or \
             (r <= 0 and s == 0 and t >= 0):

@@ -14,7 +14,7 @@ We provide a reference implementation of the procedure developed in
 
 The code is in alpha (pre-release) state. We'll provide installation packages soon. 
 
-To reproduce the paper experiments:
+To reproduce the experiments in the paper:
 - make sure you have the necessary packages: Python 3.x, numpy, scipy, numba 
 (a standard Python [Anaconda](https://www.anaconda.com/download) distribution will do), 
 - clone the repo

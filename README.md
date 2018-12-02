@@ -4,7 +4,7 @@ We provide a reference implementation of the procedure developed in
 [our paper](https://stanford.edu/~boyd/cone_prog_refine):
 
 ```
-@article{busseti2018solution,
+@article{cone_prog_refine,
   title={Solution Refinement at Regular Points of Conic Programs},
   author={E. Busseti and W. Moursi and S. Boyd},
   year={manuscript, 2018},

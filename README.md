@@ -1,7 +1,7 @@
 # Solution refinement of conic programs
 
 We provide a reference implementation of the procedure developed in 
-[our paper](https://stanford.edu/~boyd/cone_prog_refine):
+[our paper](https://stanford.edu/~boyd/papers/cone_prog_refine):
 
 ```
 @article{cone_prog_refine,

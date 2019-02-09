@@ -105,6 +105,7 @@ def generate_problem(dim_dict=None,
     #     A.nnz) * np.random.uniform(1., 1. + random_scale_max)
     # x = np.random.randn(n) * np.random.uniform(1., 1. + random_scale_max)
     A /= np.linalg.norm(A.data)
+    #A *= m/n
 
     x = np.random.uniform(min_val_entries, max_val_entries, size=n)
 
@@ -146,6 +147,7 @@ def generate_problem(dim_dict=None,
         # A = A - np.outer(y, A.T@y) / np.linalg.norm(y)**2  # dense...
         # b = np.random.randn(m) * np.random.uniform(1., 1. + random_scale_max)
         b = - y / (y@y)  # - b / (b@y)
+        assert np.allclose(b@y, -1)
         # np.random.randn(n)
         c = np.random.uniform(min_val_entries, max_val_entries, size=n)
         x *= 0.  # same as cert of infeas

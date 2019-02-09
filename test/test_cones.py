@@ -18,7 +18,7 @@ import numpy as np
 
 from cone_prog_refine import *
 
-HOW_MANY_DERIVATIVE_SAMPLES = 100
+HOW_MANY_DERIVATIVE_SAMPLES = 1000
 HOW_LONG_DERIVATIVE_TEST_STEP = 1e-4
 
 
@@ -74,7 +74,7 @@ class BaseTestCone(unittest.TestCase):
             Pix = self.test_cone.Pi(x, cache)
             self.assertTrue(np.allclose(Pix, proj_x))
 
-    def test_derivative(self):
+    def test_derivative_random(self):
         for x, isdiff in zip(self.sample_vecs,
                              self.sample_vecs_are_diff):
 
@@ -93,20 +93,22 @@ class BaseTestCone(unittest.TestCase):
             else:
                 for i in range(HOW_MANY_DERIVATIVE_SAMPLES):
 
-                    delta = np.random.randn(size_vec(x)) * HOW_LONG_DERIVATIVE_TEST_STEP
-                    print('x + delta:', x + delta)
+                    delta = np.random.randn(
+                        size_vec(x)) * HOW_LONG_DERIVATIVE_TEST_STEP
+                    #print('x + delta:', x + delta)
                     new_cache = self.make_cache(len(x))
                     proj_x_plus_delta = self.test_cone.Pi(x + delta, new_cache)
                     # proj_x_plus_delta, new_cache = self.test_cone.Pi(x + delta)
-                    print('x, delta, cache:', x, delta, cache)
+                    #print('x, delta, cache:', x, delta, cache)
                     dproj_x = self.test_cone.D(x, delta, cache)
 
-                    print('delta:')
-                    print(delta)
-                    print('Pi (x + delta) - Pi(x):')
-                    print(proj_x_plus_delta - proj_x)
-                    print('DPi delta:')
-                    print(dproj_x)
+                    if not np.allclose(proj_x + dproj_x, proj_x_plus_delta):
+                        print('delta:')
+                        print(delta)
+                        print('Pi (x + delta) - Pi(x):')
+                        print(proj_x_plus_delta - proj_x)
+                        print('DPi delta:')
+                        print(dproj_x)
 
                     self.assertTrue(np.allclose(
                         proj_x + dproj_x,
@@ -270,24 +272,26 @@ class TestProduct(BaseTestCone):
             x = np.random.randn(m)
             proj_x = prod_cone.Pi(x, *cache)
             for i in range(HOW_MANY_DERIVATIVE_SAMPLES):
-                delta = np.random.randn(size_vec(x)) * HOW_LONG_DERIVATIVE_TEST_STEP
-                print('x + delta:', x + delta)
+                delta = np.random.randn(size_vec(x)) * \
+                    HOW_LONG_DERIVATIVE_TEST_STEP
+                #print('x + delta:', x + delta)
                 new_cache = make_prod_cone_cache(dim_dict)
                 proj_x_plus_delta = prod_cone.Pi(x + delta, *new_cache)
 
-                print('x, delta, cache:', x, delta, cache)
                 dproj_x = prod_cone.D(x, delta, *cache)
 
-                print('delta:')
-                print(delta)
-                print('Pi (x + delta) - Pi(x):')
-                print(proj_x_plus_delta - proj_x)
-                print('DPi delta:')
-                print(dproj_x)
+                if not np.allclose(proj_x + dproj_x, proj_x_plus_delta):
+                    print('x, delta, cache:', x, delta, cache)
+                    print('delta:')
+                    print(delta)
+                    print('Pi (x + delta) - Pi(x):')
+                    print(proj_x_plus_delta - proj_x)
+                    print('DPi delta:')
+                    print(dproj_x)
 
-                print('error:')
-                print(proj_x + dproj_x -
-                      proj_x_plus_delta)
+                    print('error:')
+                    print(proj_x + dproj_x -
+                          proj_x_plus_delta)
 
                 self.assertTrue(np.allclose(
                     proj_x + dproj_x,
@@ -367,7 +371,8 @@ class TestEmbeddedCone(unittest.TestCase):
             z_true = u_true - v_true
 
             for i in range(HOW_MANY_DERIVATIVE_SAMPLES):
-                delta = np.random.randn(len(z_true)) * HOW_LONG_DERIVATIVE_TEST_STEP
+                delta = np.random.randn(len(z_true)) * \
+                    HOW_LONG_DERIVATIVE_TEST_STEP
                 proj_u = embedded_cone_Pi(z_true, *cone_caches, n)
                 proj_v = proj_u - z_true
 
@@ -383,18 +388,19 @@ class TestEmbeddedCone(unittest.TestCase):
                 # u_plus_delta, v_plus_delta = problem.embedded_cone_proj(z_true + delta)
                 # dproj = deriv@delta
 
-                print('delta:')
-                print(delta)
-                print('Pi (z + delta) - Pi(z):')
-                print(u_plus_delta - u_true)
-                print('DPi delta:')
-                print(dproj)
-                print('error:')
                 error = u_true + dproj - u_plus_delta
                 m, n = A.shape
-                print(error[:n])
-                print(error[n:-1])
-                print(error[-1])
+                if not np.allclose(error, 0., atol=1e-6):
+                    print('delta:')
+                    print(delta)
+                    print('Pi (z + delta) - Pi(z):')
+                    print(u_plus_delta - u_true)
+                    print('DPi delta:')
+                    print(dproj)
+                    print('error:')
+                    print(error[:n])
+                    print(error[n:-1])
+                    print(error[-1])
 
                 self.assertTrue(np.allclose(
                     error, 0., atol=1e-6))

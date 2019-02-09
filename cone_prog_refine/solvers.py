@@ -27,7 +27,7 @@ class SolverError(Exception):
     pass
 
 
-def scs_solve(A, b, c, dim_dict, **kwargs):
+def scs_solve(A, b, c, dim_dict, init_z=None, **kwargs):
     """Wraps scs.solve for convenience."""
     scs_cones = {'l': dim_dict['l'] if 'l' in dim_dict else 0,
                  'q': dim_dict['q'] if 'q' in dim_dict else [],

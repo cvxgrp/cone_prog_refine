@@ -220,29 +220,29 @@ def print_footer(message):
     print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
 
 
-# def lsqr_D(z, dz, A, b, c, cache, residual):
-#     return residual_D(z, dz, A, b, c, cache) / z[-1] - (residual /
-#                                                         z[-1]**2) * dz[-1]
-#
-#
-# def lsqr_DT(z, dres, A, b, c, cache, residual):
-#     m, n = A.shape
-#     e_minus1 = np.zeros(n + m + 1)
-#     e_minus1[-1] = 1.
-#     return residual_DT(z, dres, A, b, c, cache) / z[-1] - (dres@residual /
-#                                                            z[-1]**2) * e_minus1
-#
-
 def lsqr_D(z, dz, A, b, c, cache, residual):
-    return residual_D(z, dz, A, b, c, cache)
+    return residual_D(z, dz, A, b, c, cache) / np.abs(z[-1]) \
+        - np.sign(z[-1]) * (residual / z[-1]**2) * dz[-1]
 
 
 def lsqr_DT(z, dres, A, b, c, cache, residual):
-    return residual_DT(z, dres, A, b, c, cache)
+    m, n = A.shape
+    e_minus1 = np.zeros(n + m + 1)
+    e_minus1[-1] = 1.
+    return residual_DT(z, dres, A, b, c, cache) / np.abs(z[-1]) \
+        - np.sign(z[-1]) * (dres@residual / z[-1]**2) * e_minus1
+
+
+# def lsqr_D(z, dz, A, b, c, cache, residual):
+#     return residual_D(z, dz, A, b, c, cache)
+
+
+# def lsqr_DT(z, dres, A, b, c, cache, residual):
+#     return residual_DT(z, dres, A, b, c, cache)
 
 
 def normalized_resnorm(residual, z):
-    return np.linalg.norm(residual / z[-1])
+    return np.linalg.norm(residual) / np.abs(z[-1])
 
 
 def refine(A, b, c, dim_dict, z,
@@ -251,7 +251,7 @@ def refine(A, b, c, dim_dict, z,
            max_backtrack=10,
            verbose=True):
 
-    z = np.copy(z) / np.abs(z[-1])
+    z = np.copy(z)  # / np.abs(z[-1])
     m, n = A.shape
 
     start_time = time.time()
@@ -261,14 +261,23 @@ def refine(A, b, c, dim_dict, z,
 
     cones_caches = make_prod_cone_cache(dim_dict)
     residual, u, v = residual_and_uv(z, A, b, c, cones_caches)
-    normres = np.linalg.norm(residual)
+    normres = np.linalg.norm(residual) / np.abs(z[-1])
 
     if verbose:
         print_stats(0, residual, z, 0, 0, start_time)
 
+    mu = np.zeros(len(residual))
+    theta = np.zeros(len(residual))
+    z_s = np.zeros((iters, len(residual)))
+    steps = np.zeros((iters, len(residual)))
+    residuals = np.zeros((iters, len(residual)))
+
     for i in range(iters):
 
-        if norm(residual_DT(z, residual, A, b, c, cones_caches)) == 0.:
+        z_s[i] = z
+        residuals[i] = residual / np.abs(z[-1])
+
+        if norm(lsqr_DT(z, residual, A, b, c, cones_caches, residual)) == 0.:
             if verbose:
                 print_footer('Residual orthogonal to derivative.')
             return z / np.abs(z[-1])
@@ -282,8 +291,8 @@ def refine(A, b, c, dim_dict, z,
             rmatvec=lambda dres: lsqr_DT(
             z, dres, A, b, c, cones_caches, residual)
         )
-        _ = lsqr(D, residual,
-                 damp=1E-8,
+        _ = lsqr(D, residual / np.abs(z[-1]),  # + mu / 2,
+                 damp=0.,  # 1E-8,
                  atol=0.,
                  btol=0.,
                  show=False,
@@ -291,23 +300,58 @@ def refine(A, b, c, dim_dict, z,
         step, num_lsqr_iters = _[0], _[2]
         assert not True in np.isnan(step)
 
-        def backtrack():
-            test_cone_cache = make_prod_cone_cache(dim_dict)
-            for j in range(max_backtrack):
-                test_z = z - step * 2**(-j)
-                test_z /= np.abs(test_z[-1])
-                test_res, u, v = residual_and_uv(test_z, A, b, c, test_cone_cache)
-                test_normres = np.linalg.norm(test_res)
-                if test_normres < normres:
-                    return test_z, test_res, test_cone_cache, test_normres, j, True
-            return z, residual, cones_caches, normres, j,  False
+        steps[i] = - step
 
-        z, residual, cones_cache, normres, num_btrk, improved = backtrack()
+        # def backtrack():
+        #     test_cone_cache = make_prod_cone_cache(dim_dict)
+        #     for j in range(max_backtrack):
+        #         test_z = z - step * 2**(-j)
+        #         test_z /= np.abs(test_z[-1])
+        #         test_res, u, v = residual_and_uv(
+        #             test_z, A, b, c, test_cone_cache)
+        #         test_normres = np.linalg.norm(test_res)  # / np.abs(test_z[-1])
+        #         if test_normres < normres:
+        #             return test_z, test_res, test_cone_cache, test_normres, j, True
+        #     return z, residual, cones_caches, normres, j,  False
 
-        if not improved:
-            if verbose:
-                print_footer('Hit maximum number of backtracks.')
-            return z / np.abs(z[-1])
+        #z, residual, cones_cache, normres, num_btrk, improved = backtrack()
+
+        # theta_t_minus_one = theta_t
+        # theta_t = z - step
+        # theta_t /= np.abs(theta_t[-1])
+        # z = theta_t + .2 * (theta_t - theta_t_minus_one)
+
+        # ANDERSON = 20
+
+        # def anderson():
+        #     import cvxpy as cvx
+        #     w = cvx.Variable(ANDERSON)
+        #     cvx.Problem(cvx.Minimize(cvx.norm(w @ residuals[i - ANDERSON + 1:i + 1])),
+        #                 [cvx.sum(w) == 1.]).solve()
+        #     print(w.value)
+        # return w.value @ (z_s[i - ANDERSON + 1:i + 1] + steps[i - ANDERSON +
+        # 1:i + 1])
+
+        # z = anderson() if i > ANDERSON else (z - step)
+        z = z - step
+        # theta_t_minus_one = theta_t
+        # theta_t = z - step
+        # z = theta_t + .1 * (theta_t - theta_t_minus_one)
+
+        # theta = .5 * theta + step
+        # z = z - theta
+
+        #z /= np.abs(z[-1])
+        residual, u, v = residual_and_uv(z, A, b, c, cones_caches)
+        normres = np.linalg.norm(residual) / np.abs(z[-1])
+        num_btrk = 0
+
+        #mu += (1 / np.e) * residual
+
+        # if not improved:
+        #     if verbose:
+        #         print_footer('Hit maximum number of backtracks.')
+        #     return z / np.abs(z[-1])
 
         if verbose:
             print_stats(i + 1, np.copy(residual), np.copy(z),
@@ -317,4 +361,4 @@ def refine(A, b, c, dim_dict, z,
             if verbose:
                 print_footer('Max num. refinement iters reached.')
 
-            return z / np.abs(z[-1])
+            return z / np.abs(z[-1])  # , z_s, residuals

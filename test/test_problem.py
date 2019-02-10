@@ -17,6 +17,7 @@ import unittest
 import numpy as np
 
 from cone_prog_refine import *
+import scipy.sparse as sp
 
 import time
 
@@ -118,11 +119,22 @@ class ProblemTest(unittest.TestCase):
         u_true, v_true = xsy2uv(x_true, s_true, y_true, 1., 0.)
         z_true = u_true - v_true
 
-        res = residual(z_true, A, b, c, cones_caches)
+        res = residual(z_true, A,  # A.T,
+                       b, c, cones_caches)
         delta = np.random.randn(len(z_true)) * 1E-7
-        residual_z_plus_delta = residual(z_true + delta, A, b, c,
+        residual_z_plus_delta = residual(z_true + delta, A,  # A.T,
+                                         b, c,
                                          make_prod_cone_cache(dim_dict))
-        dres = residual_D(z_true, delta, A, b, c, cones_caches)
+
+        A = sp.csc_matrix(A)
+        #A_tr = sp.csc_matrix(A.T)
+
+        (A.indptr, A.indices, A.data),
+        #(A_tr.indptr, A_tr.indices, A_tr.data),
+
+        dres = residual_D(z_true, delta, (A.indptr, A.indices, A.data),
+                          #(A_tr.indptr, A_tr.indices, A_tr.data),
+                          b, c, cones_caches)
 
         print('delta:')
         print(delta)
@@ -166,7 +178,8 @@ class ProblemTest(unittest.TestCase):
 
         u, v = xsy2uv(x_true, s_true, y_true, solvable, not solvable)
 
-        embedded_res = residual(u - v, A, b, c, make_prod_cone_cache(dim_dict))
+        embedded_res = residual(u - v, A, b, c,
+                                make_prod_cone_cache(dim_dict))
         self.assertTrue(np.allclose(embedded_res, 0.))
 
         print('calling solver')
@@ -320,3 +333,18 @@ class ProblemTest(unittest.TestCase):
         #self.check_refine_ecos({'l': 1000})
         self.check_refine_ecos({'l': 20, 'q': [10, 20, 40]})
         #self.check_refine_ecos({'l': 20, 'q': [10, 20, 40, 60]})
+
+
+class MiscTest(unittest.TestCase):
+
+    def test_CSC(self):
+
+        m, n = 40, 30
+        A_csc = sp.random(m, n, density=.2, format='csc')
+
+        b = np.random.randn(n)
+        self.assertTrue(np.allclose(csc_matvec(A_csc.shape[0],
+                                               A_csc.indptr,
+                                               A_csc.indices,
+                                               A_csc.data, b),
+                                    A_csc @ b))

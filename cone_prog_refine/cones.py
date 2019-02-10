@@ -22,9 +22,6 @@ from collections import namedtuple
 
 import numba as nb
 
-# from functools import lru_cache
-from fastcache import clru_cache as lru_cache
-
 
 class DimensionError(Exception):
     pass
@@ -49,13 +46,13 @@ class NonDifferentiable(Exception):
 cone = namedtuple('cone', ['Pi', 'D', 'DT'])
 
 
-@nb.jit(nb.double[:](nb.double[:], nb.double[:]), nopython=True)
+@nb.jit(nb.float64[:](nb.float64[:], nb.float64[:]))
 def id_op(z, x):
     """Identity operator on x."""
     return np.copy(x)
 
 
-@nb.jit(nb.double[:](nb.double[:]), nopython=True)
+@nb.jit(nb.float64[:](nb.float64[:]))
 def free(z):
     """Projection on free cone, and cache."""
     return np.copy(z)
@@ -67,13 +64,13 @@ free_cone_cached = cone(lambda z, cache: free_cone.Pi(z),
                         lambda z, x, cache: free_cone.D(z, x))
 
 
-@nb.jit(nb.double[:](nb.double[:], nb.double[:]), nopython=True)
+@nb.jit(nb.float64[:](nb.float64[:], nb.float64[:]))
 def zero_D(z, x):
     """zero operator on x."""
     return np.zeros_like(x)
 
 
-@nb.jit(nb.double[:](nb.double[:]), nopython=True)
+@nb.jit(nb.float64[:](nb.float64[:]))
 def zero_Pi(z):
     """Projection on zero cone, and cache."""
     return np.zeros_like(z)
@@ -85,7 +82,7 @@ zero_cone_cached = cone(lambda z, cache: zero_cone.Pi(z),
                         lambda z, x, cache: zero_cone.D(z, x))
 
 
-@nb.jit(nb.double[:](nb.double[:], nb.double[:]), nopython=True)
+@nb.jit(nb.float64[:](nb.float64[:], nb.float64[:]), nopython=True)
 def non_neg_D(z, x):
     # assert len(x) == len(z)
     result = np.copy(x)
@@ -93,7 +90,7 @@ def non_neg_D(z, x):
     return result
 
 
-@nb.jit(nb.double[:](nb.double[:]), nopython=True)
+@nb.jit(nb.float64[:](nb.float64[:]), nopython=True)
 def non_neg_Pi(z):
     """Projection on non-negative cone, and cache."""
     cache = np.zeros(1)
@@ -106,7 +103,7 @@ non_neg_cone_cached = cone(lambda z, cache: non_neg_cone.Pi(z),
                            lambda z, x, cache: non_neg_cone.D(z, x))
 
 
-# @nb.jit(nb.double[:](nb.double[:], nb.double[:], nb.double[:]), nopython=True)
+# @nb.jit(nb.float64[:](nb.float64[:], nb.float64[:], nb.float64[:]), nopython=True)
 # def sec_ord_D(z, x, cache):
 #     """Derivative of projection on second order cone."""
 #
@@ -129,7 +126,7 @@ non_neg_cone_cached = cone(lambda z, cache: non_neg_cone.Pi(z),
 #     result[0] = (y@ normalized_s + t) / 2.
 #     return result
 
-@nb.jit(nb.double[:](nb.double[:], nb.double[:], nb.double[:]), nopython=True)
+@nb.jit(nb.float64[:](nb.float64[:], nb.float64[:], nb.float64[:]))
 def sec_ord_D(z, dz, cache):
     """Derivative of projection on second order cone."""
 
@@ -161,7 +158,7 @@ def sec_ord_D(z, dz, cache):
     denom = (alpha - b @ b / alpha)
     if denom == 0.:
         raise Exception('Second order cone derivative error')
-    ds = (c - b @ d / alpha)/denom
+    ds = (c - b @ d / alpha) / denom
     dy = (d - b * ds) / alpha
 
     result = np.empty_like(dz)
@@ -178,7 +175,7 @@ def sec_ord_D(z, dz, cache):
     # return result
 
 
-@nb.jit(nb.double[:](nb.double[:], nb.double[:]), nopython=True)
+@nb.jit(nb.float64[:](nb.float64[:], nb.float64[:]))
 def sec_ord_Pi(z, cache):
     """Projection on second-order cone."""
 
@@ -186,7 +183,7 @@ def sec_ord_Pi(z, cache):
     # cache this?
     norm_x = np.linalg.norm(x)
     # cache = np.zeros(1)
-    #cache[0] = norm_x
+    # cache[0] = norm_x
 
     if norm_x <= rho:
         return np.copy(z)
@@ -300,7 +297,7 @@ sec_ord_cone = cone(sec_ord_Pi, sec_ord_D, sec_ord_D)
 #   return x
 
 
-@nb.jit(nb.double(nb.double, nb.double, nb.double, nb.double), nopython=True)
+@nb.jit(nb.float64(nb.float64, nb.float64, nb.float64, nb.float64))
 def newton_exp_onz(rho, y_hat, z_hat, w):
     t = max(max(w - z_hat, -z_hat), 1e-6)
     for iter in np.arange(0, 100):
@@ -319,7 +316,7 @@ def newton_exp_onz(rho, y_hat, z_hat, w):
     return t + z_hat
 
 
-@nb.jit(nb.double[:](nb.double[:], nb.double, nb.double), nopython=True)
+@nb.jit(nb.float64[:](nb.float64[:], nb.float64, nb.float64))
 def solve_with_rho(v, rho, w):
     x = np.zeros(3)
     x[2] = newton_exp_onz(rho, v[1], v[2], w)
@@ -328,8 +325,8 @@ def solve_with_rho(v, rho, w):
     return x
 
 
-@nb.jit(nb.types.Tuple((nb.double, nb.double[:]))(nb.double[:],
-                                                  nb.double, nb.double[:]),
+@nb.jit(nb.types.Tuple((nb.float64, nb.float64[:]))(nb.float64[:],
+                                                    nb.float64, nb.float64[:]),
         nopython=True)
 def calc_grad(v, rho, warm_start):
     x = solve_with_rho(v, rho, warm_start[1])
@@ -340,7 +337,7 @@ def calc_grad(v, rho, warm_start):
     return g, x
 
 
-@nb.jit(nb.types.UniTuple(nb.double, 2)(nb.double[:]), nopython=True)
+@nb.jit(nb.types.UniTuple(nb.float64, 2)(nb.float64[:]))
 def get_rho_ub(v):
     lb = 0
     rho = 2**(-3)
@@ -353,7 +350,7 @@ def get_rho_ub(v):
     return ub, lb
 
 
-@nb.jit(nb.types.UniTuple(nb.double[:], 2)(nb.double[:]), nopython=True)
+@nb.jit(nb.types.UniTuple(nb.float64[:], 2)(nb.float64[:]))
 def fourth_case_brendan(z):
     x = np.copy(z)
     ub, lb = get_rho_ub(x)
@@ -374,8 +371,8 @@ def fourth_case_brendan(z):
 
 
 # Here it is my work on exp proj D
-@nb.jit(nb.double[:, :](nb.double, nb.double, nb.double, nb.double,
-                        nb.double, nb.double), nopython=True)
+@nb.jit(nb.float64[:, :](nb.float64, nb.float64, nb.float64, nb.float64,
+                         nb.float64, nb.float64))
 def make_mat(r, s, t, x, y, z):
     mat = np.zeros((3, 3))
     # first eq.
@@ -393,8 +390,8 @@ def make_mat(r, s, t, x, y, z):
 # Here it is my work on exp proj D
 
 
-@nb.jit(nb.double[:, :](nb.double, nb.double, nb.double, nb.double,
-                        nb.double, nb.double), nopython=True)
+@nb.jit(nb.float64[:, :](nb.float64, nb.float64, nb.float64, nb.float64,
+                         nb.float64, nb.float64))
 def make_mat_two(r, s, t, x, y, z):
     mat = np.zeros((3, 3))
     # first eq.
@@ -410,8 +407,8 @@ def make_mat_two(r, s, t, x, y, z):
     # mat[1, 1] = np.exp(x / y) * (1 - x / y)
     # mat[1, 2] = -1.
 
-    mat[1, 0] = np.exp(v/u) * (1 - v / u)
-    mat[1, 1] = np.exp(v/u)
+    mat[1, 0] = np.exp(v / u) * (1 - v / u)
+    mat[1, 1] = np.exp(v / u)
     mat[1, 2] = np.e
 
     mat[2, 0] = y
@@ -420,8 +417,8 @@ def make_mat_two(r, s, t, x, y, z):
     return mat
 
 
-@nb.jit(nb.double[:](nb.double, nb.double, nb.double, nb.double,
-                     nb.double, nb.double), nopython=True)
+@nb.jit(nb.float64[:](nb.float64, nb.float64, nb.float64, nb.float64,
+                      nb.float64, nb.float64))
 def make_error(r, s, t, x, y, z):
     error = np.zeros(3)
     error[0] = x * (x - r) + y * (y - s) + z * (z - t)
@@ -431,22 +428,22 @@ def make_error(r, s, t, x, y, z):
     return error
 
 
-@nb.jit(nb.double[:](nb.double, nb.double, nb.double, nb.double,
-                     nb.double, nb.double), nopython=True)
+@nb.jit(nb.float64[:](nb.float64, nb.float64, nb.float64, nb.float64,
+                      nb.float64, nb.float64))
 def make_error_two(r, s, t, x, y, z):
     error = np.zeros(3)
     error[0] = x * (x - r) + y * (y - s) + z * (z - t)
     u = -(r - x)
     v = -(s - y)
     w = -(t - z)
-    error[1] = np.e * w + u * np.exp(v/u)
+    error[1] = np.e * w + u * np.exp(v / u)
     error[2] = y * (x - r) + z * (z - t)
     # print('error', error)
     return error
 
 
-@nb.jit(nb.double[:](nb.double, nb.double, nb.double, nb.double,
-                     nb.double, nb.double), nopython=True)
+@nb.jit(nb.float64[:](nb.float64, nb.float64, nb.float64, nb.float64,
+                      nb.float64, nb.float64))
 def make_rhs(x, y, z, dr, ds, dt):
     rhs = np.zeros(3)
     rhs[0] = x * dr + y * ds + z * dt
@@ -454,76 +451,61 @@ def make_rhs(x, y, z, dr, ds, dt):
     return rhs
 
 
-@nb.jit(nb.double[:](nb.double, nb.double, nb.double, nb.double,
-                     nb.double, nb.double, nb.double, nb.double, nb.double),
-        nopython=True)
+@nb.jit(nb.float64[:](nb.float64, nb.float64, nb.float64, nb.float64,
+                      nb.float64, nb.float64, nb.float64, nb.float64, nb.float64))
 def fourth_case_D(r, s, t, x, y, z, dr, ds, dt):
 
     test = np.zeros(3)
     test[0], test[1], test[2] = r, s, t
-    #
-    # print('der. proj. Pi (%.2e, %.2e,%.2e) -> (%.2e, %.2e,%.2e)' %
-    #       (r, s, t, x, y, z))
-    #
-    # print('and (u,v,w)', x - r, y - s, z - t)
-
-    # took it out now (oct 31.)
-    # if np.linalg.norm(test) < 1E-12:
-    #     return np.zeros(3)
-
-    # print('fourth case D')
-    #assert not y == 0
-    # if y < 1e-14:
-    #     return np.zeros(3)
 
     u = x - r
-    # assert y >= 0
-    # assert u <= 0
-    # if (y == 0. and u == 0.):
+
     if y < 1E-12:
         return np.zeros(3)
 
     # if y > -u and not y == 0.:  # temporary fix?
-        #print('computing error with e^(x/y)')
+        # print('computing error with e^(x/y)')
     error = make_error(r, s, t, x, y, z)
     # else:
-    #print('computing error with e^(v/u)')
+    # print('computing error with e^(v/u)')
     #    error = make_error_two(r, s, t, x, y, z)
 
-    #error = make_error(r, s, t, x, y, z)
+    # error = make_error(r, s, t, x, y, z)
     rhs = make_rhs(x, y, z, dr, ds, dt)
     # print('base rhs', rhs)
     if np.any(np.isnan(error)) or np.any(np.isinf(error)) or np.any(np.isnan(rhs)):
         return np.zeros(3)
 
     # if y > -u and not y == 0.:  # temporary fix?
-        #print('solving system with e^(x/y)')
+        # print('solving system with e^(x/y)')
     result = np.linalg.solve(make_mat(r, s, t, x, y, z) + np.eye(3) * 1E-8,
                              rhs - error)
     # else:
-    #print('solving system with e^(v/u)')
+    # print('solving system with e^(v/u)')
     #    result = np.linalg.solve(make_mat_two(r, s, t, x, y, z),  # + np.eye(3) * 1E-8,
     #                             rhs - error)
 
     if np.any(np.isnan(result)):
-        #raise Exception('Exp cone derivative error.')
+        # raise Exception('Exp cone derivative error.')
         return np.zeros(3)
     # print('result', result)
     return result
 
 
-@nb.jit(nb.double[:](nb.double[:]), nopython=True)
+@nb.jit(nb.float64[:](nb.float64[:]))
 def fourth_case_enzo(z_var):
+    # VERBOSE = False
 
-    #print('fourth case Enzo')
-
+    # print('fourth case Enzo')
+    # if VERBOSE:
+    #    print('projecting (%f, %f, %f)' % (z_var[0], z_var[1], z_var[2]))
     real_result, _ = fourth_case_brendan(z_var)
-    #print('brendan result: (x,y,z)', real_result)
+    # print('brendan result: (x,y,z)', real_result)
     z_var = np.copy(z_var)
     r = z_var[0]
     s = z_var[1]
     t = z_var[2]
-    #print('brendan result: (u,v,w)', real_result - z_var)
+    # print('brendan result: (u,v,w)', real_result - z_var)
 
     x, y, z = real_result
     # if y < 1E-12:
@@ -534,24 +516,28 @@ def fourth_case_enzo(z_var):
         # if y < 1e-14:
         #     return np.zeros(3)
         u = x - r
-        #assert y >= 0
-        #assert u <= 0
+        # assert y >= 0
+        # assert u <= 0
         if (y <= 0. and u >= 0.):
             return np.zeros(3)
 
         if y > -u and not y == 0.:
-            #print('computing error with e^(x/y)')
+            # print('computing error with e^(x/y)')
             error = make_error(r, s, t, x, y, z)
         else:
-            #print('computing error with e^(v/u)')
+            # print('computing error with e^(v/u)')
             if u == 0:
                 break
             error = make_error_two(r, s, t, x, y, z)
 
-        #print('error:', error)
-        #print('error norm: %.2e' % np.linalg.norm(error))
+        # print('error:', error)
+        # print('error norm: %.2e' % np.linalg.norm(error))
 
-        if np.max(np.abs(error)) < 1e-12:
+        # if VERBOSE:
+        # print('iter %d, max |error| = %g' % (i, np.max(np.abs(error))))
+
+        if np.max(np.abs(error)) < 1e-15:
+            # print(np.max(np.abs(error)))
             # print('converged!')
             break
 
@@ -559,17 +545,17 @@ def fourth_case_enzo(z_var):
             break
 
         if y > -u and not y == 0.:
-            #print('computing correction with e^(x/y)')
+            # print('computing correction with e^(x/y)')
             correction = np.linalg.solve(
                 make_mat(r, s, t, x, y, z) + np.eye(3) * 1E-8,
                 -error)
         else:
-            #print('computing correction with e^(v/u)')
+            # print('computing correction with e^(v/u)')
             correction = np.linalg.solve(
                 make_mat_two(r, s, t, x, y, z) + np.eye(3) * 1E-8,
                 -error)
 
-        #print('correction', correction)
+        # print('correction', correction)
 
         if np.any(np.isnan(correction)):
             break
@@ -583,10 +569,13 @@ def fourth_case_enzo(z_var):
     result[1] = y
     result[2] = z
 
+    # if VERBOSE:
+    #    print('result = (%f, %f, %f)' % (result[0], result[1], result[2]))
+
     return result
 
 
-@nb.jit(nb.double[:](nb.double[:], nb.double[:]), nopython=True)
+@nb.jit(nb.float64[:](nb.float64[:], nb.float64[:]), nopython=True)
 def exp_pri_Pi(z, cache):
     """Projection on exp. primal cone, and cache."""
     z = np.copy(z)
@@ -595,7 +584,7 @@ def exp_pri_Pi(z, cache):
     t = z[2]
 
     # temporary...
-    if np.linalg.norm(z) < 1E-12:
+    if np.linalg.norm(z) < 1E-14:
         cache[:3] = 0.
         return z
 
@@ -623,7 +612,7 @@ def exp_pri_Pi(z, cache):
     return pi
 
 
-@nb.jit(nb.double[:](nb.double[:], nb.double[:], nb.double[:]), nopython=True)
+@nb.jit(nb.float64[:](nb.float64[:], nb.float64[:], nb.float64[:]), nopython=True)
 def exp_pri_D(z_0, dz, cache):
     """Derivative of proj. on exp. primal cone."""
 
@@ -687,14 +676,14 @@ def exp_pri_D(z_0, dz, cache):
 exp_pri_cone = cone(exp_pri_Pi, exp_pri_D, exp_pri_D)
 
 
-@nb.jit(nb.double[:](nb.double[:], nb.double[:]), nopython=True)
+@nb.jit(nb.float64[:](nb.float64[:], nb.float64[:]))
 def exp_dua_Pi(z, cache):
     """Projection on exp. dual cone, and cache."""
     minuspi = exp_pri_Pi(-z, cache)
     return np.copy(z) + minuspi
 
 
-@nb.jit(nb.double[:](nb.double[:], nb.double[:], nb.double[:]), nopython=True)
+@nb.jit(nb.float64[:](nb.float64[:], nb.float64[:], nb.float64[:]))
 def exp_dua_D(z, x, cache):
     """Derivative of projection on exp. dual cone."""
     # res = exp_pri_D(z, x, cache)
@@ -704,7 +693,7 @@ def exp_dua_D(z, x, cache):
 exp_dua_cone = cone(exp_dua_Pi, exp_dua_D, exp_dua_D)
 
 
-@nb.jit(nb.int64(nb.int64), nopython=True)
+@nb.jit(nb.int64(nb.int64))
 def sizevec2sizemat(n):
     m = int(np.sqrt(2 * n))
     if not n == (m * (m + 1) / 2.):
@@ -712,12 +701,12 @@ def sizevec2sizemat(n):
     return m
 
 
-@nb.jit(nb.int64(nb.int64), nopython=True)
+@nb.jit(nb.int64(nb.int64))
 def sizemat2sizevec(m):
     return int((m * (m + 1) / 2.))
 
 
-@nb.jit(nb.double[:](nb.double[:, :]), nopython=True)
+@nb.jit(nb.float64[:](nb.float64[:, :]))
 def mat2vec(Z):
     """Upper tri row stacked, off diagonal multiplied by sqrt(2)."""
     n = Z.shape[0]
@@ -736,7 +725,7 @@ def mat2vec(Z):
     return result
 
 
-@nb.jit(nb.double[:, :](nb.double[:]), nopython=True)
+@nb.jit(nb.float64[:, :](nb.float64[:]))
 def vec2mat(z):
     n = sizevec2sizemat(len(z))
 
@@ -755,8 +744,19 @@ def vec2mat(z):
     return result
 
 
-@nb.jit((nb.int64, nb.double[:], nb.double[:], nb.double[:, :],
-         nb.double[:, :]), nopython=True)
+# @nb.jit()  # nb.float64[:](nb.float64[:, :]))
+# def flatten(mat):
+#     return mat.flatten()
+
+
+@nb.jit(nb.float64[:, :](nb.float64[:]), nopython=True)
+def reconstruct_sqmat(vec):
+    n = int(np.sqrt(len(vec)))
+    return np.copy(vec).reshape((n, n))  # copying because of numba issue
+
+
+@nb.jit((nb.int64, nb.float64[:], nb.float64[:], nb.float64[:, :],
+         nb.float64[:, :]))
 def inner(m, lambda_plus, lambda_minus, dS_tilde, dZ_tilde):
     for i in range(m):
         for j in range(i, m):
@@ -770,10 +770,13 @@ def inner(m, lambda_plus, lambda_minus, dS_tilde, dZ_tilde):
             dS_tilde[j, i] = dS_tilde[i, j]
 
 
-@nb.jit(nb.double[:](nb.double[:], nb.double[:], nb.double[:, :],
-                     nb.double[:]), nopython=True)
+# nb.float64[:](nb.float64[:], nb.float64[:], nb.float64[:],
+@nb.jit(nb.float64[:](nb.float64[:],
+                      nb.float64[:],
+                      nb.float64[:],
+                      nb.float64[:]), nopython=True)
 def semidef_cone_D(z, dz, cache_eivec, cache_eival):
-    U, lambda_var = cache_eivec, cache_eival
+    U, lambda_var = reconstruct_sqmat(cache_eivec), cache_eival
     dZ = vec2mat(dz)
     dZ_tilde = U.T @ dZ @ U
     lambda_plus = np.maximum(lambda_var, 0.)
@@ -788,15 +791,23 @@ def semidef_cone_D(z, dz, cache_eivec, cache_eival):
     return mat2vec(dS)
 
 
-@nb.jit(nb.double[:](nb.double[:], nb.double[:, :],
-                     nb.double[:]), nopython=True)
+@nb.jit(nb.float64[:](nb.float64[:], nb.float64[:],
+                      nb.float64[:]), nopython=True)
 def semidef_cone_Pi(z, cache_eivec, cache_eival):
 
     Z = vec2mat(z)
     eival, eivec = np.linalg.eigh(Z)
     result = mat2vec(eivec @ np.diag(np.maximum(eival, 0.)) @ eivec.T)
 
-    cache_eivec[:, :] = eivec
+    Pi_Z = eivec @ np.diag(np.maximum(eival, 0.)) @ eivec.T
+
+    # print('semidef proj Z = %s' % z)
+    # Pi_star_Z = eivec @ np.diag(np.minimum(eival, 0.)) @ eivec.T
+    # error = Pi_Z @ Pi_star_Z
+    # print('eival = %s' % eival)
+    # print('semidef_proj_error: %.2e' % np.linalg.norm(error))
+
+    cache_eivec[:] = eivec.flatten()
     cache_eival[:] = eival
 
     return result
@@ -805,16 +816,14 @@ def semidef_cone_Pi(z, cache_eivec, cache_eival):
 semi_def_cone = cone(semidef_cone_Pi, semidef_cone_D, semidef_cone_D)
 
 
-@nb.jit(nb.double[:](nb.double[:], nb.double[:],
-                     nb.types.Tuple((nb.double[:, :], nb.double[:]))),
-        nopython=True)
+@nb.jit(nb.float64[:](nb.float64[:], nb.float64[:],
+                      nb.types.Tuple((nb.float64[:], nb.float64[:]))))
 def semidef_cone_D_single_cache(z, dz, cache):
     return semidef_cone_D(z, dz, cache[0], cache[1])
 
 
-@nb.jit(nb.double[:](nb.double[:],
-                     nb.types.Tuple((nb.double[:, :], nb.double[:]))),
-        nopython=True)
+@nb.jit(nb.float64[:](nb.float64[:],
+                      nb.types.Tuple((nb.float64[:], nb.float64[:]))))
 def semidef_cone_Pi_single_cache(z, cache):
     return semidef_cone_Pi(z, cache[0], cache[1])
 
@@ -823,23 +832,36 @@ def semidef_cone_Pi_single_cache(z, cache):
 semi_def_cone_single_cache = cone(semidef_cone_Pi_single_cache, semidef_cone_D_single_cache,
                                   semidef_cone_D_single_cache)
 
+# these functions are used to store matrices in cache
+
 
 cache_types = nb.types.Tuple((nb.int64, nb.int64,  # z, l
-                              nb.int64[:], nb.types.List(nb.float64[:]),  # q
+                              nb.int64[:],
+                              nb.float64[:],
+                              # nb.types.List(nb.float64[:]),  # q
                               nb.int64[:],  # s
-                              nb.types.List(nb.float64[:, :]),
-                              nb.types.List(nb.float64[:]),
+                              # nb.types.List(nb.float64[:, :]),
+                              nb.float64[:],
+                              # nb.types.List(nb.float64[:]),
+                              nb.float64[:],
                               nb.int64, nb.float64[:, :],  # ep
                               nb.int64, nb.float64[:, :]))  # ed
 
 
-@nb.jit(nb.double[:](nb.double[:], nb.double[:], nb.int64, nb.int64,  # z, l
-                     nb.int64[:], nb.types.List(nb.float64[:]),  # q
-                     nb.int64[:],  # s
-                     nb.types.List(nb.float64[:, :]),
-                     nb.types.List(nb.float64[:]),
-                     nb.int64, nb.float64[:, :],  # ep
-                     nb.int64, nb.float64[:, :]))
+# nb.float64[:](nb.float64[:], nb.float64[:], nb.int64, nb.int64,  # z, l
+#                       nb.int64[:],
+#                       nb.float64[:],
+#                       # nb.types.List(nb.float64[:]),  # q
+#                       nb.int64[:],  # s
+#                       #nb.types.List(nb.float64[:, :]),
+#                       nb.float64[:],
+#                       # nb.types.List(nb.float64[:]),
+#                       nb.float64[:],
+#                       nb.int64,
+#                       nb.float64[:, :],  # ep
+#                       nb.int64,
+#                       nb.float64[:, :]), nopython=True)
+@nb.jit(nopython=True)
 def prod_cone_D(z, x, zero, l, q, q_cache, s, s_cache_eivec, s_cache_eival, ep, ep_cache, ed, ed_cache):
 
     result = np.empty_like(z)
@@ -854,20 +876,30 @@ def prod_cone_D(z, x, zero, l, q, q_cache, s, s_cache_eivec, s_cache_eival, ep, 
     cur += l
 
     # second order
+    sec_ord_cache_cur = 0
     for index, size in enumerate(q):
         result[cur:cur + size] = sec_ord_D(z[cur:cur + size],
                                            x[cur:cur + size],
-                                           q_cache[index])
+                                           q_cache[sec_ord_cache_cur:
+                                                   sec_ord_cache_cur + size])
         cur += size
+        sec_ord_cache_cur += size
 
     # semi-def
+    semi_def_cache_cur = 0
+    semi_def_eivec_cache_cur = 0
+
     for index, size in enumerate(s):
         vecsize = sizemat2sizevec(size)
         result[cur:cur + vecsize] = semidef_cone_D(z[cur:cur + vecsize],
                                                    x[cur:cur + vecsize],
-                                                   s_cache_eivec[index],
-                                                   s_cache_eival[index])
+                                                   s_cache_eivec[
+            semi_def_eivec_cache_cur:semi_def_eivec_cache_cur + size**2],
+            s_cache_eival[semi_def_cache_cur:semi_def_cache_cur + size])
+
         cur += vecsize
+        semi_def_cache_cur += size
+        semi_def_eivec_cache_cur += size**2
 
     # exp-pri
     for index in range(ep):
@@ -887,13 +919,18 @@ def prod_cone_D(z, x, zero, l, q, q_cache, s, s_cache_eivec, s_cache_eival, ep, 
     return result
 
 
-@nb.jit(nb.double[:](nb.double[:], nb.int64, nb.int64,  # z, l
-                     nb.int64[:], nb.types.List(nb.float64[:]),  # q
-                     nb.int64[:],  # s
-                     nb.types.List(nb.float64[:, :]),
-                     nb.types.List(nb.float64[:]),
-                     nb.int64, nb.float64[:, :],  # ep
-                     nb.int64, nb.float64[:, :]))
+# @nb.jit(nb.float64[:](nb.float64[:], nb.int64, nb.int64,  # z, l
+#                       nb.int64[:],
+#                       nb.float64[:],
+#                       # nb.types.List(nb.float64[:]),  # q
+#                       nb.int64[:],  # s
+#                       #nb.types.List(nb.float64[:, :]),
+#                       nb.float64[:],
+#                       # nb.types.List(nb.float64[:]),
+#                       nb.float64[:],
+#                       nb.int64, nb.float64[:, :],  # ep
+#                       nb.int64, nb.float64[:, :]),
+@nb.jit(nopython=True)
 def prod_cone_Pi(z, zero, l, q, q_cache, s, s_cache_eivec, s_cache_eival,  ep,
                  ep_cache, ed, ed_cache):
     """Projection on product of zero, non-neg, sec. ord., sd, exp p., exp d."""
@@ -910,18 +947,29 @@ def prod_cone_Pi(z, zero, l, q, q_cache, s, s_cache_eivec, s_cache_eival,  ep,
     cur += l
 
     # second order
+    sec_ord_cache_cur = 0
     for index, size in enumerate(q):
+
         result[cur:cur + size] = sec_ord_Pi(z[cur:cur + size],
-                                            q_cache[index])
+                                            q_cache[sec_ord_cache_cur:
+                                                    sec_ord_cache_cur + size])
         cur += size
+        sec_ord_cache_cur += size
 
     # semi-def
+    semi_def_cache_cur = 0
+    semi_def_eivec_cache_cur = 0
+
     for index, size in enumerate(s):
         vecsize = sizemat2sizevec(size)
         result[cur:cur + vecsize] = semidef_cone_Pi(z[cur:cur + vecsize],
-                                                    s_cache_eivec[index],
-                                                    s_cache_eival[index])
+                                                    s_cache_eivec[semi_def_eivec_cache_cur:
+                                                                  semi_def_eivec_cache_cur + size**2],
+                                                    s_cache_eival[semi_def_cache_cur:
+                                                                  semi_def_cache_cur + size])
         cur += vecsize
+        semi_def_cache_cur += size
+        semi_def_eivec_cache_cur += size**2
 
     # exp-pri
     for index in range(ep):
@@ -952,24 +1000,28 @@ def make_prod_cone_cache(dim_dict):
                                  dim_dict['ed'] if 'ed' in dim_dict else 0,)
 
 
-@nb.jit(cache_types(nb.int64, nb.int64, nb.int64[:], nb.int64[:],
-                    nb.int64, nb.int64))
+# @nb.jit(cache_types(nb.int64, nb.int64, nb.int64[:], nb.int64[:],
+#                     nb.int64, nb.int64), nopython=True)
+@nb.jit(nopython=True)
 def _make_prod_cone_cache(zero, non_neg, second_ord, semi_def, exp_pri, exp_dua):
 
-    q_cache = []
-    for size in second_ord:
-        q_cache.append(np.zeros(size))
+    # q_cache = []
+    # for size in second_ord:
+    #     q_cache.append(np.zeros(size))
 
-    q_cache.append(np.zeros(1))  # for numba
+    q_cache = np.zeros(np.sum(second_ord))
 
-    s_cache_eivec = []
-    s_cache_eival = []
-    for matrix_size in semi_def:
-        s_cache_eivec.append(np.zeros((matrix_size, matrix_size)))
-        s_cache_eival.append(np.zeros(matrix_size))
+    # q_cache.append(np.zeros(1))  # for numba
 
-    s_cache_eivec.append(np.zeros((1, 1)))
-    s_cache_eival.append(np.zeros(1))
+    # s_cache_eivec = []
+    s_cache_eival = np.zeros(np.sum(semi_def))
+    s_cache_eivec = np.zeros(np.sum(semi_def**2))
+    # for matrix_size in semi_def:
+    #     s_cache_eivec.append(np.zeros((matrix_size, matrix_size)))
+    # s_cache_eival.append(np.zeros(matrix_size))
+
+    # s_cache_eivec.append(np.zeros((1, 1)))
+    # s_cache_eival.append(np.zeros(1))
 
     return zero, non_neg, second_ord, q_cache, \
         semi_def, s_cache_eivec, s_cache_eival, \
@@ -977,10 +1029,10 @@ def _make_prod_cone_cache(zero, non_neg, second_ord, semi_def, exp_pri, exp_dua)
         exp_dua, np.zeros((exp_dua, 3))
 
 
-# @nb.jit(nb.double[:](nb.double[:], nb.double[:], cache_types, nb.int64),
+# @nb.jit(nb.float64[:](nb.float64[:], nb.float64[:], cache_types, nb.int64),
 #         nopython=True)
-# @nb.jit(nopython=True)
-# @nb.jit(nb.double[:](nb.double[:], nb.double[:],
+#@nb.jit()  # nopython=True)
+# @nb.jit(nb.float64[:](nb.float64[:], nb.float64[:],
 #                      nb.int64, nb.int64,  # z, l
 #                      nb.int64[:], nb.types.List(nb.float64[:]),  # q
 #                      nb.int64[:],  # s
@@ -989,6 +1041,7 @@ def _make_prod_cone_cache(zero, non_neg, second_ord, semi_def, exp_pri, exp_dua)
 #                      nb.int64, nb.float64[:, :],  # ep
 #                      nb.int64, nb.float64[:, :],
 #                      nb.int64), nopython=True)
+@nb.jit(nopython=True)
 def embedded_cone_D(z, dz, zero, l, q, q_cache, s, s_cache_eivec,
                     s_cache_eival,  ep,
                     ep_cache, ed, ed_cache, n):
@@ -1009,10 +1062,10 @@ def embedded_cone_D(z, dz, zero, l, q, q_cache, s, s_cache_eivec,
     return result
 
 
-# @nb.jit(nb.double[:](nb.double[:], cache_types, nb.int64),
+# @nb.jit(nb.float64[:](nb.float64[:], cache_types, nb.int64),
 #         nopython=True)
 # @nb.jit(nopython=True)
-# @nb.jit(nb.double[:](nb.double[:],
+# @nb.jit(nb.float64[:](nb.float64[:],
 #                      nb.int64, nb.int64,  # z, l
 #                      nb.int64[:], nb.types.List(nb.float64[:]),  # q
 #                      nb.int64[:],  # s
@@ -1021,6 +1074,7 @@ def embedded_cone_D(z, dz, zero, l, q, q_cache, s, s_cache_eivec,
 #                      nb.int64, nb.float64[:, :],  # ep
 #                      nb.int64, nb.float64[:, :],
 #                      nb.int64), nopython=True)
+@nb.jit(nopython=True)
 def embedded_cone_Pi(z, zero, l, q, q_cache, s, s_cache_eivec, s_cache_eival,
                      ep, ep_cache, ed, ed_cache, n):
     """Projection on the cone of the primal-dual embedding."""

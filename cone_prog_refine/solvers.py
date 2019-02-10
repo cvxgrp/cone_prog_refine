@@ -21,6 +21,7 @@ import ecos
 import time
 
 from .problem import *
+from .refine import *
 
 
 class SolverError(Exception):
@@ -175,9 +176,10 @@ def solve(A, b, c, dim_dict,
         raise Exception('The only supported solvers are ecos and scs')
 
     solver_time = time.time() - solver_start
-
+    A = sp.csc_matrix(A)
+    #A_tr = sp.csc_matrix(A.T)
     new_residual, u, v = residual_and_uv(
-        z, A, b, c, make_prod_cone_cache(dim_dict))
+        z, (A.indptr, A.indices, A.data), b, c, make_prod_cone_cache(dim_dict))
     x, s, y, tau, kappa = uv2xsytaukappa(u, v, A.shape[1])
 
     pres = np.linalg.norm(A@x + s - b) / (1 + np.linalg.norm(b))
@@ -196,7 +198,8 @@ def solve(A, b, c, dim_dict,
         return z_plus, info
     else:
         new_residual, u, v =\
-            residual_and_uv(z_plus, A, b, c, make_prod_cone_cache(dim_dict))
+            residual_and_uv(z_plus, (A.indptr, A.indices, A.data), b, c,
+                            make_prod_cone_cache(dim_dict))
         x, s, y, tau, kappa = uv2xsytaukappa(u, v, A.shape[1])
         pres = np.linalg.norm(A@x + s - b) / (1 + np.linalg.norm(b))
         dres = np.linalg.norm(A.T@y + c) / (1 + np.linalg.norm(c))

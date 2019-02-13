@@ -756,7 +756,7 @@ def reconstruct_sqmat(vec):
 
 
 @nb.jit((nb.int64, nb.float64[:], nb.float64[:], nb.float64[:, :],
-         nb.float64[:, :]))
+         nb.float64[:, :]), nopython=True)
 def inner(m, lambda_plus, lambda_minus, dS_tilde, dZ_tilde):
     for i in range(m):
         for j in range(i, m):

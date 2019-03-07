@@ -33,14 +33,17 @@ A = np.random.randn(5,10)
 b = np.random.randn(5)
 
 problem = cvx.Problem(cvx.Minimize(cvx.norm(x)),  [A @ x >= b])
-cpsr.cvxpy_solve(problem, presolve = True, verbose = True, iters = 2, lsqr_iters = 30)
 
+problem.solve()
 error_one = np.minimum( A @ x.value - b, 0.)
 
-cpsr.cvxpy_solve(problem, presolve = False, warm_start = True, iters = 2, lsqr_iters = 30)
-
+cpsr.cvxpy_solve(problem, presolve = True, iters = 2, lsqr_iters = 30)
 error_two = np.minimum( A @ x.value - b, 0.)
+
+cpsr.cvxpy_solve(problem, presolve = False, warm_start = True, iters = 2, lsqr_iters = 30)
+error_three = np.minimum( A @ x.value - b, 0.)
 
 print(error_one)
 print(error_two)
+print(error_three)
 ```

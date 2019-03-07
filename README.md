@@ -1,22 +1,17 @@
-# Solution refinement of conic programs
+# CPSR: Cone Program Solution Refinement
 
-We provide a reference implementation of the procedure developed in 
-[our paper](https://stanford.edu/~boyd/papers/cone_prog_refine):
+CPSR is a pure-Python library for the refinement of solutions of 
+primal-dual cone programs. To install, execute in a terminal:
 
 ```
-@article{cone_prog_refine,
-  title={Solution Refinement at Regular Points of Conic Programs},
-  author={E. Busseti and W. Moursi and S. Boyd},
-  year={manuscript, 2018},
-  howpublished = {\url{https://stanford.edu/~boyd/papers/cone_prog_refine}}
-}
+pip install cpsr
 ```
 
-The code is in alpha (pre-release) state. We'll provide installation packages soon. 
+CPSR depends on `numpy` for vector arithmetic, 
+`scipy` for sparse linear algebra,
+and `numba` for just-in-time code compilation.
 
-To reproduce the experiments in the paper:
-- make sure you have the necessary packages: Python 3, numpy, scipy, numba 
-(we suggest using the (free) Python [Anaconda](https://www.anaconda.com/download) distribution, which includes these), 
-- clone this repository
-- launch a [jupyter](https://jupyter.org/) session and run the [experiments.ipynb](https://github.com/cvxgrp/cone_prog_refine/blob/master/examples/experiments.ipynb) notebook,
-in the `examples` folder
+A detailed description of the algorithm used is provided
+in the accompanying 
+[paper](http://stanford.edu/~boyd/papers/cone_prog_refine.html),
+which you can cite if you find the program useful.

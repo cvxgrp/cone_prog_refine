@@ -14,8 +14,7 @@ pip install cpsr
 and [`numba`](https://numba.pydata.org) for just-in-time code compilation.
 
 A detailed description of the algorithm used is provided
-in [the accompanying paper](http://stanford.edu/~boyd/papers/cone_prog_refine.html),
-which you can cite if you find the program useful.
+in [the accompanying paper](http://stanford.edu/~boyd/papers/cone_prog_refine.html).
 
 #### `cvxpy` interface
 

@@ -37,10 +37,10 @@ problem = cvx.Problem(cvx.Minimize(cvx.norm(x)),  [A @ x >= b])
 problem.solve()
 error_one = np.minimum( A @ x.value - b, 0.)
 
-cpsr.cvxpy_solve(problem, presolve = True, iters = 2, lsqr_iters = 30)
+cpsr.cvxpy_solve(problem, presolve = True)
 error_two = np.minimum( A @ x.value - b, 0.)
 
-cpsr.cvxpy_solve(problem, presolve = False, warm_start = True, iters = 2, lsqr_iters = 30)
+cpsr.cvxpy_solve(problem, presolve = False, warm_start = True)
 error_three = np.minimum( A @ x.value - b, 0.)
 
 print(error_one)

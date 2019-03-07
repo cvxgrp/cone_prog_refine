@@ -115,7 +115,7 @@ def cvxpy_solve(cvxpy_problem, iters=2, lsqr_iters=30,
         'y'], tau, kappa = uv2xsytaukappa(u, v, A.shape[1])
 
     scs_solution["info"] = {'status': 'Solved', 'solveTime': refine_time,
-                            'setupTime': prepare_time, 'iter': iters, 'pobj': np.nan}
+                            'setupTime': prepare_time, 'iter': iters, 'pobj': scs_solution['x'] @ c if tau > 0 else np.nan}
 
     cvxpy_problem.unpack_results(scs_solution, solving_chain, inverse_data)
 

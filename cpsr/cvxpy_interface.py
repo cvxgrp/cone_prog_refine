@@ -74,7 +74,7 @@ def cvxpy_scs_to_cpsr(data, sol=None):
 
 
 def cvxpy_solve(cvxpy_problem, iters=2, lsqr_iters=30,
-                scs_presolve=False, scs_opts={},
+                presolve=False, scs_opts={},
                 verbose=True, warm_start=True):
     from cvxpy.reductions.solvers.solving_chain import construct_solving_chain
 
@@ -82,7 +82,7 @@ def cvxpy_solve(cvxpy_problem, iters=2, lsqr_iters=30,
     data, inverse_data = solving_chain.apply(cvxpy_problem)
 
     start = time.time()
-    if scs_presolve:
+    if presolve:
         scs_solution = solving_chain.solve_via_data(cvxpy_problem,
                                                     data=data,
                                                     warm_start=warm_start,

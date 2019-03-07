@@ -380,6 +380,6 @@ class CVXPYTest(unittest.TestCase):
         p = cvx.Problem(cvx.Minimize(cvx.sum_squares(x)),
                         [cvx.log_sum_exp(x) <= 10, A @ x <= b])
 
-        cvxpy_solve(p, scs_presolve=True, iters=10, scs_opts={'eps': 1E-10})
+        cvxpy_solve(p, presolve=True, iters=10, scs_opts={'eps': 1E-10})
 
         self.assertTrue(np.alltrue(A @ x.value - b <= 1E-8))

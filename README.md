@@ -15,3 +15,15 @@ A detailed description of the algorithm used is provided
 in the accompanying 
 [paper](http://stanford.edu/~boyd/papers/cone_prog_refine.html),
 which you can cite if you find the program useful.
+
+A simple way to use CPSR is by solving a [CVXPY](https://www.cvxpy.org) problem
+```
+import cvxpy as cvx
+import cpsr
+
+problem = cvxpy.Problem( ... )
+
+cpsr.cvxpy_solve(problem, presolve = True, verbose = True)
+```
+the objects of the CVXPY variables  will then contain
+the result of the refinement algorithm.

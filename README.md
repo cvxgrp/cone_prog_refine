@@ -9,7 +9,7 @@ and any combination. To install, execute in a terminal:
 pip install cpsr
 ```
 
-`cpsr` depends on [`numpy`](http://www.numpy.org) for vector arithmetic, 
+`cpsr` depends on [`numpy`](http://www.numpy.org) for vector arithmetics, 
 [`scipy`](https://www.scipy.org) for sparse linear algebra,
 and [`numba`](https://numba.pydata.org) for just-in-time code compilation.
 

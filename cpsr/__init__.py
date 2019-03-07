@@ -21,3 +21,4 @@ from .utils import *
 from .lsqr import lsqr
 from .solvers import *
 from .refine import *
+from .cvxpy_interface import *

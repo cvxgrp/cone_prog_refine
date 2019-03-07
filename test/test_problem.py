@@ -31,7 +31,7 @@ class ProblemTest(unittest.TestCase):
         A, b, c, _, x_true, s_true, y_true = generate_problem(dim_dict,
                                                               mode='solvable')
 
-        #cones = dim2cones(dim_dict)
+        # cones = dim2cones(dim_dict)
         cone_caches = make_prod_cone_cache(dim_dict)
         u, v = xsy2uv(x_true, s_true, y_true)
         res = residual(u - v, A, b, c, cone_caches)
@@ -129,7 +129,7 @@ class ProblemTest(unittest.TestCase):
                                          make_prod_cone_cache(dim_dict))
 
         A = sp.csc_matrix(A)
-        #A_tr = sp.csc_matrix(A.T)
+        # A_tr = sp.csc_matrix(A.T)
 
         (A.indptr, A.indices, A.data),
         #(A_tr.indptr, A_tr.indices, A_tr.data),
@@ -292,7 +292,7 @@ class ProblemTest(unittest.TestCase):
     def test_infeasible(self):
         self.check_refine_scs({'l': 20, 'q': [10] * 5}, mode='infeasible')
         self.check_refine_ecos({'l': 20, 'q': [10] * 5}, mode='infeasible')
-        #self.check_refine_scs({'s': [20]}, mode='infeasible')
+        # self.check_refine_scs({'s': [20]}, mode='infeasible')
         self.check_refine_scs({'s': [10]}, mode='infeasible')
         self.check_refine_scs({'q': [50]}, mode='infeasible')
         self.check_refine_ecos({'q': [50]}, mode='infeasible')
@@ -300,7 +300,7 @@ class ProblemTest(unittest.TestCase):
     def test_unbound(self):
         self.check_refine_scs({'l': 20, 'q': [10] * 5}, mode='unbounded')
         self.check_refine_ecos({'l': 20, 'q': [10] * 5}, mode='unbounded')
-        #self.check_refine_scs({'s': [20]}, mode='unbounded')
+        # self.check_refine_scs({'s': [20]}, mode='unbounded')
         self.check_refine_scs({'s': [10], 'q': [5]}, mode='unbounded')
         self.check_refine_scs({'q': [50, 5]}, mode='unbounded')
         self.check_refine_ecos({'q': [50, 5]}, mode='unbounded')
@@ -316,28 +316,28 @@ class ProblemTest(unittest.TestCase):
         self.check_refine_scs({'l': 20, 'q': [10] * 5, 'ep': 20})
         self.check_refine_scs({'l': 20, 'q': [10] * 5, 'ed': 20})
 
-        #self.check_refine_scs({'s': [20]})
-        #self.check_refine_scs({'s': [10]})
+        # self.check_refine_scs({'s': [20]})
+        # self.check_refine_scs({'s': [10]})
         self.check_refine_scs({'q': [50]})
         self.check_refine_scs({'l': 10})
-        #self.check_refine_scs({'l': 50})
+        # self.check_refine_scs({'l': 50})
         self.check_refine_scs({'l': 20, 'q': [10, 20]})
-        #self.check_refine_scs({'l': 1000, 'q': [100] * 10})
-        #self.check_refine_scs({'f': 10, 'l': 20, 'q': [10], 's': [10]})
+        # self.check_refine_scs({'l': 1000, 'q': [100] * 10})
+        # self.check_refine_scs({'f': 10, 'l': 20, 'q': [10], 's': [10]})
         self.check_refine_scs({'f': 10, 'l': 20, 'q': [10, 20], 's': [5, 10]})
 
     def test_ecos(self):
         self.check_refine_ecos({'l': 20, 'q': [10] * 5})
-        #self.check_refine_ecos({'l': 50, 'q': [10] * 10})
+        # self.check_refine_ecos({'l': 50, 'q': [10] * 10})
         self.check_refine_ecos({'q': [50]})
         self.check_refine_ecos({'l': 10})
-        #self.check_refine_ecos({'l': 50})
-        #self.check_refine_ecos({'l': 1000})
+        # self.check_refine_ecos({'l': 50})
+        # self.check_refine_ecos({'l': 1000})
         self.check_refine_ecos({'l': 20, 'q': [10, 20, 40]})
-        #self.check_refine_ecos({'l': 20, 'q': [10, 20, 40, 60]})
+        # self.check_refine_ecos({'l': 20, 'q': [10, 20, 40, 60]})
 
 
-class MiscTest(unittest.TestCase):
+class SparseLinalgTest(unittest.TestCase):
 
     def test_CSC(self):
 
@@ -350,3 +350,36 @@ class MiscTest(unittest.TestCase):
                                                A_csc.indices,
                                                A_csc.data, b),
                                     A_csc @ b))
+
+    def test_CSR(self):
+
+        m, n = 40, 30
+        A_csc = sp.random(m, n, density=.2, format='csr')
+
+        b = np.random.randn(n)
+        self.assertTrue(np.allclose(csr_matvec(A_csc.indptr,
+                                               A_csc.indices,
+                                               A_csc.data, b),
+                                    A_csc @ b))
+
+
+class CVXPYTest(unittest.TestCase):
+
+    def test_CVXPY(self):
+
+        try:
+            import cvxpy as cvx
+        except ImportError:
+            return
+
+        m, n = 40, 30
+        A = np.random.randn(m, n)
+        b = np.random.randn(m)
+        x = cvx.Variable(n)
+
+        p = cvx.Problem(cvx.Minimize(cvx.sum_squares(x)),
+                        [cvx.log_sum_exp(x) <= 10, A @ x <= b])
+
+        cvxpy_solve(p, scs_presolve=True, iters=10, scs_opts={'eps': 1E-10})
+
+        self.assertTrue(np.alltrue(A @ x.value - b <= 1E-8))

@@ -28,7 +28,7 @@ import cpsr
 
 
 x = cvx.Variable(10)
-np.random.seed(0)
+np.random.seed(1)
 A = np.random.randn(5,10)
 b = np.random.randn(5)
 

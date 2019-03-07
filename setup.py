@@ -1,10 +1,10 @@
 from setuptools import setup
 
 setup(
-    name='cone_prog_refine',
-    version='0.0.3',
-    description='Solution refinement and perturbation analysis of conic programs.',
-    author='E. Busseti, W. Moursi, S. Boyd',
-    packages=['cone_prog_refine'],
-    install_requires=['numpy', 'scipy', 'numba']
+    name='cpsr',
+    version='0.0.1',
+    description='Cone Problem Solution Refinement.',
+    author='E. Busseti',
+    packages=['cpsr'],
+    install_requires=['numpy>=1.15.1', 'scipy>=1.1.0', 'numba>=0.36.2']
 )

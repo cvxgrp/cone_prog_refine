@@ -100,25 +100,25 @@ def _sym_ortho(a, b):
     return c, s, r
 
 
-operator_vars_types = nb.types.Tuple((nb.float64[:],
-                                      CSC_mattypes,
-                                      # CSC_mattypes,
-                                      nb.float64[:],
-                                      nb.float64[:],
-                                      cache_types,
-                                      nb.float64[:]))
+# operator_vars_types = nb.types.Tuple((nb.float64[:],
+#                                       CSC_mattypes,
+#                                       nb.float64[:],
+#                                       nb.float64[:],
+#                                       cache_types,
+#                                       nb.float64[:]))
 
 
-#
-# @nb.jit(nb.types.Tuple((nb.float64[:], nb.int64))(
+# @nb.jit(nb.types.Tuple((nb.float64[:], nb.int64,
+#                         nb.float64, nb.float64))(
 #     nb.int64, nb.int64, operator_vars_types,
-#     nb.float64[:], nb.optional(nb.float64),
+#     nb.float64[:],
+#     nb.optional(nb.float64),
 #     nb.optional(nb.float64),
 #     nb.optional(nb.float64),
 #     nb.optional(nb.float64),
 #     nb.optional(nb.int64)), nopython=True)
 @nb.jit(nopython=True)
-def lsqr(m, n, operator_vars, b, damp=0.0, atol=1e-8, btol=1e-8, conlim=1e8,
+def lsqr(m, n, operator_vars, b, damp=1E-6, atol=1e-8, btol=1e-8, conlim=1e8,
          iter_lim=1000):
     show = False
     calc_var = False
@@ -366,15 +366,16 @@ def lsqr(m, n, operator_vars, b, damp=0.0, atol=1e-8, btol=1e-8, conlim=1e8,
            'The iteration limit has been reached                      ')
 
     # if show:
-    #     with objmode():  # disables numba C code generation to use python pretty print
-    #         print(' ')
-    #         print('LSQR            Least-squares solution of  Ax = b')
-    #         print('The matrix A has %d rows  and %d cols' % (m, n))
-    #         print('damp = %20.14e   calc_var = %8g' % (damp, calc_var))
-    #         print('atol = %8.2e                 conlim = %8.2e' % (
-    #             atol, conlim))
-    #         print('btol = %8.2e               iter_lim = %8g' % (
-    #             btol, iter_lim))
+    #     # with objmode():  # disables numba C code generation to use python
+    #     # pretty print
+    #     print(' ')
+    #     print('LSQR            Least-squares solution of  Ax = b')
+    #     print('The matrix A has %d rows  and %d cols' % (m, n))
+    #     print('damp = %20.14e   calc_var = %8g' % (damp, calc_var))
+    #     print('atol = %8.2e                 conlim = %8.2e' % (
+    #         atol, conlim))
+    #     print('btol = %8.2e               iter_lim = %8g' % (
+    #         btol, iter_lim))
 
     itn = 0
     istop = 0
@@ -439,12 +440,12 @@ def lsqr(m, n, operator_vars, b, damp=0.0, atol=1e-8, btol=1e-8, conlim=1e8,
     head2 = ' Compatible    LS      Norm A   Cond A'
 
     # if show:
-    #     with objmode():
-    #         print(' ')
-    #         print(head1, head2)
-    #         print('%6g %12.5e' % (itn, x[0]),
-    #               ' %10.3e %10.3e' % (r1norm, r2norm),
-    #               '  %8.1e %8.1e' % (1, alfa / beta))
+    #    # with objmode():
+    #     print(' ')
+    #     print(head1, head2)
+    #     print('%6g %12.5e' % (itn, x[0]),
+    #           ' %10.3e %10.3e' % (r1norm, r2norm),
+    #           '  %8.1e %8.1e' % (1, alfa / beta))
 
     # Main iteration loop.
     while itn < iter_lim:
@@ -581,22 +582,22 @@ def lsqr(m, n, operator_vars, b, damp=0.0, atol=1e-8, btol=1e-8, conlim=1e8,
             istop = 1
 
         # See if it is time to print something.
-        prnt = False
-        if n <= 40:
-            prnt = True
-        if itn <= 10:
-            prnt = True
-        if itn >= iter_lim - 10:
-            prnt = True
-        # if itn%10 == 0: prnt = True
-        if test3 <= 2 * ctol:
-            prnt = True
-        if test2 <= 10 * atol:
-            prnt = True
-        if test1 <= 10 * rtol:
-            prnt = True
-        if istop != 0:
-            prnt = True
+        # prnt = False
+        # if n <= 40:
+        #     prnt = True
+        # if itn <= 10:
+        #     prnt = True
+        # if itn >= iter_lim - 10:
+        #     prnt = True
+        # # if itn%10 == 0: prnt = True
+        # if test3 <= 2 * ctol:
+        #     prnt = True
+        # if test2 <= 10 * atol:
+        #     prnt = True
+        # if test1 <= 10 * rtol:
+        #     prnt = True
+        # if istop != 0:
+        #     prnt = True
 
         # if prnt:
         #     if show:

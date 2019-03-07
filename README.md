@@ -21,7 +21,7 @@ A simple way to use CPSR is by solving a [CVXPY](https://www.cvxpy.org) problem
 import cvxpy as cvx
 import cpsr
 
-problem = cvxpy.Problem( ... )
+problem = cvx.Problem( ... )
 
 cpsr.cvxpy_solve(problem, presolve = True, verbose = True)
 ```

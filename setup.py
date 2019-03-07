@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='cpsr',
-    version='0.0.2',
+    version='0.0.3',
     description='Cone Problem Solution Refinement.',
     author='Enzo Busseti',
     packages=['cpsr'],

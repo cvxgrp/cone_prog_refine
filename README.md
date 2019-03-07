@@ -18,7 +18,7 @@ in [the accompanying paper](http://stanford.edu/~boyd/papers/cone_prog_refine.ht
 
 #### `cvxpy` interface
 
-A simple way to use CPSR is by refining the solution of
+A simple way to use `cpsr` is by refining the solution of
 a [`cvxpy`](https://www.cvxpy.org) problem, *e.g.*,
 
 ```

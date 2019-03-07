@@ -28,16 +28,19 @@ import cpsr
 
 
 x = cvx.Variable(10)
+np.random.seed(1)
 A = np.random.randn(5,10)
 b = np.random.randn(5)
 
 problem = cvx.Problem(cvx.Minimize(cvx.norm(x)),  [A @ x >= b])
 cpsr.cvxpy_solve(problem, presolve = True, verbose = True, iters = 2, lsqr_iters = 30)
 
-print(np.minimum( A @ x.value - b, 0.))
+error_one = np.minimum( A @ x.value - b, 0.)
 
 cpsr.cvxpy_solve(problem, presolve = False, warm_start = True, iters = 2, lsqr_iters = 30)
 
-print(np.minimum( A @ x.value - b, 0.))
+error_two = np.minimum( A @ x.value - b, 0.)
 
+print(error_one)
+print(error_two)
 ```

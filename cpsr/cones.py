@@ -1,5 +1,5 @@
 """
-Copyright (C) Enzo Busseti 2018-2019.
+Copyright (C) Enzo Busseti 2017-2019.
 
 Some parts (exponential cone projection) are adapted
 from Brendan O'Donoghue's scs-python.

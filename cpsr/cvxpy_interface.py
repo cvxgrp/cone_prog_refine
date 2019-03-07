@@ -1,5 +1,5 @@
 """
-Copyright (C) Enzo Busseti 2018-2019.
+Copyright (C) Enzo Busseti 2017-2019.
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -62,9 +62,12 @@ def cvxpy_scs_to_cpsr(data, sol=None):
             z = xsy2z(x, s, y, tau=0., kappa=1.)
 
     dims_dict = {}
-    dims_dict['l'] = int(dims.nonpos)
-    dims_dict['z'] = int(dims.zero)
-    dims_dict['ep'] = int(dims.exp)
+    if int(dims.nonpos):
+        dims_dict['l'] = int(dims.nonpos)
+    if int(dims.zero):
+        dims_dict['z'] = int(dims.zero)
+    if int(dims.exp):
+        dims_dict['ep'] = int(dims.exp)
     if len(dims.soc):
         dims_dict['q'] = list([int(el) for el in dims.soc])
     if len(dims.psd):

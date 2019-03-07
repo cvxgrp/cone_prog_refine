@@ -1,6 +1,6 @@
 # `cpsr`: Cone Program Solution Refinement
 
-cpsr` is a pure-Python library for the refinement of solutions of 
+`cpsr` is a pure-Python library for the refinement of solutions of 
 primal-dual cone programs. It currently supports linear programs,
 second-order cone programs, exponential programs, semidefinite programs,
 and any combination. To install, execute in a terminal:

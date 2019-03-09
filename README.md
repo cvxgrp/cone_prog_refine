@@ -4,7 +4,7 @@
 for the iterative improvement, or refinement,
 of a primal-dual solution,
 or a certificate of unboundedness or infeasibility,
-of a (cone program)[https://en.wikipedia.org/wiki/Conic_optimization]. 
+of a [cone program](https://en.wikipedia.org/wiki/Conic_optimization). 
 
 Given an approximate solution (or certificate), 
 meaning one for which the optimality 

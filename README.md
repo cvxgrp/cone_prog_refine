@@ -5,8 +5,7 @@ for the iterative improvement, or refinement,
 of a primal-dual solution,
 or a certificate of unboundedness or infeasibility,
 of a [cone program](https://en.wikipedia.org/wiki/Conic_optimization). 
-It operates by differentiation through the  
-conic optimality conditions (also knonw as KKT),
+It operates by differentiation through the conic optimality conditions (also knonw as KKT),
 and so it can also be used to do calculus with conic programs.
 
 Given an approximate solution (or certificate), 

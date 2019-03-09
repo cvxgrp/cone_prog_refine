@@ -1,6 +1,6 @@
 # `cpsr`: Cone Program Solution Refinement
 
-`cpsr` is a [Python]([https://www.python.org) library 
+`cpsr` is a [Python](https://www.python.org) library 
 for the iterative improvement, or refinement,
 of a primal-dual solution,
 or a certificate of unboundedness or infeasibility,

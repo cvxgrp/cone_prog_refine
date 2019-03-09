@@ -25,21 +25,24 @@ for any approximate primal-dual solution (or certificate) z ∈ 𝗥^(n).
 So, 𝒩 (z) = 0 if and only if z in an exact primal-dual solution
 or certificate, meaning one for which the optimality conditions
 are satisfied within machine precision. 
-It uses [LSQR](http://web.stanford.edu/group/SOL/software/lsqr/),
-an iterative linear system solver, to approximately solve the linearized system.
 
 `cpsr` is a matrix-free solver, meaning that it does not store or
 invert the derivative matrix of 𝒩 (z). This allows it to scale
 to very large problems. Essentially, if you are able to load the problem
 data in memory, then `cpsr` can solve it, with O(n) memory requirement.
 
-It currently supports cone programs that are
-either 
-[linear programs](https://en.wikipedia.org/wiki/Linear_programming),
-[second-order cone programs](https://en.wikipedia.org/wiki/Second-order_cone_programming), 
-[exponential programs](https://yalmip.github.io/tutorial/exponentialcone/), 
-[semidefinite programs](https://en.wikipedia.org/wiki/Semidefinite_programming),
-and any combination. 
+It uses [LSQR](http://web.stanford.edu/group/SOL/software/lsqr/),
+an iterative linear system solver, to approximately solve the system
+that locally approximates the conic optimality conditions. 
+The number of LSQR iterations is chosen by the user (by default, 30)
+It then repeats for a number of steps chosen by the user (by default, 2).
+
+It can currently solve cone programs whose cone constraints are products of 
+the [zero cone](https://en.wikipedia.org/wiki/System_of_linear_equations),
+[the non-negative orhant](https://en.wikipedia.org/wiki/Linear_programming),
+and any number of [second-order cones](https://en.wikipedia.org/wiki/Second-order_cone_programming), 
+[exponential cones](https://yalmip.github.io/tutorial/exponentialcone/), 
+and [semidefinite cones](https://en.wikipedia.org/wiki/Semidefinite_programming).
 
 ### Installation
 To install, execute in a terminal:

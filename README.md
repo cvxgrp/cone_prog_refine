@@ -31,10 +31,10 @@ data in memory, then `cpsr` can solve it, with O(n) memory requirement.
 
 It currently supports cone programs that are
 either 
-linear programs,
-second-order cone programs, 
-exponential programs, 
-semidefinite programs,
+[linear programs](https://en.wikipedia.org/wiki/Linear_programming),
+[second-order cone programs](https://en.wikipedia.org/wiki/Second-order_cone_programming), 
+[exponential programs](https://yalmip.github.io/tutorial/exponentialcone/), 
+[semidefinite programs](https://en.wikipedia.org/wiki/Semidefinite_programming),
 and any combination. 
 
 To install, execute in a terminal:
@@ -46,8 +46,10 @@ pip install cpsr
 `cpsr` depends on [`numpy`](http://www.numpy.org) for vector arithmetics, 
 [`scipy`](https://www.scipy.org) for sparse linear algebra,
 and [`numba`](https://numba.pydata.org) for just-in-time code compilation.
-It is currently single-threaded and CPU only. I plan to support 
-multi-threading and GPUs, and rewrite the algorithmic part of the code in C.
+It currently runs on a single thread, on CPU. I plan to support 
+multi-threading and GPUs, 
+and rewrite the algorithmic part of the code in C. I also plan to
+release interfaces to other scientific programming languages.
 
 A detailed description of the algorithm used is provided
 in [the accompanying paper](http://stanford.edu/~boyd/papers/cone_prog_refine.html).

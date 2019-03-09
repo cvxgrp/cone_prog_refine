@@ -13,12 +13,21 @@ conditions don't hold exactly,
 the norm of the violations of the primal and dual constraints, 
 and the duality gap, is smaller. 
 
-It does so by computing the gradient 
-of the operator 𝒩 (z) ∈ 𝗥^(n), 
-where z ∈ 𝗥^(n) is a primal-dual approximate solution or certificate,
-and 𝒩 (z) = 0 if and only if z in an exact primal-dual solution
+It does so by locally linearizing
+the operator 𝒩 (z) ∈ 𝗥^(n), 
+the concatenation of the violations of the 
+primal and dual constraints, and the duality gap,
+for any approximate primal-dual solution (or certificate) z ∈ 𝗥^(n).
+So, 𝒩 (z) = 0 if and only if z in an exact primal-dual solution
 or certificate, meaning one for which the optimality conditions
-are satisfied within machine precision.
+are satisfied within machine precision. 
+It uses [LSQR](http://web.stanford.edu/group/SOL/software/lsqr/),
+an iterative linear system solver, to approximately solve the linearized system.
+
+`cpsr` is a matrix-free solver, meaning that it does not store or
+invert the derivative matrix of 𝒩 (z). This allows it to scale
+to very large problems. Essentially, if you are able to load the problem
+data in memory, then `cpsr` can solve it, with O(n) memory requirement.
 
 It currently supports cone programs that are
 either 
@@ -37,6 +46,8 @@ pip install cpsr
 `cpsr` depends on [`numpy`](http://www.numpy.org) for vector arithmetics, 
 [`scipy`](https://www.scipy.org) for sparse linear algebra,
 and [`numba`](https://numba.pydata.org) for just-in-time code compilation.
+It is currently single-threaded and CPU only. I plan to support 
+multi-threading and GPUs, and rewrite the algorithmic part of the code in C.
 
 A detailed description of the algorithm used is provided
 in [the accompanying paper](http://stanford.edu/~boyd/papers/cone_prog_refine.html).

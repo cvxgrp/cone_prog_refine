@@ -1,9 +1,33 @@
 # `cpsr`: Cone Program Solution Refinement
 
-`cpsr` is a pure-Python library for the refinement of solutions of 
-primal-dual cone programs. It currently supports linear programs,
-second-order cone programs, exponential programs, semidefinite programs,
-and any combination. To install, execute in a terminal:
+`cpsr` is a [Python]([https://www.python.org) library 
+for the iterative improvement, or refinement,
+of a primal-dual solution,
+or a certificate of unboundedness or infeasibility,
+of a cone program. 
+
+Given an approximate solution (or certificate), 
+meaning one for which the optimality 
+conditions don't hold exactly, 
+`cpsr` produces a new solution for which 
+the norm of the violations of the primal and dual constraints, 
+and the duality gap, is smaller. 
+
+It does so by computing the gradient 
+of the operator 𝒩 (z) ∈ 𝗥^(n), 
+where z ∈ 𝗥^(n) is a primal-dual approximate solution,
+and 𝒩 (z) = 0 if and only if z in an *exact* primal-dual solution,
+or certificate, meaning one for which the optimality conditions
+are satisfied within machine precision.
+
+It currently supports cone programs that are
+either linear programs,
+second-order cone programs, 
+exponential programs, 
+semidefinite programs,
+and any combination. 
+
+To install, execute in a terminal:
 
 ```
 pip install cpsr
@@ -18,8 +42,17 @@ in [the accompanying paper](http://stanford.edu/~boyd/papers/cone_prog_refine.ht
 
 #### `cvxpy` interface
 
-A simple way to use `cpsr` is by refining the solution of
-a [`cvxpy`](https://www.cvxpy.org) problem, *e.g.*,
+`cpsr` can be used in combination with [`cvxpy`](https://www.cvxpy.org)
+to 
+
+
+a  problem. We currently
+offer
+
+In this example, the problem is first solved with the default settings of
+`cvxpy`, then with the `cvxpy_solve` method of `cpsr`, and then again
+which currently 
+runs [`scs`](https://github.com/cvxgrp/scs)
 
 ```
 import numpy as np

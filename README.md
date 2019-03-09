@@ -15,9 +15,9 @@ and the duality gap, is smaller.
 
 It does so by computing the gradient 
 of the operator 𝒩 (z) ∈ 𝗥^(n), 
-where z ∈ 𝗥^(n) is a primal-dual approximate solution,
-and 𝒩 (z) = 0 if and only if z in an *exact* primal-dual solution,
-or certificate, meaning one for which the optimality conditions
+where z ∈ 𝗥^(n) is a primal-dual approximate solution (or certificate),
+and 𝒩 (z) = 0 if and only if z in an exact primal-dual solution
+(or certificate), meaning one for which the optimality conditions
 are satisfied within machine precision.
 
 It currently supports cone programs that are

@@ -41,7 +41,7 @@ and [`numba`](https://numba.pydata.org) for just-in-time code compilation.
 A detailed description of the algorithm used is provided
 in [the accompanying paper](http://stanford.edu/~boyd/papers/cone_prog_refine.html).
 
-#### `cvxpy` interface
+### `cvxpy` interface
 
 `cpsr` can be used in combination with [`cvxpy`](https://www.cvxpy.org),
 via the `cpsr.cvxpy_solve` method. An example follows.

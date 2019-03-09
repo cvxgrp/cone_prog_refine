@@ -42,17 +42,8 @@ in [the accompanying paper](http://stanford.edu/~boyd/papers/cone_prog_refine.ht
 
 #### `cvxpy` interface
 
-`cpsr` can be used in combination with [`cvxpy`](https://www.cvxpy.org)
-to 
-
-
-a  problem. We currently
-offer
-
-In this example, the problem is first solved with the default settings of
-`cvxpy`, then with the `cvxpy_solve` method of `cpsr`, and then again
-which currently 
-runs [`scs`](https://github.com/cvxgrp/scs)
+`cpsr` can be used in combination with [`cvxpy`](https://www.cvxpy.org),
+via the `cpsr.cvxpy_solve` method. An example follows.
 
 ```
 import numpy as np
@@ -79,4 +70,7 @@ error_three = np.minimum( A @ x.value - b, 0.)
 print(error_one)
 print(error_two)
 print(error_three)
+```
+The output is 
+```
 ```

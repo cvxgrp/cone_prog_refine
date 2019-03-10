@@ -25,20 +25,19 @@ It does so by locally linearizing
 the operator 𝒩 (z) ∈ 𝗥^(n), 
 the concatenation of the violations of the 
 primal and dual systems of the problem, and the duality gap,
-for any approximate primal-dual solution represented,
-via a primal-dual homogeneous 
-[embedding](https://www.jstor.org/stable/3690376) 
-of the conic [optimality conditions](https://arxiv.org/pdf/1312.3039.pdf)
+for any approximate primal-dual solution represented
+(via an [embedding](https://www.jstor.org/stable/3690376) 
+of the conic [optimality conditions](https://arxiv.org/pdf/1312.3039.pdf))
 by z ∈ 𝗥^(n).
 z can also represent a certificate, and in that case 𝒩 (z)
-is the violation of its (primal or dual) system, concatenated with zero.
+is the violation of its primal or dual system, concatenated with zero.
 So, 𝒩 (z) = 0 if and only if z is an exact primal-dual solution
 or certificate, meaning one for which the optimality conditions
 are satisfied within machine precision. 
-At each of its iterations, using the current value of 𝒩 (z)
-and the derivative matrix 𝗗𝒩 (z),
-`cpsr` approximately solves
-the linear system that locally approximates the conic optimality conditions. 
+`cpsr` proceeds iteratively, using at each steps the current value of 𝒩 (z)
+and the derivative matrix 𝗗𝒩 (z) to (approximately) solve
+the linear system that locally approximates 
+the conic optimality conditions. 
 
 **Matrix free.**
 `cpsr` is a matrix-free solver, meaning that it does not store or

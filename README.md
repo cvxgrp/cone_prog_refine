@@ -5,7 +5,7 @@ for the iterative improvement, or refinement,
 of a primal-dual solution,
 or a certificate of unboundedness or infeasibility,
 of a cone (or [convex](http://web.stanford.edu/~boyd/cvxbook/bv_cvxbook.pdf)) program. 
-It operates by differentiating the conic optimality conditions 
+It operates by differentiating the conic optimality conditions,
 and so it can also be used for *calculus* of conic programs.
 
 ### Refinement

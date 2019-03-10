@@ -35,7 +35,7 @@ are satisfied within machine precision.
 `cpsr` is a matrix-free solver, meaning that it does not store or
 invert the derivative matrix of 𝒩 (z). This allows it to scale
 to very large problems. Essentially, if you are able to load the problem
-data in memory, then `cpsr` can solve it, with O(n) memory requirement.
+data in memory, then `cpsr` can solve it, using O(n) memory.
 
 **Iterative solution.**
 It uses [LSQR](http://web.stanford.edu/group/SOL/software/lsqr/),

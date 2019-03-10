@@ -36,7 +36,7 @@ or certificate, meaning one for which the optimality conditions
 are satisfied within machine precision. 
 `cpsr` proceeds iteratively, using at each steps the current value of 𝒩 (z)
 and the derivative matrix 𝗗𝒩 (z) to (approximately) solve
-the linear system that locally approximates 
+a linear system that locally approximates 
 the conic optimality conditions. 
 
 **Matrix free.**

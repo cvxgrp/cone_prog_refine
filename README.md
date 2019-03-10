@@ -34,8 +34,8 @@ data in memory, then `cpsr` can solve it, with O(n) memory requirement.
 It uses [LSQR](http://web.stanford.edu/group/SOL/software/lsqr/),
 an iterative linear system solver, to approximately solve the system
 that locally approximates the conic optimality conditions. 
-The number of LSQR iterations is chosen by the user (by default, 30),
-as is the number of `cpsr` iterations (by default, 2).
+The number of LSQR iterations is chosen by the user (by default, for small problems, 30),
+as is the number of `cpsr` iterations (by default, for small problems, 2). 
 
 It can currently solve cone programs whose cone constraints are products of 
 the [zero cone](https://en.wikipedia.org/wiki/System_of_linear_equations),

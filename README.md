@@ -67,10 +67,12 @@ and [`numba`](https://numba.pydata.org) for just-in-time code compilation.
 It currently runs on a single thread, on CPU. 
 
 **Future.**
-I plan to support 
-multi-threading and GPUs, 
-and rewrite the algorithmic part of the code in C. I also plan to
-release interfaces to other scientific programming languages.
+I plan to rewrite the core library in C,
+and (possibly) provide 
+a distributed implementation of the cone projections 
+and the sparse matrix multiplications, 
+either on multiple threads or on GPU.
+I also plan to release interfaces to other scientific programming languages.
 
 
 ### Installation

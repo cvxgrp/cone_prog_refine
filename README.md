@@ -4,9 +4,7 @@
 for the iterative improvement, or refinement,
 of a primal-dual solution,
 or a certificate of unboundedness or infeasibility,
-of a cone, or convex, 
-program, whose data is provided
-as a sparse matrix (or, in future, an abstract linear operator).
+of a cone, or convex, program.
 It operates by differentiating the conic optimality conditions,
 and so it can also be used for *calculus* with conic programs.
 

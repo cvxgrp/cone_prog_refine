@@ -48,7 +48,7 @@ where n is the size of a primal-dual solution.
 
 **Iterative solution.**
 `cpsr` uses [LSQR](http://web.stanford.edu/group/SOL/software/lsqr/),
-an iterative linear system solver, to approximately solve the system
+an iterative linear system solver, to approximately solve a system
 that locally approximates the conic optimality conditions. 
 The number of LSQR iterations is chosen by the user (by default, for small problems, 30),
 as is the number of `cpsr` iterations (by default, for small problems, 2). 

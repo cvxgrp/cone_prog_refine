@@ -35,6 +35,10 @@ is the violation of its (primal or dual) system, concatenated with zero.
 So, 𝒩 (z) = 0 if and only if z is an exact primal-dual solution
 or certificate, meaning one for which the optimality conditions
 are satisfied within machine precision. 
+At each of its iterations, using the current value of 𝒩 (z)
+and the derivative matrix 𝗗 𝒩 (z),
+`cpsr` approximately solves
+the linear system that locally approximates the conic optimality conditions. 
 
 **Matrix free.**
 `cpsr` is a matrix-free solver, meaning that it does not store or

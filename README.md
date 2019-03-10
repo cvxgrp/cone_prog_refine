@@ -22,7 +22,7 @@ and the duality gap, is smaller.
 
 **Mathematics.**
 It does so by locally linearizing
-the operator 𝒩 (z) ∈ 𝗥^(n), 
+the operator 𝒩 (z) ∈ 𝗥^(n),
 the concatenation of the violations of the 
 primal and dual systems of the problem, and the duality gap,
 for any approximate primal-dual solution represented

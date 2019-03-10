@@ -25,7 +25,10 @@ the operator 𝒩 (z) ∈ 𝗥^(n),
 the concatenation of the violations of the 
 primal and dual systems of the problem, and the duality gap,
 for any approximate primal-dual solution represented 
-(via the primal-dual homogeneous embedding) by z ∈ 𝗥^(n).
+(via a primal-dual homogeneous 
+[embedding](https://www.jstor.org/stable/3690376) 
+of the conic [optimality conditions]([conic](https://arxiv.org/pdf/1312.3039.pdf))) 
+by z ∈ 𝗥^(n).
 If z ∈ 𝗥^(n) represents instead a certificate, 𝒩 (z)
 is the violation of its (primal or dual) system, concatenated with zero.
 So, 𝒩 (z) = 0 if and only if z is an exact primal-dual solution
@@ -55,10 +58,9 @@ and [semidefinite cones](https://en.wikipedia.org/wiki/Semidefinite_programming)
 
 **Paper.**
 A much more detailed description of the algorithm used is provided
-in [the accompanying paper](http://stanford.edu/~boyd/papers/cone_prog_refine.html).
+in the [accompanying paper](http://stanford.edu/~boyd/papers/pdf/cone_prog_refine.pdf).
 I show the experiments described in the paper in the
-[Jupyter](https://jupyter.org)
-notebook
+[Jupyter](https://jupyter.org) notebook
 [examples/experiments.ipynb](examples/experiments.ipynb).
 
 **Dependencies.**

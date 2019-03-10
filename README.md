@@ -18,7 +18,7 @@ the norm of the violations of the primal and dual constraints,
 and the duality gap, is smaller. 
 
 
-##### Mathematics.
+###### Mathematics.
 It does so by locally linearizing
 the operator 𝒩 (z) ∈ 𝗥^(n), 
 the concatenation of the violations of the 

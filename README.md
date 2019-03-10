@@ -43,7 +43,8 @@ the conic optimality conditions.
 `cpsr` is a matrix-free solver, meaning that it does not store or
 invert the derivative matrix 𝗗𝒩 (z). This allows it to scale
 to very large problems. Essentially, if you are able to load the problem
-data in memory, then `cpsr` can solve it, using O(n) additional memory.
+data in memory, then `cpsr` can solve it, using O(n) additional memory, 
+where n is the size of a primal-dual solution.
 
 **Iterative solution.**
 `cpsr` uses [LSQR](http://web.stanford.edu/group/SOL/software/lsqr/),

@@ -36,13 +36,13 @@ So, 𝒩 (z) = 0 if and only if z is an exact primal-dual solution
 or certificate, meaning one for which the optimality conditions
 are satisfied within machine precision. 
 At each of its iterations, using the current value of 𝒩 (z)
-and the derivative matrix 𝗗 𝒩 (z),
+and the derivative matrix 𝗗𝒩 (z),
 `cpsr` approximately solves
 the linear system that locally approximates the conic optimality conditions. 
 
 **Matrix free.**
 `cpsr` is a matrix-free solver, meaning that it does not store or
-invert the derivative matrix of 𝒩 (z). This allows it to scale
+invert the derivative matrix 𝗗𝒩 (z). This allows it to scale
 to very large problems. Essentially, if you are able to load the problem
 data in memory, then `cpsr` can solve it, using O(n) additional memory.
 

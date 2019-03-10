@@ -95,7 +95,7 @@ print('norm after refining with CPSR again: %.2e' %
       np.linalg.norm(problem.constraints[0].violation()))
 ```
 
-It has the following output. (Machine precision is ~1.11e-16.)
+It has the following output. (Machine precision is around `1.11e-16`.)
 
 ```
 norm of the constraint error, solving with SCS and then refining with CPSR: 1.48e-11

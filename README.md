@@ -4,7 +4,8 @@
 for the iterative improvement, or refinement,
 of a primal-dual solution,
 or a certificate of unboundedness or infeasibility,
-of a cone, or convex, program, whose data is provided
+of a cone, or [convex](http://web.stanford.edu/~boyd/cvxbook/bv_cvxbook.pdf), 
+program, whose data is provided
 as a sparse matrix (or, in future, an abstract linear operator).
 It operates by differentiating the conic optimality conditions,
 and so it can also be used for *calculus* with conic programs.
@@ -42,7 +43,7 @@ to very large problems. Essentially, if you are able to load the problem
 data in memory, then `cpsr` can solve it, using O(n) additional memory.
 
 **Iterative solution.**
-It uses [LSQR](http://web.stanford.edu/group/SOL/software/lsqr/),
+`cpsr` uses [LSQR](http://web.stanford.edu/group/SOL/software/lsqr/),
 an iterative linear system solver, to approximately solve the system
 that locally approximates the conic optimality conditions. 
 The number of LSQR iterations is chosen by the user (by default, for small problems, 30),

@@ -4,7 +4,8 @@
 for the iterative improvement, or refinement,
 of a primal-dual solution,
 or a certificate of unboundedness or infeasibility,
-of a cone, or convex, program.
+of a cone, or convex, program, whose data is provided
+as a sparse matrix (or, in future, an abstract linear operator).
 It operates by differentiating the conic optimality conditions,
 and so it can also be used for *calculus* with conic programs.
 
@@ -35,7 +36,7 @@ are satisfied within machine precision.
 `cpsr` is a matrix-free solver, meaning that it does not store or
 invert the derivative matrix of 𝒩 (z). This allows it to scale
 to very large problems. Essentially, if you are able to load the problem
-data in memory, then `cpsr` can solve it, using O(n) memory.
+data in memory, then `cpsr` can solve it, using O(n) additional memory.
 
 **Iterative solution.**
 It uses [LSQR](http://web.stanford.edu/group/SOL/software/lsqr/),
@@ -67,11 +68,10 @@ and [`numba`](https://numba.pydata.org) for just-in-time code compilation.
 It currently runs on a single thread, on CPU. 
 
 **Future.**
-I plan to rewrite the core library in C,
-and (possibly) provide 
-a distributed implementation of the cone projections 
-and the sparse matrix multiplications, 
-either on multiple threads or on GPU.
+I plan to rewrite the core library in C, 
+support problems whose data is provided as an abstract linear operator,
+and (possibly) provide a distributed implementation of the cone projections 
+and the sparse matrix multiplications, either on multiple threads or on GPU.
 I also plan to release interfaces to other scientific programming languages.
 
 

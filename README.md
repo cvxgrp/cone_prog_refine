@@ -86,18 +86,18 @@ X = cp.Variable((n,n))
 problem = cp.Problem(objective = cp.Minimize(cp.norm(X - np.random.randn(n, n))), 
                      constraints = [X @ np.random.randn(n) == np.random.randn(n)])
 
-cpsr.cvxpy_solve(problem, presolve = True, verbose=False)
-print('constraint violation norm of solution refined from SCS: %.2e' % 
+cpsr.cvxpy_solve(problem, presolve=True, verbose=False)
+print('norm of the constraint error, solving with SCS and then refining with CPSR: %.2e' % 
       np.linalg.norm(problem.constraints[0].violation()))
 
 cpsr.cvxpy_solve(problem, verbose=False)
-print('violation norm after running CPSR again: %.2e' % 
+print('norm after refining with CPSR again: %.2e' % 
       np.linalg.norm(problem.constraints[0].violation()))
 ```
 
-It has the following output.
+It has the following output. (Machine precision is ~1.11e-16.)
 
 ```
-constraint violation norm of solution refined from SCS: 1.48e-11
-violation norm after running CPSR again: 5.21e-16
+norm of the constraint error, solving with SCS and then refining with CPSR: 1.48e-11
+norm after refining with CPSR again: 5.21e-16
 ```

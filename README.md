@@ -50,7 +50,7 @@ The number of LSQR iterations is chosen by the user (by default, for small probl
 as is the number of `cpsr` iterations (by default, for small problems, 2). 
 
 **Problem classes.**
-It can currently solve cone programs whose cone constraints are products of 
+`cpsr` can currently solve cone programs whose cone constraints are products of 
 the [zero cone](https://en.wikipedia.org/wiki/System_of_linear_equations),
 [the non-negative orhant](https://en.wikipedia.org/wiki/Linear_programming),
 and any number of [second-order cones](https://en.wikipedia.org/wiki/Second-order_cone_programming), 

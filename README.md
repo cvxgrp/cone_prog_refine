@@ -28,7 +28,7 @@ primal and dual systems of the problem, and the duality gap,
 for any approximate primal-dual solution represented
 (via an [embedding](https://www.jstor.org/stable/3690376) 
 of the conic [optimality conditions](https://arxiv.org/pdf/1312.3039.pdf))
-by z ∈ 𝗥^(n).
+by z ∈ 𝗥^(n);
 z can also represent a certificate, and in that case 𝒩 (z)
 is the violation of its primal or dual system, concatenated with zero.
 So, 𝒩 (z) = 0 if and only if z is an exact primal-dual solution

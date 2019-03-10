@@ -65,7 +65,7 @@ and [semidefinite cones](https://en.wikipedia.org/wiki/Semidefinite_programming)
 A much more detailed description of the algorithm used is provided
 in the [accompanying paper](http://stanford.edu/~boyd/papers/pdf/cone_prog_refine.pdf).
 I show the experiments described in the paper in the
-[Jupyter](https://jupyter.org) notebook
+Jupyter notebook
 [examples/experiments.ipynb](examples/experiments.ipynb).
 
 **Dependencies.**

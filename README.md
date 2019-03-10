@@ -86,8 +86,7 @@ pip install cpsr
 ### `cvxpy` interface
 
 `cpsr` can be used in combination with [`cvxpy`](https://www.cvxpy.org),
-via the `cpsr.cvxpy_solve` method. (I plan
-to include support for `cspr` as a solver in `cvxpy`.)
+via the `cpsr.cvxpy_solve` method. 
 An example follows.
 
 ```python

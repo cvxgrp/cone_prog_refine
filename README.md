@@ -4,7 +4,7 @@
 for the iterative improvement, or refinement,
 of a primal-dual solution,
 or a certificate of unboundedness or infeasibility,
-of a cone (or convex) program. 
+of a cone, or [convex](http://web.stanford.edu/~boyd/cvxbook/bv_cvxbook.pdf), program. 
 It operates by differentiating the conic optimality conditions (also known, historically, as "KKT"),
 and so it can also be used for calculus with conic programs.
 
@@ -44,11 +44,10 @@ and any number of [second-order cones](https://en.wikipedia.org/wiki/Second-orde
 [exponential cones](https://yalmip.github.io/tutorial/exponentialcone/), 
 and [semidefinite cones](https://en.wikipedia.org/wiki/Semidefinite_programming).
 
-A (much) more detailed description of the algorithm used is provided
+A much more detailed description of the algorithm used is provided
 in [the accompanying paper](http://stanford.edu/~boyd/papers/cone_prog_refine.html).
 
-
-I show the experiments described in the paper in the 
+I show the experiments described in the paper in the
 [Jupyter](https://jupyter.org)
 notebook
 [examples/experiments.ipynb](examples/experiments.ipynb).

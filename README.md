@@ -20,8 +20,11 @@ and the duality gap, is smaller.
 It does so by locally linearizing
 the operator 𝒩 (z) ∈ 𝗥^(n), 
 the concatenation of the violations of the 
-primal and dual constraints, and the duality gap,
-for any approximate primal-dual solution (or certificate) z ∈ 𝗥^(n).
+primal and dual systems of the problem, and the duality gap,
+for any approximate primal-dual solution represented 
+(via the primal-dual homogeneous embedding) by z ∈ 𝗥^(n).
+If z ∈ 𝗥^(n) represents instead a certificate, 𝒩 (z)
+is the violation of its (primal or dual) system, concatenated with zero.
 So, 𝒩 (z) = 0 if and only if z is an exact primal-dual solution
 or certificate, meaning one for which the optimality conditions
 are satisfied within machine precision. 

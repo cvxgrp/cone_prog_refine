@@ -48,10 +48,10 @@ A (much) more detailed description of the algorithm used is provided
 in [the accompanying paper](http://stanford.edu/~boyd/papers/cone_prog_refine.html).
 
 
-I show the experiments described in the paper in the
-[jupyter notebook](https://jupyter.org) [experiments.ipynb](examples/experiments.ipynb), 
-in the `examples` folder. 
-(It is large file, I believe the online visualization currently fails.)
+I show the experiments described in the paper in the 
+[Jupyter](https://jupyter.org)
+notebook
+[examples/experiments.ipynb](examples/experiments.ipynb).
 
 
 ### Installation

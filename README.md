@@ -17,7 +17,7 @@ conditions don't hold exactly,
 the norm of the violations of the primal and dual constraints, 
 and the duality gap, is smaller. 
 
-It does so by locally [linearizing](https://www.khanacademy.org/math/multivariable-calculus/applications-of-multivariable-derivatives/tangent-planes-and-local-linearization/a/local-linearization)
+It does so by locally linearizing
 the operator 𝒩 (z) ∈ 𝗥^(n), 
 the concatenation of the violations of the 
 primal and dual systems of the problem, and the duality gap,

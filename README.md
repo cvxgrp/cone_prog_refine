@@ -15,7 +15,7 @@ Given an approximate solution (or certificate),
 meaning one for which the optimality 
 conditions don't hold exactly, 
 `cpsr` produces a new solution for which 
-the norm of the violations of the primal and dual constraints, 
+the norm of the violations of the primal and dual systems, 
 and the duality gap, is smaller. 
 
 

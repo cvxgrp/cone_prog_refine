@@ -64,7 +64,10 @@ notebook
 `cpsr` depends on [`numpy`](http://www.numpy.org) for vector arithmetics, 
 [`scipy`](https://www.scipy.org) for sparse linear algebra,
 and [`numba`](https://numba.pydata.org) for just-in-time code compilation.
-It currently runs on a single thread, on CPU. I plan to support 
+It currently runs on a single thread, on CPU. 
+
+**Future.**
+I plan to support 
 multi-threading and GPUs, 
 and rewrite the algorithmic part of the code in C. I also plan to
 release interfaces to other scientific programming languages.

@@ -44,6 +44,16 @@ and any number of [second-order cones](https://en.wikipedia.org/wiki/Second-orde
 [exponential cones](https://yalmip.github.io/tutorial/exponentialcone/), 
 and [semidefinite cones](https://en.wikipedia.org/wiki/Semidefinite_programming).
 
+A (much) more detailed description of the algorithm used is provided
+in [the accompanying paper](http://stanford.edu/~boyd/papers/cone_prog_refine.html).
+
+
+I show the experiments described in the paper in the
+[jupyter notebook](https://jupyter.org) [experiments.ipynb](examples/experiments.ipynb), 
+in the `examples` folder. 
+(It is large file, I believe the online visualization currently fails.)
+
+
 ### Installation
 To install, execute in a terminal:
 
@@ -59,8 +69,6 @@ multi-threading and GPUs,
 and rewrite the algorithmic part of the code in C. I also plan to
 release interfaces to other scientific programming languages.
 
-A detailed description of the algorithm used is provided
-in [the accompanying paper](http://stanford.edu/~boyd/papers/cone_prog_refine.html).
 
 ### `cvxpy` interface
 

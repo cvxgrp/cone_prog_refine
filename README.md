@@ -4,9 +4,7 @@
 for the iterative improvement, or refinement,
 of a primal-dual solution,
 or a certificate of unboundedness or infeasibility,
-of a cone, or convex, 
-program, whose data is provided
-as a sparse matrix (or, in future, an abstract linear operator).
+of a cone, or convex, program.
 It operates by differentiating the conic optimality conditions,
 and so it can also be used for *calculus* with conic programs.
 
@@ -36,7 +34,7 @@ or certificate, meaning one for which the optimality conditions
 are satisfied within machine precision. 
 `cpsr` proceeds iteratively, using at each steps the current value of 𝒩 (z)
 and the derivative matrix 𝗗𝒩 (z) to (approximately) solve
-the linear system that locally approximates 
+a linear system that locally approximates 
 the conic optimality conditions. 
 
 **Matrix free.**
@@ -65,7 +63,7 @@ and [semidefinite cones](https://en.wikipedia.org/wiki/Semidefinite_programming)
 A much more detailed description of the algorithm used is provided
 in the [accompanying paper](http://stanford.edu/~boyd/papers/pdf/cone_prog_refine.pdf).
 I show the experiments described in the paper in the
-[Jupyter](https://jupyter.org) notebook
+Jupyter notebook
 [examples/experiments.ipynb](examples/experiments.ipynb).
 
 **Dependencies.**

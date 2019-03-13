@@ -36,7 +36,7 @@ and the derivative matrix 𝗗𝒩 (z) to (approximately) solve
 a linear system that locally approximates 
 the conic optimality conditions. 
 
-**Matrix free.**
+**Matrix-free.**
 `cpsr` is a matrix-free solver, meaning that it does not store or
 invert the derivative matrix 𝗗𝒩 (z). This allows it to scale
 to very large problems. Essentially, if you are able to load the problem

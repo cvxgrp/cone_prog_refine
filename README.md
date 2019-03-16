@@ -29,7 +29,7 @@ of the conic [optimality conditions](https://arxiv.org/pdf/1312.3039.pdf);
 z can also represent a certificate, and in that case 𝒩 (z)
 is the violation of its (primal or dual) system, concatenated with zero.
 So, 𝒩 (z) = 0 if and only if z is an exact primal-dual solution
-or certificate, meaning one for which the optimality conditions
+or certificate, meaning one for which the conic optimality conditions, or the certificate conditions,
 are satisfied within machine precision. 
 `cpsr` proceeds iteratively, using at each steps the current value of 𝒩 (z)
 and the derivative matrix 𝗗𝒩 (z) to (approximately) solve

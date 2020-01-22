@@ -56,6 +56,9 @@ ffi.cdef('void zero_cone_projection_derivative(int64_t z, int64_t x, int64_t zer
 ffi.cdef('void non_negative_cone_projection(int64_t z, int64_t zero);')
 ffi.cdef('void non_negative_cone_projection_derivative(int64_t z, int64_t x, int64_t zero);')
 
+ffi.cdef('void second_order_cone_projection(int64_t z, int64_t zero);')
+ffi.cdef('void second_order_cone_projection_derivative(int64_t z, int64_t dz, int64_t pi_z, int64_t zero);')
+
 
 C = ffi.dlopen('/Users/enzo/repos/cone_prog_refine/c/libcones.so')
 
@@ -64,6 +67,9 @@ c_zero_p_d = C.zero_cone_projection_derivative
 
 c_non_neg_p = C.non_negative_cone_projection
 c_non_neg_p_d = C.non_negative_cone_projection_derivative
+
+c_sec_ord_p = C.second_order_cone_projection
+c_sec_ord_p_d = C.second_order_cone_projection_derivative
 
 
 # TEST
@@ -195,79 +201,61 @@ non_neg_cone_cached = cone(lambda z, cache: non_neg_cone.Pi(z),
 #     return result
 
 @nb.jit(nb.float64[:](nb.float64[:], nb.float64[:], nb.float64[:]))
-def sec_ord_D(z, dz, cache):
+def sec_ord_D(z, dz, pi_z):
     """Derivative of projection on second order cone."""
 
-    # point at which we derive
-    t = z[0]
-    x = z[1:]
-    # projection of point
-    s = cache[0]
-    y = cache[1:]
-
     # logic for simple cases
-    norm = np.linalg.norm(x)
-    if norm <= t:
-        return np.copy(dz)
-    if norm <= -t:
-        return np.zeros_like(dz)
 
-    # big case
-    dx, dt = dz[1:], dz[0]
+    # t, x = z[0], z[1:]
 
-    # from my notes (attach photo)
-    alpha = 2 * s - t
-    if alpha == 0.:
-        raise Exception('Second order cone derivative error')
-    b = 2 * y - x
-    c = dt * s + dx @ y
-    d = dt * y + dx * s
+    # norm = np.linalg.norm(z[1:])
 
-    denom = (alpha - b @ b / alpha)
-    if denom == 0.:
-        raise Exception('Second order cone derivative error')
-    ds = (c - b @ d / alpha) / denom
-    dy = (d - b * ds) / alpha
+    # if norm <= z[0]:
+    #     return dz
 
-    result = np.empty_like(dz)
-    result[1:], result[0] = dy, ds
-    return result
+    # if norm <= -z[0]:
+    #     dz[:] = 0.
+    #     return dz
 
-    # normalized_s = s / norm
-    # result = np.empty_like(x)
-    # result[1:] = ((rho / norm + 1) * y -
-    #               (rho / norm**3) * s *
-    #               s@y +
-    #               t * normalized_s) / 2.
-    # result[0] = (y@ normalized_s + t) / 2.
-    # return result
+    # dot_val = dz[1:] @ x
+    # old_dzzero = dz[0]
+
+    # dz[0] = (dz[0] * norm + dot_val) / (2 * norm)
+    # dz[1:] = dz[1:] * (t + norm) / (2 * norm) + \
+    #     x * ((old_dzzero - t * dot_val / norm**2) / (2 * norm))
+
+    c_sec_ord_p_d(z.ctypes.data, dz.ctypes.data, pi_z.ctypes.data, len(z))
+
+    return dz
 
 
 @nb.jit(nb.float64[:](nb.float64[:], nb.float64[:]))
 def sec_ord_Pi(z, cache):
     """Projection on second-order cone."""
 
-    x, rho = z[1:], z[0]
-    # cache this?
-    norm_x = np.linalg.norm(x)
-    # cache = np.zeros(1)
-    # cache[0] = norm_x
+    # x, rho = z[1:], z[0]
+    # # cache this?
+    # norm_x = np.linalg.norm(x)
+    # # cache = np.zeros(1)
+    # # cache[0] = norm_x
 
-    if norm_x <= rho:
-        return np.copy(z)
+    # if norm_x <= rho:
+    #     return np.copy(z)
 
-    if norm_x <= -rho:
-        return np.zeros_like(z)
+    # if norm_x <= -rho:
+    #     return np.zeros_like(z)
 
-    result = np.empty_like(z)
+    # result = np.empty_like(z)
 
-    result[0] = 1.
-    result[1:] = x / norm_x
-    result *= (norm_x + rho) / 2.
+    # result[0] = 1.
+    # result[1:] = x / norm_x
+    # result *= (norm_x + rho) / 2.
 
-    cache[:] = result
+    c_sec_ord_p(z.ctypes.data, len(z))
 
-    return result
+    cache[:] = z
+
+    return z
 
 
 sec_ord_cone = cone(sec_ord_Pi, sec_ord_D, sec_ord_D)

@@ -21,6 +21,19 @@
 
 #include <stdint.h>
 
+double norm(double *x, int size);
+
+void vecsum(double *x, double *y, int size);
+
+void vecdiff(double *x, double *y, int size);
+
+void vecalgsum(double *x, double *y, 
+                 double alpha, double beta,
+                 int size);
+
+double dot(double *x, double *y, int size);
+
+
 
 void zero_cone_projection(double *z, int64_t size);
 
@@ -32,7 +45,12 @@ void non_negative_cone_projection(double *z, int64_t size);
 void non_negative_cone_projection_derivative(double *z, double *x, 
                                              int64_t size);
 
-void second_order_cone_projection(double *z, int size);
+void second_order_cone_projection(double *z, int64_t size);
+
+void second_order_cone_projection_derivative(double *z, 
+                                             double *dz, 
+                                             double *pi_z,
+                                             int64_t size);
 
 void semidefinite_cone_projection(double *z, double *pi_z, int semidefinite, 
                                   double *eigenvectors, double *eigenvalues);

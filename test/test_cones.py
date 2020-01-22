@@ -18,7 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import unittest
 import numpy as np
 
-from cpsr import *
+from cpr import *
 
 HOW_MANY_DERIVATIVE_SAMPLES = 1000
 HOW_LONG_DERIVATIVE_TEST_STEP = 1e-5

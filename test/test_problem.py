@@ -18,7 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import unittest
 import numpy as np
 
-from cpsr import *
+from cpr import *
 import scipy.sparse as sp
 
 import time

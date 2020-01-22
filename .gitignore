@@ -3,5 +3,17 @@
 *.pyc
 *.egg-info*
 *__pycache__*
+
+# Build
 build/*
+dist/*
+
+# Notebooks
 *.ipynb_checkpoints*
+
+# Examples and local experiments
+*.ipynb
+*.png
+
+# Profiling
+*.dat

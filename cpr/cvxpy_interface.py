@@ -1,18 +1,17 @@
 """
-Copyright (C) Enzo Busseti 2017-2019.
+Copyright 2019 Enzo Busseti, Walaa Moursi, and Stephen Boyd
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+    http://www.apache.org/licenses/LICENSE-2.0
 
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <https://www.gnu.org/licenses/>.
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 """
 
 import time
@@ -27,7 +26,7 @@ from .cones import make_prod_cone_cache
 __all__ = ['cvxpy_solve', 'cvxpy_differentiate']
 
 
-def cvxpy_scs_to_cpsr(data, sol=None):
+def cvxpy_scs_to_cpr(data, sol=None):
 
     A, b, c, dims = data['A'], data['b'], data['c'], data['dims']
 
@@ -94,12 +93,12 @@ def cvxpy_solve(cvxpy_problem, iters=2, lsqr_iters=30,
                                                     verbose=verbose,
                                                     solver_opts=scs_opts)
 
-        A, b, c, z, dims = cvxpy_scs_to_cpsr(data, scs_solution)
+        A, b, c, z, dims = cvxpy_scs_to_cpr(data, scs_solution)
     else:
-        A, b, c, z, dims = cvxpy_scs_to_cpsr(data)
+        A, b, c, z, dims = cvxpy_scs_to_cpr(data)
         scs_solution = {}
-        if warm_start and 'CPSR' in cvxpy_problem._solver_cache:
-            z = cvxpy_problem._solver_cache['CPSR']['z']
+        if warm_start and 'CPR' in cvxpy_problem._solver_cache:
+            z = cvxpy_problem._solver_cache['CPR']['z']
     prepare_time = time.time() - start
 
     # TODO change this
@@ -107,7 +106,7 @@ def cvxpy_solve(cvxpy_problem, iters=2, lsqr_iters=30,
     start = time.time()
     refined_z = refine(A, b, c, dims, z, iters=iters,
                        lsqr_iters=lsqr_iters, verbose=verbose)
-    cvxpy_problem._solver_cache['CPSR'] = {'z': refined_z}
+    cvxpy_problem._solver_cache['CPR'] = {'z': refined_z}
     refine_time = time.time() - start
 
     new_residual, u, v = residual_and_uv(
@@ -142,7 +141,7 @@ def cvxpy_differentiate(cvxpy_problem, parameters, output_expression,
 
     solving_chain = construct_solving_chain(cvxpy_problem, solver='SCS')
     data, inverse_data = solving_chain.apply(cvxpy_problem)
-    A, b, c, _, _ = cvxpy_scs_to_cpsr(data)
+    A, b, c, _, _ = cvxpy_scs_to_cpr(data)
 
     # A is a sparse matrix, so below we compute
     # sparse matrix differences.
@@ -154,15 +153,15 @@ def cvxpy_differentiate(cvxpy_problem, parameters, output_expression,
         if verbose:
             print('compiling parameter', parameter.name())
         old_par_val = parameter.value
-        parameter.value = 1.
+        parameter.value += 1.
         newdata, _ = solving_chain.apply(cvxpy_problem)
-        new_A, new_b, new_c, _, _ = cvxpy_scs_to_cpsr(newdata)
+        new_A, new_b, new_c, _, _ = cvxpy_scs_to_cpr(newdata)
         dA = new_A - A
         db = new_b - b
         dc = new_c - c
-        parameter.value = -1.
+        parameter.value -= 2.
         newdata, _ = solving_chain.apply(cvxpy_problem)
-        new_A, new_b, new_c, _, _ = cvxpy_scs_to_cpsr(newdata)
+        new_A, new_b, new_c, _, _ = cvxpy_scs_to_cpr(newdata)
         if not (np.allclose(A - new_A, dA)) \
                 and (np.allclose(b - new_b, db))\
                 and (np.allclose(c - new_c, dc)):
@@ -179,7 +178,7 @@ def cvxpy_differentiate(cvxpy_problem, parameters, output_expression,
     scs_solution["info"] = {'status': 'Solved', 'solveTime': 0.,
                             'setupTime': 0., 'iter': 0, 'pobj': np.nan}
 
-    z = cvxpy_problem._solver_cache['CPSR']['z']
+    z = cvxpy_problem._solver_cache['CPR']['z']
 
     if not (len(output_expression.shape) == 1):
         raise ValueError('Only one-dimensional outputs')
@@ -234,7 +233,7 @@ def cvxpy_differentiate(cvxpy_problem, parameters, output_expression,
         return dz @ output_matrix
 
     def rmatvec(d_output):
-        pass
+        dz = output_matrix @ d_output
 
     result = LinearOperator((len(parameters), output_expression.size),
                             matvec=matvec,

@@ -35,6 +35,45 @@ class DimensionError(Exception):
 class NonDifferentiable(Exception):
     pass
 
+# import ctypes
+# # from ctypes import cdll, c_double, c_int, POINTER
+# c_cones = ctypes.cdll.LoadLibrary(
+#     '/Users/enzo/repos/cone_prog_refine/c/libcones.so')
+
+# c_zero_p = c_cones.zero_cone_projection
+# c_zero_p.argtypes = [ctypes.POINTER(ctypes.c_double),
+#                      # ctypes.c_uint64,
+#                      ctypes.c_int64]
+# c_zero_p.restype = None
+
+
+from cffi import FFI
+
+ffi = FFI()
+ffi.cdef('void zero_cone_projection(int64_t z, int64_t zero);')
+ffi.cdef('void zero_cone_projection_derivative(int64_t z, int64_t x, int64_t zero);')
+
+ffi.cdef('void non_negative_cone_projection(int64_t z, int64_t zero);')
+ffi.cdef('void non_negative_cone_projection_derivative(int64_t z, int64_t x, int64_t zero);')
+
+
+C = ffi.dlopen('/Users/enzo/repos/cone_prog_refine/c/libcones.so')
+
+c_zero_p = C.zero_cone_projection
+c_zero_p_d = C.zero_cone_projection_derivative
+
+c_non_neg_p = C.non_negative_cone_projection
+c_non_neg_p_d = C.non_negative_cone_projection_derivative
+
+
+# TEST
+z = np.arange(10)
+print(z)
+c_zero_p(z.ctypes.data, len(z))
+print(z)
+assert np.all(z == 0.)
+#######
+
 
 # def check_non_neg_int(n):
 #     if not isinstance(n, int):
@@ -54,13 +93,13 @@ cone = namedtuple('cone', ['Pi', 'D', 'DT'])
 @nb.jit(nb.float64[:](nb.float64[:], nb.float64[:]))
 def id_op(z, x):
     """Identity operator on x."""
-    return np.copy(x)
+    return x  # np.copy(x)
 
 
 @nb.jit(nb.float64[:](nb.float64[:]))
 def free(z):
     """Projection on free cone, and cache."""
-    return np.copy(z)
+    return z  # np.copy(z)
 
 
 free_cone = cone(free, id_op, id_op)
@@ -72,13 +111,30 @@ free_cone_cached = cone(lambda z, cache: free_cone.Pi(z),
 @nb.jit(nb.float64[:](nb.float64[:], nb.float64[:]))
 def zero_D(z, x):
     """zero operator on x."""
-    return np.zeros_like(x)
+    # x[:] = 0.
+    c_zero_p_d(z.ctypes.data, x.ctypes.data, len(z))
+
+    return x  # np.zeros_like(x)
 
 
 @nb.jit(nb.float64[:](nb.float64[:]))
 def zero_Pi(z):
     """Projection on zero cone, and cache."""
-    return np.zeros_like(z)
+    #z[:] = 0.
+
+    # z.ctypes.data_as(ctypes.POINTER(ctypes.c_double))
+
+    c_zero_p(z.ctypes.data, len(z))
+
+    # c_zero_p(
+    #     # z.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+    #     # z.ctypes.data,
+    #     CPointer(float64(z.ctypes.data)),
+    #     #nb.carray(z.ctypes.data, (len(z),)),
+    #     len(z)
+    # )
+
+    return z  # np.zeros_like(z)
 
 
 zero_cone = cone(zero_Pi, zero_D, zero_D)
@@ -90,16 +146,23 @@ zero_cone_cached = cone(lambda z, cache: zero_cone.Pi(z),
 @nb.jit(nb.float64[:](nb.float64[:], nb.float64[:]), nopython=True)
 def non_neg_D(z, x):
     # assert len(x) == len(z)
-    result = np.copy(x)
-    result[z < 0] = 0.
-    return result
+    # result = np.copy(x)
+    # x[z <= 0] = 0.
+
+    c_non_neg_p_d(z.ctypes.data, x.ctypes.data, len(z))
+
+    return x
 
 
 @nb.jit(nb.float64[:](nb.float64[:]), nopython=True)
 def non_neg_Pi(z):
     """Projection on non-negative cone, and cache."""
-    cache = np.zeros(1)
-    return np.maximum(z, 0.)
+    # cache = np.zeros(1)
+    #z[z <= 0.] = 0.
+
+    c_non_neg_p(z.ctypes.data, len(z))
+
+    return z  # np.maximum(z, 0.)
 
 
 non_neg_cone = cone(non_neg_Pi, non_neg_D, non_neg_D)

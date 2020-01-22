@@ -7,6 +7,7 @@
 # Build
 build/*
 dist/*
+*.so
 
 # Notebooks
 *.ipynb_checkpoints*

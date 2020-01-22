@@ -19,11 +19,20 @@
 
 //void embedded_cone_projection(double *z, double *pi_z, int zero, int nonneg, int* second_order);
 
-void zero_cone_projection(double *pi_z, int zero);
+#include <stdint.h>
 
-void non_negative_cone_projection(double *z, double *pi_z, int non_negative);
 
-void second_order_cone_projection(double *z, double *pi_z, int second_order);
+void zero_cone_projection(double *z, int64_t size);
+
+void zero_cone_projection_derivative(double *z, double *x, 
+                                     int64_t size);
+
+void non_negative_cone_projection(double *z, int64_t size);
+
+void non_negative_cone_projection_derivative(double *z, double *x, 
+                                             int64_t size);
+
+void second_order_cone_projection(double *z, int size);
 
 void semidefinite_cone_projection(double *z, double *pi_z, int semidefinite, 
                                   double *eigenvectors, double *eigenvalues);

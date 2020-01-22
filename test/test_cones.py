@@ -66,14 +66,14 @@ class BaseTestCone(unittest.TestCase):
     def test_contains(self):
         for x, isin in zip(self.sample_vecs, self.sample_vecs_are_in):
             cache = self.make_cache(len(x))
-            res = self.test_cone.Pi(x, cache)
+            res = self.test_cone.Pi(np.copy(x), cache)
             Pix = res
             self.assertTrue(np.alltrue(Pix == x) == isin)
 
     def test_proj(self):
         for x, proj_x in zip(self.sample_vecs, self.sample_vec_proj):
             cache = self.make_cache(len(x))
-            Pix = self.test_cone.Pi(x, cache)
+            Pix = self.test_cone.Pi(np.copy(x), cache)
             self.assertTrue(np.allclose(Pix, proj_x))
 
     def test_derivative_random(self):
@@ -83,7 +83,7 @@ class BaseTestCone(unittest.TestCase):
             x = np.random.randn(len(x))
             cache = self.make_cache(len(x))
 
-            proj_x = self.test_cone.Pi(x, cache)
+            proj_x = self.test_cone.Pi(np.copy(x), cache)
 
             # if not isdiff:
             #     pass
@@ -273,7 +273,7 @@ class TestProduct(BaseTestCone):
 
         for j in range(100):
             x = np.random.randn(m)
-            proj_x = prod_cone.Pi(x, *cache)
+            proj_x = prod_cone.Pi(np.copy(x), *cache)
             for i in range(HOW_MANY_DERIVATIVE_SAMPLES):
                 delta = np.random.randn(size_vec(x)) * \
                     HOW_LONG_DERIVATIVE_TEST_STEP

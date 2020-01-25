@@ -20,6 +20,7 @@
 #include <cones.h>
 #include <math.h>
 #include <string.h>
+#include <stdbool.h>
 
 
 double norm(double *x, int size){
@@ -158,9 +159,9 @@ void second_order_cone_projection_derivative(double *z,
 }
 
 
-#define CONE_TOL (1e-14)
-#define CONE_THRESH (1e-12)
-#define EXP_CONE_MAX_ITERS (100)
+#define CONE_TOL (1e-16)
+#define CONE_THRESH (1e-16)
+#define EXP_CONE_MAX_ITERS (200)
 
 const double EulerConstant = 2.718281828459045; //exp(1.0);
 
@@ -208,31 +209,55 @@ void exp_get_rho_ub(double *v, double *x, double *ub, double *lb) {
   }
 }
 
+// int isin_kexp(double r, double s, double t){
+//     return ((s * exp(r / s) - t <= CONE_THRESH && s > 0) ||
+//       (r <= CONE_THRESH && fabs(s) <= CONE_THRESH && t >= 0));
+// }
+
+int isin_kexp(double * z){
+    return (((z[1] * exp(z[0] / z[1]) - z[2] <= CONE_THRESH) && (z[1] > 0)) ||
+      ((z[0] <= 0) && (fabs(z[1]) <= CONE_THRESH) && (z[2] >= 0)));
+}
+
+// int isin_minus_kexp_star(double r, double s, double t){
+//     return ((-r < 0 && r * exp(s / r) + EulerConstant * t <= CONE_THRESH) ||
+//       (fabs(r) <= CONE_THRESH && -s >= 0 && -t >= 0));
+// }
+
+int isin_minus_kexp_star(double * z){
+    double r = z[0],s = z[1],t = z[2];
+    return (((-r < 0) && (r * exp(s / r) + EulerConstant * t <= CONE_THRESH)) ||
+      ((fabs(r) <= CONE_THRESH) && (-s >= 0) && (-t >= 0)));
+}
+
+int isin_special_case(double * z){
+    return ((z[0] <= CONE_THRESH) && (z[1] <= 0));
+}
 
 void exp_cone_projection(double *z) {
   
   int i;
   double ub, lb, g, x[3];
   
-  double r = z[0], s = z[1], t = z[2];
+  //double r = z[0], s = z[1], t = z[2];
   
   double tol = CONE_TOL;
 
   /* v in cl(Kexp) */
-  if ((s * exp(r / s) - t <= CONE_THRESH && s > 0) ||
-      (r <= 0 && fabs(s) <= CONE_THRESH && t >= 0)) {
+  //if (isin_kexp(r,s,t)) {
+  if (isin_kexp(z)) {
     return;
   }
 
   /* -v in Kexp^* */
-  if ((-r < 0 && r * exp(s / r) + EulerConstant * t <= CONE_THRESH) ||
-      (fabs(r) <= CONE_THRESH && -s >= 0 && -t >= 0)) {
+  //if (isin_minus_kexp_star(r, s, t)){
+  if (isin_minus_kexp_star(z)){
     memset(z, 0, 3 * sizeof(double));
     return;
   }
 
   /* special case with analytical solution */
-  if (r < 0 && s < 0) {
+  if (isin_special_case(z)) {
     z[1] = 0.0;
     z[2] = (z[2] > 0.0) ? z[2] : 0.0;
     return;
@@ -260,6 +285,82 @@ void exp_cone_projection(double *z) {
 }
 
 
+
+int exp_cone_projection_derivative(double *z, 
+                                    double *dz, 
+                                    double *pi_z){
+
+    // double r = z[0];
+    // double s = z[1];
+    // double t = z[2];
+
+    // double dr = dz[0];
+    // double ds = dz[1];
+    // double dt = dz[2];
+
+    // double x = pi_z[0];
+    // double y = pi_z[1];
+    // double z = pi_z[2];
+
+    //if (isin_kexp(z[0],z[1],z[2])){
+    if (isin_kexp(z)) {
+        return 1;
+    };
+
+    // if ((s > 0) && (s * exp(r / s) < t)){
+    //     return;
+    // };
+        
+    // if (((-r < 0) && (r * exp(s / r) == -EulerConstant * t)) || 
+    //         ((r == 0) && (-s >= 0) && (-t >= 0))){
+    //     dz[0] = 0.0;
+    //     dz[1] = 0.0;
+    //     dz[2] = 0.0;
+    //     return;
+    // };
+
+      /* -v in Kexp^* */
+      //if (isin_minus_kexp_star(z[0],z[1],z[2])){
+      if (isin_minus_kexp_star(z)){
+        memset(dz, 0, 3 * sizeof(double));
+        return 1;
+      }
+
+      /* special case with analytical solution */
+      if (isin_special_case(z)) {
+        dz[1] = 0.0;
+        if (z[2] < 0.0) {dz[2] = 0.0;}
+        return 1;
+      }
+
+
+    // if (-r < 0 and r * np.exp(s / r) < -np.exp(1) * t):  # or \
+    //        # (r == 0 and -s > 0 and -t > 0):
+    //     # print('second case')
+    //     return np.zeros(3)
+
+    // if r < 0 and s < 0 and t == 0:
+    //     # raise NonDifferentiable
+    //     return np.zeros(3)
+
+    // # third case
+    // if r < 0 and s < 0:
+    //     # print('third case')
+    //     result = np.zeros(3)
+    //     result[0] = dz[0]
+    //     result[2] = dz[2] if t > 0 else 0.
+    //     # print('result', result)
+    //     return result
+
+    // # fourth case
+    // #fourth = fourth_case_D(r, s, t, x, y, z, dr, ds, dt)
+    // fourth = fourth_case_D_new(r, s, t, x, y, z, dr, ds, dt)
+    // # assert not True in np.isnan(fourth)
+    // return fourth
+
+      return 0;
+
+}
 
 
 void semidefinite_cone_projection(double *z, double *pi_z, int semidefinite, 

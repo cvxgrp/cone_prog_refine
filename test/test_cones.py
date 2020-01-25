@@ -164,6 +164,20 @@ class TestZero(BaseTestCone):
     sample_vecs_are_diff = [True] * len(sample_vecs)
 
 
+THRESH = 1E-16
+
+
+def isin_kexp(z):
+    return (((z[1] > 0) and (z[1] * np.exp(z[0] / z[1]) - z[2] <= THRESH)) or
+            ((z[0] <= 0) and (np.abs(z[1]) <= THRESH) and (z[2] >= 0)))
+
+
+def isin_minus_kexp_star(z):
+    r, s, t = z
+    return (((-r < 0) and r * np.exp(s / r) + np.e * t <= THRESH) or
+            ((np.abs(r) <= THRESH) and (-s >= 0) and (-t >= 0)))
+
+
 class TestExpPri(BaseTestCone):
 
     test_cone = exp_pri_cone
@@ -189,6 +203,22 @@ class TestExpPri(BaseTestCone):
                           False, False, False, False, False]
     sample_vecs_are_diff = [False, True, True, True, True, True, True, True]
 
+    def test_projection_is_good(self):
+
+        for i in range(1000):
+            z = np.random.randn(3)
+            pi_z = exp_pri_cone.Pi(np.copy(z), np.empty(3))
+            print()
+            print('z', z)
+            print('pi z', pi_z)
+            print('z - pi z', z - pi_z)
+            if pi_z[1] > 0:
+                print(pi_z[1] * np.exp(pi_z[0] / pi_z[1]) - pi_z[2])
+            self.assertTrue(isin_kexp(pi_z))
+            self.assertTrue(isin_minus_kexp_star(z - pi_z))
+            print(z @ (pi_z - z))
+            self.assertTrue(np.isclose(z @ (pi_z - z), 0.))
+
 
 class TestExpDua(BaseTestCone):
 
@@ -203,6 +233,19 @@ class TestExpDua(BaseTestCone):
                        np.array([-0.1100572, -0.05958119,  0.06957226])]
     sample_vecs_are_in = [True, True, False, False]
     sample_vecs_are_diff = [False, True, True, True]
+
+    # def test_projection_is_good(self):
+
+    #     for i in range(100):
+    #         z = np.random.randn(3)
+    #         pi_z = exp_dua_cone.Pi(z, np.empty(3))
+    #         print('z', z)
+    #         print('pi z', pi_z)
+    #         # if z[1] > 0:
+    #         #     print(z[1] * np.exp(z[0] / z[1]) - z[2])
+    #         self.assertTrue(isin_minus_kexp_star(-pi_z))
+    #         #self.assertTrue(isin_kexp(pi_z - z))
+    #         self.assertTrue(np.allclose(z @ (pi_z - z), 0.))
 
 
 class TestSecondOrder(BaseTestCone):
@@ -268,6 +311,10 @@ class TestProduct(BaseTestCone):
                     's': [3, 4, 5], 'ep': 10, 'ed': 10}
         cache = make_prod_cone_cache(dim_dict)
         m = 22 + 7 + (6 + 10 + 15) + 30 + 30
+
+        sizes = [2, 20, 3, 4, 6, 10, 15] + [3] * 20
+        conetypes = ['z', 'l'] + ['q'] * 2 + ['s'] * 3 + ['ep'] * 10 + \
+            ['ed'] * 10
         # samples = [np.array([-5.3, 2., 11]), np.random.randn(m)
         #            np.array([-10.3, -22., 13.])]
 
@@ -283,19 +330,34 @@ class TestProduct(BaseTestCone):
 
                 dproj_x = prod_cone.D(x, delta, *cache)
 
-                if not np.allclose(proj_x + dproj_x, proj_x_plus_delta, atol=1e-6):
-                    print(dim_dict)
-                    print('x:', x)
-                    print('Pi (x):', proj_x)
-                    # print(delta)
-                    print('Pi (x + delta) - Pi(x):')
-                    print(proj_x_plus_delta - proj_x)
-                    print('DPi delta:')
-                    print(dproj_x)
+                error = proj_x + dproj_x - proj_x_plus_delta
 
-                    print('error:')
-                    print(proj_x + dproj_x -
-                          proj_x_plus_delta)
+                # if not np.allclose(proj_x + dproj_x, proj_x_plus_delta, atol=1e-6):
+                #     print(dim_dict)
+                #     print('x:', x)
+                #     print('Pi (x):', proj_x)
+                #     # print(delta)
+                #     print('Pi (x + delta) - Pi(x):')
+                #     print(proj_x_plus_delta - proj_x)
+                #     print('DPi delta:')
+                #     print(dproj_x)
+
+                #     print('error:')
+                #     print(proj_x + dproj_x -
+                #           proj_x_plus_delta)
+
+                count = 0
+                for size, conetype in zip(sizes, conetypes):
+                    if not np.allclose(error[count:count + size], 0., atol=1e-6):
+                        print(size, conetype)
+                        print('x', x[count:count + size])
+                        print('pi x', proj_x[count:count + size])
+                        print('delta ', delta[count:count + size])
+                        print('proj_x_plus_delta',
+                              proj_x_plus_delta[count:count + size])
+                        print('error', error[count:count + size])
+                        self.assertTrue(False)
+                    count += size
 
                 self.assertTrue(np.allclose(
                     proj_x + dproj_x,
@@ -366,6 +428,11 @@ class TestEmbeddedCone(unittest.TestCase):
         for j in range(100):
             dim_dict = {'f': 2, 'l': 20,  'q': [2, 3, 5],
                         's': [3, 4, 5], 'ep': 10, 'ed': 10}
+
+            sizes = [2, 20, 2, 3, 5, 6, 10, 15] + [3] * 20
+            conetypes = ['z', 'l'] + ['q'] * 3 + ['s'] * 3 + ['ep'] * 10 + \
+                ['ed'] * 10
+
             A, b, c, _, x_true, s_true, y_true = generate_problem(
                 dim_dict, mode='solvable')
             m, n = A.shape
@@ -379,6 +446,23 @@ class TestEmbeddedCone(unittest.TestCase):
                     HOW_LONG_DERIVATIVE_TEST_STEP
                 proj_u = embedded_cone_Pi(z_true, *cone_caches, n)
                 proj_v = proj_u - z_true
+
+                proj_u_error = (proj_u - u_true)
+                proj_v_error = (proj_v - v_true)
+
+                count = 0
+                for size, conetype in zip(sizes, conetypes):
+                    if not np.allclose(proj_u_error[count:count + size], 0.):
+                        print(size, conetype)
+                        print('u:', u_true[count:count + size])
+                        print('pi u:', proj_u[count:count + size])
+                    if not np.allclose(proj_v_error[count:count + size], 0.):
+                        print(size, conetype)
+                        print('v:', v_true[count:count + size])
+                        print('pi v:', proj_v[count:count + size])
+
+                        # self.assertTrue(False)
+                    count += size
 
                 self.assertTrue(np.allclose(proj_u - u_true, 0.))
                 self.assertTrue(np.allclose(proj_v - v_true, 0.))
@@ -394,18 +478,35 @@ class TestEmbeddedCone(unittest.TestCase):
 
                 error = u_true + dproj - u_plus_delta
                 m, n = A.shape
-                if not np.allclose(error, 0., atol=1e-6):
-                    print('z:', z_true)
-                    print('delta:')
-                    print(delta)
-                    print('Pi (z + delta) - Pi(z):')
-                    print(u_plus_delta - u_true)
-                    print('DPi delta:')
-                    print(dproj)
-                    print('error:')
-                    print(error[:n])
-                    print(error[n:-1])
-                    print(error[-1])
+                # if not np.allclose(error, 0., atol=1e-6):
+                #     print('z:', z_true)
+                #     print('delta:')
+                #     print(delta)
+                #     print('Pi (z + delta) - Pi(z):')
+                #     print(u_plus_delta - u_true)
+                #     print('DPi delta:')
+                #     print(dproj)
+                #     print('error:')
+                #     print(error[:n])
+                #     print(error[n:-1])
+                #     print(error[-1])
+
+                count = 0
+                for size, conetype in zip(sizes, conetypes):
+                    if not np.allclose(error[count:count + size], 0., atol=1e-6):
+                        print(size, conetype)
+                        print('z:', z_true[count:count + size])
+                        print('delta:')
+                        print(delta[count:count + size])
+                        print('Pi (z + delta) - Pi(z):')
+                        print(u_plus_delta[count:count + size] -
+                              u_true[count:count + size])
+                        print('DPi delta:')
+                        print(dproj[count:count + size])
+                        print('error:')
+                        print(error[count:count + size])
+                        # self.assertTrue(False)
+                    count += size
 
                 self.assertTrue(np.allclose(
                     error, 0., atol=1e-6))

@@ -60,6 +60,8 @@ ffi.cdef('void second_order_cone_projection(int64_t z, int64_t zero);')
 ffi.cdef('void second_order_cone_projection_derivative(int64_t z, int64_t dz, int64_t pi_z, int64_t zero);')
 
 ffi.cdef('void exp_cone_projection(int64_t z);')
+ffi.cdef('int exp_cone_projection_derivative(int64_t z, int64_t dz, int64_t pi_z);')
+
 
 import os
 dirname = os.path.dirname(__file__)
@@ -76,6 +78,7 @@ c_sec_ord_p = C.second_order_cone_projection
 c_sec_ord_p_d = C.second_order_cone_projection_derivative
 
 c_exp_p = C.exp_cone_projection
+c_exp_p_d = C.exp_cone_projection_derivative
 
 
 # TEST
@@ -359,362 +362,362 @@ sec_ord_cone = cone(sec_ord_Pi, sec_ord_D, sec_ord_D)
 #   return x
 
 
-@nb.jit(nb.float64(nb.float64, nb.float64, nb.float64, nb.float64))
-def newton_exp_onz(rho, y_hat, z_hat, w):
-    t = max(max(w - z_hat, -z_hat), 1e-6)
-    for iter in np.arange(0, 100):
-        f = (1 / rho**2) * t * (t + z_hat) - y_hat / rho + np.log(t / rho) + 1
-        fp = (1 / rho**2) * (2 * t + z_hat) + 1 / t
+# @nb.jit(nb.float64(nb.float64, nb.float64, nb.float64, nb.float64))
+# def newton_exp_onz(rho, y_hat, z_hat, w):
+#     t = max(max(w - z_hat, -z_hat), 1e-6)
+#     for iter in np.arange(0, 100):
+#         f = (1 / rho**2) * t * (t + z_hat) - y_hat / rho + np.log(t / rho) + 1
+#         fp = (1 / rho**2) * (2 * t + z_hat) + 1 / t
 
-        t = t - f / fp
-        if t <= -z_hat:
-            t = -z_hat
-            break
-        elif t <= 0:
-            t = 0
-            break
-        elif np.abs(f) < 1e-6:
-            break
-    return t + z_hat
-
-
-@nb.jit(nb.float64[:](nb.float64[:], nb.float64, nb.float64))
-def solve_with_rho(v, rho, w):
-    x = np.zeros(3)
-    x[2] = newton_exp_onz(rho, v[1], v[2], w)
-    x[1] = (1 / rho) * (x[2] - v[2]) * x[2]
-    x[0] = v[0] - rho
-    return x
+#         t = t - f / fp
+#         if t <= -z_hat:
+#             t = -z_hat
+#             break
+#         elif t <= 0:
+#             t = 0
+#             break
+#         elif np.abs(f) < 1e-6:
+#             break
+#     return t + z_hat
 
 
-@nb.jit(nb.types.Tuple((nb.float64, nb.float64[:]))(nb.float64[:],
-                                                    nb.float64, nb.float64[:]),
-        nopython=True)
-def calc_grad(v, rho, warm_start):
-    x = solve_with_rho(v, rho, warm_start[1])
-    if x[1] == 0:
-        g = x[0]
-    else:
-        g = (x[0] + x[1] * np.log(x[1] / x[2]))
-    return g, x
+# @nb.jit(nb.float64[:](nb.float64[:], nb.float64, nb.float64))
+# def solve_with_rho(v, rho, w):
+#     x = np.zeros(3)
+#     x[2] = newton_exp_onz(rho, v[1], v[2], w)
+#     x[1] = (1 / rho) * (x[2] - v[2]) * x[2]
+#     x[0] = v[0] - rho
+#     return x
 
 
-@nb.jit(nb.types.UniTuple(nb.float64, 2)(nb.float64[:]))
-def get_rho_ub(v):
-    lb = 0
-    rho = 2**(-3)
-    g, z = calc_grad(v, rho, v)
-    while g > 0:
-        lb = rho
-        rho = rho * 2
-        g, z = calc_grad(v, rho, z)
-    ub = rho
-    return ub, lb
+# @nb.jit(nb.types.Tuple((nb.float64, nb.float64[:]))(nb.float64[:],
+#                                                     nb.float64, nb.float64[:]),
+#         nopython=True)
+# def calc_grad(v, rho, warm_start):
+#     x = solve_with_rho(v, rho, warm_start[1])
+#     if x[1] == 0:
+#         g = x[0]
+#     else:
+#         g = (x[0] + x[1] * np.log(x[1] / x[2]))
+#     return g, x
 
 
-@nb.jit(nb.types.UniTuple(nb.float64[:], 2)(nb.float64[:]))
-def fourth_case_brendan(z):
-    x = np.copy(z)
-    ub, lb = get_rho_ub(x)
-    # print('initial ub, lb', ub, lb)
-    for i in range(0, 100):
-        rho = (ub + lb) / 2
-        g, x = calc_grad(z, rho, x)
-        # print('g, x', g, x)
-        if g > 0:
-            lb = rho
-        else:
-            ub = rho
-        # print('new ub, lb', ub, lb)
-        if ub - lb < 1e-8:
-            break
-    # print('result:', x)
-    return x, np.copy(x)
+# @nb.jit(nb.types.UniTuple(nb.float64, 2)(nb.float64[:]))
+# def get_rho_ub(v):
+#     lb = 0
+#     rho = 2**(-3)
+#     g, z = calc_grad(v, rho, v)
+#     while g > 0:
+#         lb = rho
+#         rho = rho * 2
+#         g, z = calc_grad(v, rho, z)
+#     ub = rho
+#     return ub, lb
 
+
+# @nb.jit(nb.types.UniTuple(nb.float64[:], 2)(nb.float64[:]))
+# def fourth_case_brendan(z):
+#     x = np.copy(z)
+#     ub, lb = get_rho_ub(x)
+#     # print('initial ub, lb', ub, lb)
+#     for i in range(0, 100):
+#         rho = (ub + lb) / 2
+#         g, x = calc_grad(z, rho, x)
+#         # print('g, x', g, x)
+#         if g > 0:
+#             lb = rho
+#         else:
+#             ub = rho
+#         # print('new ub, lb', ub, lb)
+#         if ub - lb < 1e-8:
+#             break
+#     # print('result:', x)
+#     return x, np.copy(x)
+
+
+# # Here it is my work on exp proj D
+# @nb.jit(nb.float64[:, :](nb.float64, nb.float64, nb.float64, nb.float64,
+#                          nb.float64, nb.float64))
+# def make_mat(r, s, t, x, y, z):
+#     mat = np.zeros((3, 3))
+#     # first eq.
+#     mat[0, 0] = 2 * x - r
+#     mat[0, 1] = 2 * y - s
+#     mat[0, 2] = 2 * z - t
+#     mat[1, 0] = np.exp(x / y)
+#     mat[1, 1] = np.exp(x / y) * (1 - x / y)
+#     mat[1, 2] = -1.
+#     mat[2, 0] = y
+#     mat[2, 1] = x - r
+#     mat[2, 2] = 2 * z - t
+#     return mat
 
 # Here it is my work on exp proj D
-@nb.jit(nb.float64[:, :](nb.float64, nb.float64, nb.float64, nb.float64,
-                         nb.float64, nb.float64))
-def make_mat(r, s, t, x, y, z):
-    mat = np.zeros((3, 3))
-    # first eq.
-    mat[0, 0] = 2 * x - r
-    mat[0, 1] = 2 * y - s
-    mat[0, 2] = 2 * z - t
-    mat[1, 0] = np.exp(x / y)
-    mat[1, 1] = np.exp(x / y) * (1 - x / y)
-    mat[1, 2] = -1.
-    mat[2, 0] = y
-    mat[2, 1] = x - r
-    mat[2, 2] = 2 * z - t
-    return mat
-
-# Here it is my work on exp proj D
 
 
-@nb.jit(nb.float64[:, :](nb.float64, nb.float64, nb.float64, nb.float64,
-                         nb.float64, nb.float64))
-def make_mat_two(r, s, t, x, y, z):
-    mat = np.zeros((3, 3))
-    # first eq.
-    u = -(r - x)
-    v = -(s - y)
-    w = -(t - z)
+# @nb.jit(nb.float64[:, :](nb.float64, nb.float64, nb.float64, nb.float64,
+#                          nb.float64, nb.float64))
+# def make_mat_two(r, s, t, x, y, z):
+#     mat = np.zeros((3, 3))
+#     # first eq.
+#     u = -(r - x)
+#     v = -(s - y)
+#     w = -(t - z)
 
-    mat[0, 0] = 2 * x - r
-    mat[0, 1] = 2 * y - s
-    mat[0, 2] = 2 * z - t
+#     mat[0, 0] = 2 * x - r
+#     mat[0, 1] = 2 * y - s
+#     mat[0, 2] = 2 * z - t
 
-    # mat[1, 0] = np.exp(x / y)
-    # mat[1, 1] = np.exp(x / y) * (1 - x / y)
-    # mat[1, 2] = -1.
+#     # mat[1, 0] = np.exp(x / y)
+#     # mat[1, 1] = np.exp(x / y) * (1 - x / y)
+#     # mat[1, 2] = -1.
 
-    mat[1, 0] = np.exp(v / u) * (1 - v / u)
-    mat[1, 1] = np.exp(v / u)
-    mat[1, 2] = np.e
+#     mat[1, 0] = np.exp(v / u) * (1 - v / u)
+#     mat[1, 1] = np.exp(v / u)
+#     mat[1, 2] = np.e
 
-    mat[2, 0] = y
-    mat[2, 1] = x - r
-    mat[2, 2] = 2 * z - t
-    return mat
-
-
-@nb.jit(nb.float64[:](nb.float64, nb.float64, nb.float64, nb.float64,
-                      nb.float64, nb.float64))
-def make_error(r, s, t, x, y, z):
-    error = np.zeros(3)
-    error[0] = x * (x - r) + y * (y - s) + z * (z - t)
-    error[1] = y * np.exp(x / y) - z
-    error[2] = y * (x - r) + z * (z - t)
-    print('error', error)
-    return error
+#     mat[2, 0] = y
+#     mat[2, 1] = x - r
+#     mat[2, 2] = 2 * z - t
+#     return mat
 
 
-@nb.jit(nb.float64[:](nb.float64, nb.float64, nb.float64, nb.float64,
-                      nb.float64, nb.float64))
-def make_error_two(r, s, t, x, y, z):
-    error = np.zeros(3)
-    error[0] = x * (x - r) + y * (y - s) + z * (z - t)
-    u = -(r - x)
-    v = -(s - y)
-    w = -(t - z)
-    error[1] = np.e * w + u * np.exp(v / u)
-    error[2] = y * (x - r) + z * (z - t)
-    # print('error', error)
-    return error
+# @nb.jit(nb.float64[:](nb.float64, nb.float64, nb.float64, nb.float64,
+#                       nb.float64, nb.float64))
+# def make_error(r, s, t, x, y, z):
+#     error = np.zeros(3)
+#     error[0] = x * (x - r) + y * (y - s) + z * (z - t)
+#     error[1] = y * np.exp(x / y) - z
+#     error[2] = y * (x - r) + z * (z - t)
+#     print('error', error)
+#     return error
 
 
-@nb.jit(nb.float64[:](nb.float64, nb.float64, nb.float64, nb.float64,
-                      nb.float64, nb.float64))
-def make_rhs(x, y, z, dr, ds, dt):
-    rhs = np.zeros(3)
-    rhs[0] = x * dr + y * ds + z * dt
-    rhs[2] = y * dr + z * dt
-    return rhs
+# @nb.jit(nb.float64[:](nb.float64, nb.float64, nb.float64, nb.float64,
+#                       nb.float64, nb.float64))
+# def make_error_two(r, s, t, x, y, z):
+#     error = np.zeros(3)
+#     error[0] = x * (x - r) + y * (y - s) + z * (z - t)
+#     u = -(r - x)
+#     v = -(s - y)
+#     w = -(t - z)
+#     error[1] = np.e * w + u * np.exp(v / u)
+#     error[2] = y * (x - r) + z * (z - t)
+#     # print('error', error)
+#     return error
 
 
-@nb.jit(nb.float64[:](nb.float64, nb.float64, nb.float64, nb.float64,
-                      nb.float64, nb.float64, nb.float64, nb.float64, nb.float64))
-def fourth_case_D(r, s, t, x, y, z, dr, ds, dt):
-
-    test = np.zeros(3)
-    test[0], test[1], test[2] = r, s, t
-
-    u = x - r
-
-    if y < 1E-12:
-        return np.zeros(3)
-
-    # if y > -u and not y == 0.:  # temporary fix?
-        # print('computing error with e^(x/y)')
-    error = make_error(r, s, t, x, y, z)
-    # else:
-    # print('computing error with e^(v/u)')
-    #    error = make_error_two(r, s, t, x, y, z)
-
-    # error = make_error(r, s, t, x, y, z)
-    rhs = make_rhs(x, y, z, dr, ds, dt)
-    # print('base rhs', rhs)
-    if np.any(np.isnan(error)) or np.any(np.isinf(error)) or np.any(np.isnan(rhs)):
-        return np.zeros(3)
-
-    # if y > -u and not y == 0.:  # temporary fix?
-        # print('solving system with e^(x/y)')
-    result = np.linalg.solve(make_mat(r, s, t, x, y, z) + np.eye(3) * 1E-8,
-                             rhs - error)
-    # else:
-    # print('solving system with e^(v/u)')
-    #    result = np.linalg.solve(make_mat_two(r, s, t, x, y, z),  # + np.eye(3) * 1E-8,
-    #                             rhs - error)
-
-    if np.any(np.isnan(result)):
-        # raise Exception('Exp cone derivative error.')
-        return np.zeros(3)
-    # print('result', result)
-    return result
-
-MAXITER = 100
-STEP = 0.5
+# @nb.jit(nb.float64[:](nb.float64, nb.float64, nb.float64, nb.float64,
+#                       nb.float64, nb.float64))
+# def make_rhs(x, y, z, dr, ds, dt):
+#     rhs = np.zeros(3)
+#     rhs[0] = x * dr + y * ds + z * dt
+#     rhs[2] = y * dr + z * dt
+#     return rhs
 
 
-@nb.jit(nb.float64[:](nb.float64[:]))
-def fourth_case_enzo(z_var):
-    # VERBOSE = False
+# @nb.jit(nb.float64[:](nb.float64, nb.float64, nb.float64, nb.float64,
+#                       nb.float64, nb.float64, nb.float64, nb.float64, nb.float64))
+# def fourth_case_D(r, s, t, x, y, z, dr, ds, dt):
 
-    # print('fourth case Enzo')
-    # if VERBOSE:
-    #    print('projecting (%f, %f, %f)' % (z_var[0], z_var[1], z_var[2]))
-    real_result, _ = fourth_case_brendan(z_var)
-    # print('brendan result: (x,y,z)', real_result)
-    z_var = np.copy(z_var)
-    r = z_var[0]
-    s = z_var[1]
-    t = z_var[2]
-    # print('brendan result: (u,v,w)', real_result - z_var)
+#     test = np.zeros(3)
+#     test[0], test[1], test[2] = r, s, t
 
-    x, y, z = real_result
+#     u = x - r
 
-    # x, y, z = 1, 1, np.e
-    # if y < 1E-12:
-    #     y = 1E-12
+#     if y < 1E-12:
+#         return np.zeros(3)
 
-    for i in range(10):
+#     # if y > -u and not y == 0.:  # temporary fix?
+#         # print('computing error with e^(x/y)')
+#     error = make_error(r, s, t, x, y, z)
+#     # else:
+#     # print('computing error with e^(v/u)')
+#     #    error = make_error_two(r, s, t, x, y, z)
 
-        # if y < 1e-14:
-        #     return np.zeros(3)
-        u = x - r
-        # assert y >= 0
-        # assert u <= 0
-        if (y <= 0. and u >= 0.):
-            return np.zeros(3)
+#     # error = make_error(r, s, t, x, y, z)
+#     rhs = make_rhs(x, y, z, dr, ds, dt)
+#     # print('base rhs', rhs)
+#     if np.any(np.isnan(error)) or np.any(np.isinf(error)) or np.any(np.isnan(rhs)):
+#         return np.zeros(3)
 
-        if y > -u and not y == 0.:
-            # print('computing error with e^(x/y)')
-            error = make_error(r, s, t, x, y, z)
-        else:
-            # print('computing error with e^(v/u)')
-            if u == 0:
-                break
-            error = make_error_two(r, s, t, x, y, z)
+#     # if y > -u and not y == 0.:  # temporary fix?
+#         # print('solving system with e^(x/y)')
+#     result = np.linalg.solve(make_mat(r, s, t, x, y, z) + np.eye(3) * 1E-8,
+#                              rhs - error)
+#     # else:
+#     # print('solving system with e^(v/u)')
+#     #    result = np.linalg.solve(make_mat_two(r, s, t, x, y, z),  # + np.eye(3) * 1E-8,
+#     #                             rhs - error)
 
-        # print('error:', error)
-        # print('error norm: %.2e' % np.linalg.norm(error))
+#     if np.any(np.isnan(result)):
+#         # raise Exception('Exp cone derivative error.')
+#         return np.zeros(3)
+#     # print('result', result)
+#     return result
 
-        # if VERBOSE:
-        # print('iter %d, max |error| = %g' % (i, np.max(np.abs(error))))
-
-        print(np.max(np.abs(error)))
-
-        if np.max(np.abs(error)) < 1e-15:
-            # print(np.max(np.abs(error)))
-            # print('converged!')
-            break
-
-        if np.any(np.isnan(error)):
-            raise Exception("Exponential cone error")
-
-        if y > -u and not y == 0.:
-            # print('computing correction with e^(x/y)')
-            correction = np.linalg.solve(
-                make_mat(r, s, t, x, y, z) + np.eye(3) * 1E-8,
-                -error)
-        else:
-            # print('computing correction with e^(v/u)')
-            correction = np.linalg.solve(
-                make_mat_two(r, s, t, x, y, z) + np.eye(3) * 1E-8,
-                -error)
-
-        # print('correction', correction)
-
-        if np.any(np.isnan(correction)):
-            raise Exception("Exponential cone error")
-
-        x += correction[0]
-        y += correction[1]
-        z += correction[2]
-
-    result = np.empty(3)
-    result[0] = x
-    result[1] = y
-    result[2] = z
-
-    # if VERBOSE:
-    #    print('result = (%f, %f, %f)' % (result[0], result[1], result[2]))
-
-    return result
+# MAXITER = 100
+# STEP = 0.5
 
 
-@nb.jit(nb.float64[:](nb.float64[:]))
-def fourth_case_enzo_two(z_var):
-    # # VERBOSE = False
+# @nb.jit(nb.float64[:](nb.float64[:]))
+# def fourth_case_enzo(z_var):
+#     # VERBOSE = False
 
-    # # print('fourth case Enzo')
-    # # if VERBOSE:
-    # #    print('projecting (%f, %f, %f)' % (z_var[0], z_var[1], z_var[2]))
-    # real_result, _ = fourth_case_brendan(z_var)
-    # # print('brendan result: (x,y,z)', real_result)
-    # z_var = np.copy(z_var)
-    r = z_var[0]
-    s = z_var[1]
-    t = z_var[2]
-    # # print('brendan result: (u,v,w)', real_result - z_var)
+#     # print('fourth case Enzo')
+#     # if VERBOSE:
+#     #    print('projecting (%f, %f, %f)' % (z_var[0], z_var[1], z_var[2]))
+#     real_result, _ = fourth_case_brendan(z_var)
+#     # print('brendan result: (x,y,z)', real_result)
+#     z_var = np.copy(z_var)
+#     r = z_var[0]
+#     s = z_var[1]
+#     t = z_var[2]
+#     # print('brendan result: (u,v,w)', real_result - z_var)
 
-    # x, y, z = real_result
+#     x, y, z = real_result
 
-    #x, y, z = 1, 1, np.e
-    # x, y, z = r, s, s * np.exp(r / s)
-    x, y, z = r, s, t
-    # if y < 1E-12:
-    #     y = 1E-12
+#     # x, y, z = 1, 1, np.e
+#     # if y < 1E-12:
+#     #     y = 1E-12
 
-    for i in range(100):
+#     for i in range(10):
 
-        # if y < 1e-14:
-        #     return np.zeros(3)
-        u = x - r
-        # assert y >= 0
-        # assert u <= 0
-        if (y <= 0. and u >= 0.):
-            return np.zeros(3)
+#         # if y < 1e-14:
+#         #     return np.zeros(3)
+#         u = x - r
+#         # assert y >= 0
+#         # assert u <= 0
+#         if (y <= 0. and u >= 0.):
+#             return np.zeros(3)
 
-        error = make_error(r, s, t, x, y, z)
+#         if y > -u and not y == 0.:
+#             # print('computing error with e^(x/y)')
+#             error = make_error(r, s, t, x, y, z)
+#         else:
+#             # print('computing error with e^(v/u)')
+#             if u == 0:
+#                 break
+#             error = make_error_two(r, s, t, x, y, z)
 
-        # print('error:', error)
-        # print('error norm: %.2e' % np.linalg.norm(error))
+#         # print('error:', error)
+#         # print('error norm: %.2e' % np.linalg.norm(error))
 
-        # if VERBOSE:
-        # print('iter %d, max |error| = %g' % (i, np.max(np.abs(error))))
+#         # if VERBOSE:
+#         # print('iter %d, max |error| = %g' % (i, np.max(np.abs(error))))
 
-        print(np.max(np.abs(error)))
+#         print(np.max(np.abs(error)))
 
-        if np.max(np.abs(error)) < 1e-15:
-            # print(np.max(np.abs(error)))
-            # print('converged!')
-            break
+#         if np.max(np.abs(error)) < 1e-15:
+#             # print(np.max(np.abs(error)))
+#             # print('converged!')
+#             break
 
-        if np.any(np.isnan(error)):
-            raise Exception("Exponential cone error")
+#         if np.any(np.isnan(error)):
+#             raise Exception("Exponential cone error")
 
-        correction = np.linalg.solve(
-            make_mat(r, s, t, x, y, z),  # + np.eye(3) * 1E-5,
-            -error)
+#         if y > -u and not y == 0.:
+#             # print('computing correction with e^(x/y)')
+#             correction = np.linalg.solve(
+#                 make_mat(r, s, t, x, y, z) + np.eye(3) * 1E-8,
+#                 -error)
+#         else:
+#             # print('computing correction with e^(v/u)')
+#             correction = np.linalg.solve(
+#                 make_mat_two(r, s, t, x, y, z) + np.eye(3) * 1E-8,
+#                 -error)
 
-        if np.any(np.isnan(correction)):
-            raise Exception("Exponential cone error")
+#         # print('correction', correction)
 
-        x += correction[0]  # * 0.8
-        y += correction[1]  # * 0.8
-        z += correction[2]  # * 0.8
+#         if np.any(np.isnan(correction)):
+#             raise Exception("Exponential cone error")
 
-    result = np.empty(3)
-    result[0] = x
-    result[1] = y
-    result[2] = z
+#         x += correction[0]
+#         y += correction[1]
+#         z += correction[2]
 
-    # if VERBOSE:
-    #    print('result = (%f, %f, %f)' % (result[0], result[1], result[2]))
+#     result = np.empty(3)
+#     result[0] = x
+#     result[1] = y
+#     result[2] = z
 
-    return result
+#     # if VERBOSE:
+#     #    print('result = (%f, %f, %f)' % (result[0], result[1], result[2]))
+
+#     return result
+
+
+# @nb.jit(nb.float64[:](nb.float64[:]))
+# def fourth_case_enzo_two(z_var):
+#     # # VERBOSE = False
+
+#     # # print('fourth case Enzo')
+#     # # if VERBOSE:
+#     # #    print('projecting (%f, %f, %f)' % (z_var[0], z_var[1], z_var[2]))
+#     # real_result, _ = fourth_case_brendan(z_var)
+#     # # print('brendan result: (x,y,z)', real_result)
+#     # z_var = np.copy(z_var)
+#     r = z_var[0]
+#     s = z_var[1]
+#     t = z_var[2]
+#     # # print('brendan result: (u,v,w)', real_result - z_var)
+
+#     # x, y, z = real_result
+
+#     #x, y, z = 1, 1, np.e
+#     # x, y, z = r, s, s * np.exp(r / s)
+#     x, y, z = r, s, t
+#     # if y < 1E-12:
+#     #     y = 1E-12
+
+#     for i in range(100):
+
+#         # if y < 1e-14:
+#         #     return np.zeros(3)
+#         u = x - r
+#         # assert y >= 0
+#         # assert u <= 0
+#         if (y <= 0. and u >= 0.):
+#             return np.zeros(3)
+
+#         error = make_error(r, s, t, x, y, z)
+
+#         # print('error:', error)
+#         # print('error norm: %.2e' % np.linalg.norm(error))
+
+#         # if VERBOSE:
+#         # print('iter %d, max |error| = %g' % (i, np.max(np.abs(error))))
+
+#         print(np.max(np.abs(error)))
+
+#         if np.max(np.abs(error)) < 1e-15:
+#             # print(np.max(np.abs(error)))
+#             # print('converged!')
+#             break
+
+#         if np.any(np.isnan(error)):
+#             raise Exception("Exponential cone error")
+
+#         correction = np.linalg.solve(
+#             make_mat(r, s, t, x, y, z),  # + np.eye(3) * 1E-5,
+#             -error)
+
+#         if np.any(np.isnan(correction)):
+#             raise Exception("Exponential cone error")
+
+#         x += correction[0]  # * 0.8
+#         y += correction[1]  # * 0.8
+#         z += correction[2]  # * 0.8
+
+#     result = np.empty(3)
+#     result[0] = x
+#     result[1] = y
+#     result[2] = z
+
+#     # if VERBOSE:
+#     #    print('result = (%f, %f, %f)' % (result[0], result[1], result[2]))
+
+#     return result
 
 
 # @nb.jit(nb.float64[:](nb.float64[:], nb.float64[:]), nopython=True)
@@ -762,14 +765,35 @@ def exp_pri_Pi(z, cache):
     cache[:] = z
     return z
 
+# CONE_THRESH = 1E-10
+
+
+# @nb.njit()
+# def isin_kexp(r, s, t):
+#     return ((s * np.exp(r / s) - t <= CONE_THRESH and s > 0) or
+#             (r <= 0 and np.abs(s) <= CONE_THRESH and t >= 0))
+
+
+# @nb.njit()
+# def isin_minus_kexp_star(r, s, t):
+#     return ((-r < 0 and r * np.exp(s / r) + np.e * t <= CONE_THRESH) or
+#             (np.abs(r) <= CONE_THRESH and -s >= 0 and -t >= 0))
+
 
 @nb.njit()
-def fourth_case_D_new(x, y, z, x_star, y_star, z_star, dx, dy, dz):
+def compute_jacobian_exp_cone_fourth_case(x, y, z,
+                                          x_star, y_star, z_star):
     """From BMB'18 appendix C."""
 
     mu_star = z_star - z
 
     matrix = np.zeros((4, 4))
+
+    if y_star == 0.:
+        print('z', x, y, z)
+        print('pi z', x_star, y_star, z_star)
+        raise Exception("y_star = 0.")
+        # return np.zeros(3)
 
     alpha = x_star / y_star
     beta = np.exp(alpha)
@@ -797,73 +821,91 @@ def fourth_case_D_new(x, y, z, x_star, y_star, z_star, dx, dy, dz):
 
     matinv = np.linalg.inv(matrix)
 
-    jacobian = matinv[:3, :3]
+    return matinv[:3, :3]
 
-    d = np.empty(3)
 
-    d[0], d[1], d[2] = dx, dy, dz
+@nb.njit()
+def fourth_case_D_new(z, z_star, dz):
+    """From BMB'18 appendix C."""
 
-    return jacobian @ d
+    jacobian = compute_jacobian_exp_cone_fourth_case(
+        z[0], z[1], z[2],
+        z_star[0], z_star[1], z_star[2])
+
+    return jacobian @ dz
 
 
 @nb.jit(nb.float64[:](nb.float64[:], nb.float64[:], nb.float64[:]), nopython=True)
 def exp_pri_D(z_0, dz, cache):
     """Derivative of proj. on exp. primal cone."""
 
-    r = z_0[0]
-    s = z_0[1]
-    t = z_0[2]
+    # if isin_kexp(r, s, t):
+    #     return np.copy(dz)
 
-    dr = dz[0]
-    ds = dz[1]
-    dt = dz[2]
+    # if isin_minus_kexp_star(r, s, t):
+    #     return np.zeros(3)
 
-    # projection of z_0
-    x = cache[0]
-    y = cache[1]
-    z = cache[2]
+    # # first case
+    # # if on the cone boundary, non-diff
+    # # if (s > 0 and s * np.exp(r / s) == t) or \
+    # #         (r <= 0 and s == 0 and t >= 0):  # or \
+    # #         # (r <= 0 and s == 0 and t == 0):
+    # #     # raise NonDifferentiable
+    # #     print('case 1')
+    # #     # return np.zeros(3)
 
-    # first case
-    # if on the cone boundary, non-diff
-    if (s > 0 and s * np.exp(r / s) == t) or \
-            (r <= 0 and s == 0 and t >= 0):  # or \
-            # (r <= 0 and s == 0 and t == 0):
-        # raise NonDifferentiable
-        return np.zeros(3)
+    # # # if (s > 0 and s * np.exp(r / s) < t):
+    # # #     # print('first case')
+    # # #     return np.copy(dz)
 
-    if (s > 0 and s * np.exp(r / s) < t):
-        # print('first case')
+    # # # second case
+    # # # if on cone bound, then non-diff
+    # # if (-r < 0 and r * np.exp(s / r) == -np.exp(1) * t) or \
+    # #         (r == 0 and -s >= 0 and -t >= 0):  # or \
+    # #     # (r == 0 and -s >= 0 and -t == 0):
+    # #     # raise NonDifferentiable
+    # #     print('case 2')
+    # #     # return np.zeros(3)
+
+    # # if (-r < 0 and r * np.exp(s / r) < -np.exp(1) * t):  # or \
+    # #        # (r == 0 and -s > 0 and -t > 0):
+    # #     # print('second case')
+    # #     print('case 3')
+    # #     # return np.zeros(3)
+
+    # # if r < 0 and s < 0 and t == 0:
+    # #     # raise NonDifferentiable
+    # #     print('case 4')
+    # #     # return np.zeros(3)
+
+    # # third case
+    # if r < 0 and s < 0:
+    #     # print('third case')
+    #     result = np.zeros(3)
+    #     result[0] = dz[0]
+    #     result[2] = dz[2] if t > 0 else 0.
+    #     # print('result', result)
+    #     return result
+
+    if c_exp_p_d(z_0.ctypes.data, dz.ctypes.data, cache.ctypes.data):
         return np.copy(dz)
 
-    # second case
-    # if on cone bound, then non-diff
-    if (-r < 0 and r * np.exp(s / r) == -np.exp(1) * t) or \
-            (r == 0 and -s >= 0 and -t >= 0):  # or \
-        # (r == 0 and -s >= 0 and -t == 0):
-        # raise NonDifferentiable
-        return np.zeros(3)
+    # r = z_0[0]
+    # s = z_0[1]
+    # t = z_0[2]
 
-    if (-r < 0 and r * np.exp(s / r) < -np.exp(1) * t):  # or \
-           # (r == 0 and -s > 0 and -t > 0):
-        # print('second case')
-        return np.zeros(3)
+    # dr = dz[0]
+    # ds = dz[1]
+    # dt = dz[2]
 
-    if r < 0 and s < 0 and t == 0:
-        # raise NonDifferentiable
-        return np.zeros(3)
-
-    # third case
-    if r < 0 and s < 0:
-        # print('third case')
-        result = np.zeros(3)
-        result[0] = dz[0]
-        result[2] = dz[2] if t > 0 else 0.
-        # print('result', result)
-        return result
+    # # projection of z_0
+    # x = cache[0]
+    # y = cache[1]
+    # z = cache[2]
 
     # fourth case
     #fourth = fourth_case_D(r, s, t, x, y, z, dr, ds, dt)
-    fourth = fourth_case_D_new(r, s, t, x, y, z, dr, ds, dt)
+    fourth = fourth_case_D_new(z_0, cache, dz)
     # assert not True in np.isnan(fourth)
     return fourth
 

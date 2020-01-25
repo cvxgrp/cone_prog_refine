@@ -20,6 +20,7 @@
 //void embedded_cone_projection(double *z, double *pi_z, int zero, int nonneg, int* second_order);
 
 #include <stdint.h>
+#include <stdbool.h>
 
 double norm(double *x, int size);
 
@@ -56,10 +57,17 @@ double exp_newton_one_d(double rho, double y_hat, double z_hat);
 void exp_solve_for_x_with_rho(double *v, double *x, double rho);
 double exp_calc_grad(double *v, double *x, double rho);
 void exp_get_rho_ub(double *v, double *x, double *ub, double *lb);
+//int isin_kexp(double r, double s, double t);
+int isin_kexp(double * z);
+
+//int isin_minus_kexp_star(double r, double s, double t);
+int isin_minus_kexp_star(double * z);
+int isin_special_case(double * z);
+
 
 void exp_cone_projection(double *z);
 
-void exp_cone_projection_derivative(double *z, 
+int exp_cone_projection_derivative(double *z, 
                                     double *dz, 
                                     double *pi_z);
 

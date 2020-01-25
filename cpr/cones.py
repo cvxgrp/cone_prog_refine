@@ -59,8 +59,12 @@ ffi.cdef('void non_negative_cone_projection_derivative(int64_t z, int64_t x, int
 ffi.cdef('void second_order_cone_projection(int64_t z, int64_t zero);')
 ffi.cdef('void second_order_cone_projection_derivative(int64_t z, int64_t dz, int64_t pi_z, int64_t zero);')
 
+ffi.cdef('void exp_cone_projection(int64_t z);')
 
-C = ffi.dlopen('/Users/enzo/repos/cone_prog_refine/c/libcones.so')
+import os
+dirname = os.path.dirname(__file__)
+libpath = os.path.join(dirname, '../c/libcones.so')
+C = ffi.dlopen(libpath)
 
 c_zero_p = C.zero_cone_projection
 c_zero_p_d = C.zero_cone_projection_derivative
@@ -70,6 +74,8 @@ c_non_neg_p_d = C.non_negative_cone_projection_derivative
 
 c_sec_ord_p = C.second_order_cone_projection
 c_sec_ord_p_d = C.second_order_cone_projection_derivative
+
+c_exp_p = C.exp_cone_projection
 
 
 # TEST
@@ -480,7 +486,7 @@ def make_error(r, s, t, x, y, z):
     error[0] = x * (x - r) + y * (y - s) + z * (z - t)
     error[1] = y * np.exp(x / y) - z
     error[2] = y * (x - r) + z * (z - t)
-    # print('error', error)
+    print('error', error)
     return error
 
 
@@ -547,6 +553,9 @@ def fourth_case_D(r, s, t, x, y, z, dr, ds, dt):
     # print('result', result)
     return result
 
+MAXITER = 100
+STEP = 0.5
+
 
 @nb.jit(nb.float64[:](nb.float64[:]))
 def fourth_case_enzo(z_var):
@@ -564,6 +573,8 @@ def fourth_case_enzo(z_var):
     # print('brendan result: (u,v,w)', real_result - z_var)
 
     x, y, z = real_result
+
+    # x, y, z = 1, 1, np.e
     # if y < 1E-12:
     #     y = 1E-12
 
@@ -592,13 +603,15 @@ def fourth_case_enzo(z_var):
         # if VERBOSE:
         # print('iter %d, max |error| = %g' % (i, np.max(np.abs(error))))
 
+        print(np.max(np.abs(error)))
+
         if np.max(np.abs(error)) < 1e-15:
             # print(np.max(np.abs(error)))
             # print('converged!')
             break
 
         if np.any(np.isnan(error)):
-            break
+            raise Exception("Exponential cone error")
 
         if y > -u and not y == 0.:
             # print('computing correction with e^(x/y)')
@@ -614,7 +627,7 @@ def fourth_case_enzo(z_var):
         # print('correction', correction)
 
         if np.any(np.isnan(correction)):
-            break
+            raise Exception("Exponential cone error")
 
         x += correction[0]
         y += correction[1]
@@ -631,41 +644,123 @@ def fourth_case_enzo(z_var):
     return result
 
 
+@nb.jit(nb.float64[:](nb.float64[:]))
+def fourth_case_enzo_two(z_var):
+    # # VERBOSE = False
+
+    # # print('fourth case Enzo')
+    # # if VERBOSE:
+    # #    print('projecting (%f, %f, %f)' % (z_var[0], z_var[1], z_var[2]))
+    # real_result, _ = fourth_case_brendan(z_var)
+    # # print('brendan result: (x,y,z)', real_result)
+    # z_var = np.copy(z_var)
+    r = z_var[0]
+    s = z_var[1]
+    t = z_var[2]
+    # # print('brendan result: (u,v,w)', real_result - z_var)
+
+    # x, y, z = real_result
+
+    #x, y, z = 1, 1, np.e
+    # x, y, z = r, s, s * np.exp(r / s)
+    x, y, z = r, s, t
+    # if y < 1E-12:
+    #     y = 1E-12
+
+    for i in range(100):
+
+        # if y < 1e-14:
+        #     return np.zeros(3)
+        u = x - r
+        # assert y >= 0
+        # assert u <= 0
+        if (y <= 0. and u >= 0.):
+            return np.zeros(3)
+
+        error = make_error(r, s, t, x, y, z)
+
+        # print('error:', error)
+        # print('error norm: %.2e' % np.linalg.norm(error))
+
+        # if VERBOSE:
+        # print('iter %d, max |error| = %g' % (i, np.max(np.abs(error))))
+
+        print(np.max(np.abs(error)))
+
+        if np.max(np.abs(error)) < 1e-15:
+            # print(np.max(np.abs(error)))
+            # print('converged!')
+            break
+
+        if np.any(np.isnan(error)):
+            raise Exception("Exponential cone error")
+
+        correction = np.linalg.solve(
+            make_mat(r, s, t, x, y, z),  # + np.eye(3) * 1E-5,
+            -error)
+
+        if np.any(np.isnan(correction)):
+            raise Exception("Exponential cone error")
+
+        x += correction[0]  # * 0.8
+        y += correction[1]  # * 0.8
+        z += correction[2]  # * 0.8
+
+    result = np.empty(3)
+    result[0] = x
+    result[1] = y
+    result[2] = z
+
+    # if VERBOSE:
+    #    print('result = (%f, %f, %f)' % (result[0], result[1], result[2]))
+
+    return result
+
+
+# @nb.jit(nb.float64[:](nb.float64[:], nb.float64[:]), nopython=True)
+# def exp_pri_Pi(z, cache):
+#     """Projection on exp. primal cone, and cache."""
+#     z = np.copy(z)
+#     r = z[0]
+#     s = z[1]
+#     t = z[2]
+
+#     # temporary...
+#     if np.linalg.norm(z) < 1E-14:
+#         cache[:3] = 0.
+#         return z
+
+#     # first case
+#     if (s > 0 and s * np.exp(r / s) <= t) or \
+#             (r <= 0 and s == 0 and t >= 0):
+#         cache[:3] = z
+#         return z
+
+#     # second case
+#     if (-r < 0 and r * np.exp(s / r) <= -np.exp(1) * t) or \
+#             (r == 0 and -s >= 0 and -t >= 0):
+#         cache[:3] = 0.
+#         return np.zeros(3)
+
+#     # third case
+#     if r < 0 and s < 0:
+#         z[1] = 0
+#         z[2] = max(z[2], 0)
+#         cache[:3] = z
+#         return z
+
+#     pi = fourth_case_enzo_two(z)
+
+#     cache[:3] = pi
+#     return pi
+
+
 @nb.jit(nb.float64[:](nb.float64[:], nb.float64[:]), nopython=True)
 def exp_pri_Pi(z, cache):
-    """Projection on exp. primal cone, and cache."""
-    z = np.copy(z)
-    r = z[0]
-    s = z[1]
-    t = z[2]
 
-    # temporary...
-    if np.linalg.norm(z) < 1E-14:
-        cache[:3] = 0.
-        return z
-
-    # first case
-    if (s > 0 and s * np.exp(r / s) <= t) or \
-            (r <= 0 and s == 0 and t >= 0):
-        cache[:3] = z
-        return z
-
-    # second case
-    if (-r < 0 and r * np.exp(s / r) <= -np.exp(1) * t) or \
-            (r == 0 and -s >= 0 and -t >= 0):
-        cache[:3] = 0.
-        return np.zeros(3)
-
-    # third case
-    if r < 0 and s < 0:
-        z[1] = 0
-        z[2] = max(z[2], 0)
-        cache[:3] = z
-        return z
-
-    pi = fourth_case_enzo(z)
-    cache[:3] = pi
-    return pi
+    c_exp_p(z.ctypes.data)
+    cache[:] = z
+    return z
 
 
 @nb.jit(nb.float64[:](nb.float64[:], nb.float64[:], nb.float64[:]), nopython=True)
@@ -847,12 +942,82 @@ def semidef_cone_D(z, dz, cache_eivec, cache_eival):
     return mat2vec(dS)
 
 
+@nb.njit()
+def Jacobi(A):
+    n = A.shape[0]            # matrix size #columns = #lines
+    maxit = 100                   # maximum number of iterations
+    eps = 1.0e-30              # accuracy goal
+    pi = np.pi
+    info = 0                     # return flag
+    ev = np.zeros(n)  # ,float)     # initialize eigenvalues
+    U = np.zeros((n, n))  # ,float) # initialize eigenvector
+    for i in range(0, n):
+        U[i, i] = 1.0
+
+    numit = int(np.log(n))
+
+    for t in range(0, maxit):
+        s = 0    # compute sum of off-diagonal elements in A(i,j)
+        for i in range(0, n):
+            s = s + np.sum(np.abs(A[i, (i + 1):n]))
+        # print(s)
+        if (s < eps):  # diagonal form reached
+            info = t
+            for i in range(0, n):
+                ev[i] = A[i, i]
+            break
+        else:
+            # average value of off-diagonal elements
+            limit = s / (n * (n - 1) / 2.0)
+            for i in range(0, n - 1):       # loop over lines of matrix
+                for j in range(i + 1, n):  # loop over columns of matrix
+                    # determine (ij) such that |A(i,j)| larger than average
+                    if (np.abs(A[i, j]) >= limit):
+                                                      # value of off-diagonal
+                                                      # elements
+                        # denominator of Eq. (3.61)
+                        denom = A[i, i] - A[j, j]
+                        if (np.abs(denom) < eps):
+                            phi = pi / 4         # Eq. (3.62)
+                        else:
+                            # Eq. (3.61)
+                            phi = 0.5 * np.arctan(2.0 * A[i, j] / denom)
+                        si = np.sin(phi)
+                        co = np.cos(phi)
+                        for k in range(i + 1, j):
+                            store = A[i, k]
+                            A[i, k] = A[i, k] * co + A[k, j] * si  # Eq. (3.56)
+                            A[k, j] = A[k, j] * co - store * si  # Eq. (3.57)
+                        for k in range(j + 1, n):
+                            store = A[i, k]
+                            A[i, k] = A[i, k] * co + A[j, k] * si  # Eq. (3.56)
+                            A[j, k] = A[j, k] * co - store * si  # Eq. (3.57)
+                        for k in range(0, i):
+                            store = A[k, i]
+                            A[k, i] = A[k, i] * co + A[k, j] * si
+                            A[k, j] = A[k, j] * co - store * si
+                        store = A[i, i]
+                        A[i, i] = A[i, i] * co * co + 2.0 * A[i, j] * \
+                            co * si + A[j, j] * si * si  # Eq. (3.58)
+                        A[j, j] = A[j, j] * co * co - 2.0 * A[i, j] * \
+                            co * si + store * si * si  # Eq. (3.59)
+                        # Eq. (3.60)
+                        A[i, j] = 0.0
+                        for k in range(0, n):
+                            store = U[k, j]
+                            U[k, j] = U[k, j] * co - U[k, i] * si  # Eq. (3.66)
+                            U[k, i] = U[k, i] * co + store * si  # Eq. (3.67)
+        info = -t  # in case no convergence is reached set info to a negative value "-t"
+    return ev, U, t
+
+
 @nb.jit(nb.float64[:](nb.float64[:], nb.float64[:],
                       nb.float64[:]), nopython=True)
 def semidef_cone_Pi(z, cache_eivec, cache_eival):
 
     Z = vec2mat(z)
     eival, eivec = np.linalg.eigh(Z)
+    #eival, eivec, _ = Jacobi(Z)
     result = mat2vec(eivec @ np.diag(np.maximum(eival, 0.)) @ eivec.T)
 
     Pi_Z = eivec @ np.diag(np.maximum(eival, 0.)) @ eivec.T

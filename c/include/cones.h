@@ -52,5 +52,16 @@ void second_order_cone_projection_derivative(double *z,
                                              double *pi_z,
                                              int64_t size);
 
+double exp_newton_one_d(double rho, double y_hat, double z_hat);
+void exp_solve_for_x_with_rho(double *v, double *x, double rho);
+double exp_calc_grad(double *v, double *x, double rho);
+void exp_get_rho_ub(double *v, double *x, double *ub, double *lb);
+
+void exp_cone_projection(double *z);
+
+void exp_cone_projection_derivative(double *z, 
+                                    double *dz, 
+                                    double *pi_z);
+
 void semidefinite_cone_projection(double *z, double *pi_z, int semidefinite, 
                                   double *eigenvectors, double *eigenvalues);

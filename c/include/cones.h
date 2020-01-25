@@ -64,6 +64,11 @@ int isin_kexp(double * z);
 int isin_minus_kexp_star(double * z);
 int isin_special_case(double * z);
 
+int inverse_four_by_four(const double m[16], double invOut[16]);
+int compute_jacobian_exp_cone(double *result, double mu_star,
+                              double x_star, double y_star, 
+                              double z_star);
+
 
 void exp_cone_projection(double *z);
 

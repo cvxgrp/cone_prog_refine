@@ -62,6 +62,8 @@ ffi.cdef('void second_order_cone_projection_derivative(int64_t z, int64_t dz, in
 ffi.cdef('void exp_cone_projection(int64_t z);')
 ffi.cdef('int exp_cone_projection_derivative(int64_t z, int64_t dz, int64_t pi_z);')
 
+ffi.cdef('int compute_jacobian_exp_cone(int64_t result, double mu_star, double x_star, double y_star, double z_star);')
+
 
 import os
 dirname = os.path.dirname(__file__)
@@ -79,6 +81,8 @@ c_sec_ord_p_d = C.second_order_cone_projection_derivative
 
 c_exp_p = C.exp_cone_projection
 c_exp_p_d = C.exp_cone_projection_derivative
+
+c_compute_jacobian_exp_cone = C.compute_jacobian_exp_cone
 
 
 # TEST
@@ -102,7 +106,7 @@ assert np.all(z == 0.)
 #         raise DimensionError
 
 
-cone = namedtuple('cone', ['Pi', 'D', 'DT'])
+cone = namedtuple('cone', ['Pi', 'D', 'DT', 'isin'])
 
 
 @nb.jit(nb.float64[:](nb.float64[:], nb.float64[:]))
@@ -117,10 +121,12 @@ def free(z):
     return z  # np.copy(z)
 
 
-free_cone = cone(free, id_op, id_op)
+free_cone = cone(free, id_op, id_op,
+                 lambda z: True)
 free_cone_cached = cone(lambda z, cache: free_cone.Pi(z),
                         lambda z, x, cache: free_cone.D(z, x),
-                        lambda z, x, cache: free_cone.D(z, x))
+                        lambda z, x, cache: free_cone.D(z, x),
+                        lambda z: True)
 
 
 @nb.jit(nb.float64[:](nb.float64[:], nb.float64[:]))
@@ -135,7 +141,7 @@ def zero_D(z, x):
 @nb.jit(nb.float64[:](nb.float64[:]))
 def zero_Pi(z):
     """Projection on zero cone, and cache."""
-    #z[:] = 0.
+    # z[:] = 0.
 
     # z.ctypes.data_as(ctypes.POINTER(ctypes.c_double))
 
@@ -152,10 +158,12 @@ def zero_Pi(z):
     return z  # np.zeros_like(z)
 
 
-zero_cone = cone(zero_Pi, zero_D, zero_D)
+zero_cone = cone(zero_Pi, zero_D, zero_D,
+                 lambda z: np.all(z == 0.))
 zero_cone_cached = cone(lambda z, cache: zero_cone.Pi(z),
                         lambda z, x, cache: zero_cone.D(z, x),
-                        lambda z, x, cache: zero_cone.D(z, x))
+                        lambda z, x, cache: zero_cone.D(z, x),
+                        lambda z: np.all(z == 0.))
 
 
 @nb.jit(nb.float64[:](nb.float64[:], nb.float64[:]), nopython=True)
@@ -173,17 +181,19 @@ def non_neg_D(z, x):
 def non_neg_Pi(z):
     """Projection on non-negative cone, and cache."""
     # cache = np.zeros(1)
-    #z[z <= 0.] = 0.
+    # z[z <= 0.] = 0.
 
     c_non_neg_p(z.ctypes.data, len(z))
 
     return z  # np.maximum(z, 0.)
 
 
-non_neg_cone = cone(non_neg_Pi, non_neg_D, non_neg_D)
+non_neg_cone = cone(non_neg_Pi, non_neg_D, non_neg_D,
+                    lambda z: np.min(z) >= 0.)
 non_neg_cone_cached = cone(lambda z, cache: non_neg_cone.Pi(z),
                            lambda z, x, cache: non_neg_cone.D(z, x),
-                           lambda z, x, cache: non_neg_cone.D(z, x))
+                           lambda z, x, cache: non_neg_cone.D(z, x),
+                           lambda z: np.min(z) >= 0.)
 
 
 # @nb.jit(nb.float64[:](nb.float64[:], nb.float64[:], nb.float64[:]), nopython=True)
@@ -267,7 +277,14 @@ def sec_ord_Pi(z, cache):
     return z
 
 
-sec_ord_cone = cone(sec_ord_Pi, sec_ord_D, sec_ord_D)
+def secord_isin(z):
+    err = z[0] - np.linalg.norm(z[1:])
+    print('err', err)
+    return np.isclose(min(err, 0.), 0.)
+
+
+sec_ord_cone = cone(sec_ord_Pi, sec_ord_D, sec_ord_D,
+                    secord_isin)
 
 
 # @njit
@@ -780,59 +797,60 @@ def exp_pri_Pi(z, cache):
 #             (np.abs(r) <= CONE_THRESH and -s >= 0 and -t >= 0))
 
 
-@nb.njit()
-def compute_jacobian_exp_cone_fourth_case(x, y, z,
-                                          x_star, y_star, z_star):
-    """From BMB'18 appendix C."""
+# @nb.njit()
+# def compute_jacobian_exp_cone(matrix, mu_star,
+#                               x_star, y_star, z_star):
+#     """From BMB'18 appendix C."""
 
-    mu_star = z_star - z
+#     if y_star == 0.:
+#         # print('z', x, y, z)
+#         print('pi z', x_star, y_star, z_star)
+#         raise Exception("y_star = 0.")
+#         # return np.zeros(3)
 
-    matrix = np.zeros((4, 4))
+#     alpha = x_star / y_star
+#     beta = np.exp(alpha)
+#     gamma = mu_star * beta / y_star
 
-    if y_star == 0.:
-        print('z', x, y, z)
-        print('pi z', x_star, y_star, z_star)
-        raise Exception("y_star = 0.")
-        # return np.zeros(3)
+#     matrix[0, 0] = 1 + gamma
+#     matrix[0, 1] = - gamma * alpha
+#     matrix[0, 2] = 0
+#     matrix[0, 3] = beta
 
-    alpha = x_star / y_star
-    beta = np.exp(alpha)
-    gamma = mu_star * beta / y_star
+#     matrix[1, 0] = matrix[0, 1]
+#     matrix[1, 1] = 1 + gamma * alpha * alpha
+#     matrix[1, 2] = 0
+#     matrix[1, 3] = (1 - alpha) * beta
 
-    matrix[0, 0] = 1 + gamma
-    matrix[0, 1] = - gamma * alpha
-    matrix[0, 2] = 0
-    matrix[0, 3] = beta
+#     matrix[2, 0] = 0
+#     matrix[2, 1] = 0
+#     matrix[2, 2] = 1
+#     matrix[2, 3] = -1
 
-    matrix[1, 0] = matrix[0, 1]
-    matrix[1, 1] = 1 + gamma * alpha * alpha
-    matrix[1, 2] = 0
-    matrix[1, 3] = (1 - alpha) * beta
+#     matrix[3, 0] = beta
+#     matrix[3, 1] = matrix[1, 3]
+#     matrix[3, 2] = -1
+#     matrix[3, 3] = 0
 
-    matrix[2, 0] = 0
-    matrix[2, 1] = 0
-    matrix[2, 2] = 1
-    matrix[2, 3] = -1
-
-    matrix[3, 0] = beta
-    matrix[3, 1] = matrix[1, 3]
-    matrix[3, 2] = -1
-    matrix[3, 3] = 0
-
-    matinv = np.linalg.inv(matrix)
-
-    return matinv[:3, :3]
+#     return np.linalg.inv(matrix)
 
 
-@nb.njit()
-def fourth_case_D_new(z, z_star, dz):
-    """From BMB'18 appendix C."""
+# @nb.njit()
+# def fourth_case_D_new(z, z_star, dz):
+#     """From BMB'18 appendix C."""
 
-    jacobian = compute_jacobian_exp_cone_fourth_case(
-        z[0], z[1], z[2],
-        z_star[0], z_star[1], z_star[2])
+#     jacobian = np.zeros((4, 4))
 
-    return jacobian @ dz
+#     success = c_compute_jacobian_exp_cone(jacobian.ctypes.data, z_star[2] - z[2],
+#                                           z_star[0], z_star[1], z_star[2])
+
+#     if not success:
+#         raise Exception('Exp cone derivative error')
+#     # jacobian = compute_jacobian_exp_cone(
+#     #     matrix, z_star[2] - z[2],
+#     #     z_star[0], z_star[1], z_star[2])
+
+#     return jacobian[:3, :3] @ dz
 
 
 @nb.jit(nb.float64[:](nb.float64[:], nb.float64[:], nb.float64[:]), nopython=True)
@@ -889,6 +907,8 @@ def exp_pri_D(z_0, dz, cache):
 
     if c_exp_p_d(z_0.ctypes.data, dz.ctypes.data, cache.ctypes.data):
         return np.copy(dz)
+    else:
+        raise Exception('Exp cone derivative error')
 
     # r = z_0[0]
     # s = z_0[1]
@@ -904,13 +924,36 @@ def exp_pri_D(z_0, dz, cache):
     # z = cache[2]
 
     # fourth case
-    #fourth = fourth_case_D(r, s, t, x, y, z, dr, ds, dt)
-    fourth = fourth_case_D_new(z_0, cache, dz)
-    # assert not True in np.isnan(fourth)
-    return fourth
+    # fourth = fourth_case_D(r, s, t, x, y, z, dr, ds, dt)
+
+    # jacobian = np.zeros((4, 4))
+    # # z, z_star, dz = z_0, cache, dz
+    # success = c_compute_jacobian_exp_cone(jacobian.ctypes.data,
+    #                                       cache[2] - z_0[2],
+    #                                       cache[0], cache[1], cache[2])
+
+    # if not success:
+    #     raise Exception('Exp cone derivative error')
+    # # jacobian = compute_jacobian_exp_cone(
+    # #     matrix, z_star[2] - z[2],
+    # #     z_star[0], z_star[1], z_star[2])
+
+    # return jacobian[:3, :3] @ dz
+
+    # fourth = fourth_case_D_new(z_0, cache, dz)
+    # # assert not True in np.isnan(fourth)
+    # return fourth
 
 
-exp_pri_cone = cone(exp_pri_Pi, exp_pri_D, exp_pri_D)
+def isin_exppri(z):
+    if z[1] > 0:
+        print('margin (< 0)', (z[1] * np.exp(z[0] / z[1]) - z[2]))
+    return ((z[1] > 0) and (np.isclose(max((z[1] * np.exp(z[0] / z[1]) - z[2]),
+                                           0.), 0.)) or
+            ((z[0] <= 0) and (z[1] == 0) and (z[2] >= 0)))
+
+
+exp_pri_cone = cone(exp_pri_Pi, exp_pri_D, exp_pri_D, isin_exppri)
 
 
 @nb.jit(nb.float64[:](nb.float64[:], nb.float64[:]))
@@ -927,7 +970,15 @@ def exp_dua_D(z, x, cache):
     return np.copy(x) + exp_pri_D(-z, -x, cache)
 
 
-exp_dua_cone = cone(exp_dua_Pi, exp_dua_D, exp_dua_D)
+def isin_expdua(z):
+    if z[0] < 0:
+        print('margin (< 0)', -z[0] * np.exp(z[1] / z[0]) - np.e * z[2])
+    return ((z[0] < 0) and np.isclose(max(-z[0] * np.exp(z[1] / z[0])
+                                          - np.e * z[2], 0.), 0.) or
+            ((z[0] == 0.) and (z[1] >= 0) and (z[2] >= 0)))
+
+exp_dua_cone = cone(exp_dua_Pi, exp_dua_D, exp_dua_D,
+                    isin_expdua)
 
 
 @nb.jit(nb.int64(nb.int64))
@@ -1103,7 +1154,7 @@ def semidef_cone_Pi(z, cache_eivec, cache_eival):
 
     Z = vec2mat(z)
     eival, eivec = np.linalg.eigh(Z)
-    #eival, eivec, _ = Jacobi(Z)
+    # eival, eivec, _ = Jacobi(Z)
     result = mat2vec(eivec @ np.diag(np.maximum(eival, 0.)) @ eivec.T)
 
     Pi_Z = eivec @ np.diag(np.maximum(eival, 0.)) @ eivec.T
@@ -1120,7 +1171,8 @@ def semidef_cone_Pi(z, cache_eivec, cache_eival):
     return result
 
 
-semi_def_cone = cone(semidef_cone_Pi, semidef_cone_D, semidef_cone_D)
+semi_def_cone = cone(semidef_cone_Pi, semidef_cone_D, semidef_cone_D,
+                     None)
 
 
 @nb.jit(nb.float64[:](nb.float64[:], nb.float64[:],
@@ -1135,9 +1187,15 @@ def semidef_cone_Pi_single_cache(z, cache):
     return semidef_cone_Pi(z, cache[0], cache[1])
 
 
+def semidef_isin(z):
+    min_eival = np.min(np.linalg.eigh(vec2mat(z))[0])
+    print('min_eival', min_eival)
+    return np.isclose(min(min_eival, 0.), 0.)
+
 # used as test harness for semi-def functions
 semi_def_cone_single_cache = cone(semidef_cone_Pi_single_cache, semidef_cone_D_single_cache,
-                                  semidef_cone_D_single_cache)
+                                  semidef_cone_D_single_cache,
+                                  semidef_isin)
 
 # these functions are used to store matrices in cache
 
@@ -1293,7 +1351,7 @@ def prod_cone_Pi(z, zero, l, q, q_cache, s, s_cache_eivec, s_cache_eival,  ep,
     return result
 
 
-prod_cone = cone(prod_cone_Pi, prod_cone_D, prod_cone_D)
+prod_cone = cone(prod_cone_Pi, prod_cone_D, prod_cone_D, None)
 
 
 def make_prod_cone_cache(dim_dict):
@@ -1400,4 +1458,4 @@ def embedded_cone_Pi(z, zero, l, q, q_cache, s, s_cache_eivec, s_cache_eival,
     return result
 
 
-embedded_cone = cone(embedded_cone_Pi, embedded_cone_D, embedded_cone_D)
+embedded_cone = cone(embedded_cone_Pi, embedded_cone_D, embedded_cone_D, None)

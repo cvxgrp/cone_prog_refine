@@ -334,6 +334,27 @@ int exp_cone_projection_derivative(double *z,
       }
 
 
+
+    double jacobian[16]; 
+
+    int success = compute_jacobian_exp_cone(jacobian,
+                                          pi_z[2] - z[2],
+                                          pi_z[0], pi_z[1], pi_z[2]);
+
+    double old_dz[3];
+
+    old_dz[0] = dz[0];
+    old_dz[1] = dz[1];
+    old_dz[2] = dz[2];
+
+    dz[0] = jacobian[0] * old_dz[0] + jacobian[1] * old_dz[1] + jacobian[2] * old_dz[2];
+    dz[1] = jacobian[4] * old_dz[0] + jacobian[5] * old_dz[1] + jacobian[6] * old_dz[2];
+    dz[2] = jacobian[8] * old_dz[0] + jacobian[9] * old_dz[1] + jacobian[10] * old_dz[2];
+
+    return success;
+
+
+
     // if (-r < 0 and r * np.exp(s / r) < -np.exp(1) * t):  # or \
     //        # (r == 0 and -s > 0 and -t > 0):
     //     # print('second case')
@@ -358,10 +379,177 @@ int exp_cone_projection_derivative(double *z,
     // # assert not True in np.isnan(fourth)
     // return fourth
 
-      return 0;
 
 }
 
+int compute_jacobian_exp_cone(double *result, double mu_star,
+                              double x_star, double y_star, 
+                              double z_star){
+    /* From BMB'18 appendix C. */
+
+    if (y_star == 0){
+        /*Can't compute derivative.*/
+        return 0;
+    }
+
+    double matrix[16];
+    double alpha = x_star / y_star;
+    double beta = exp(alpha);
+    double gamma = mu_star * beta / y_star;
+
+    matrix[0] = 1 + gamma;
+    matrix[1] = - gamma * alpha;
+    matrix[2] = 0;
+    matrix[3] = beta;
+
+    matrix[4] = matrix[1];
+    matrix[5] = 1 + gamma * alpha * alpha;
+    matrix[6] = 0;
+    matrix[7] = (1 - alpha) * beta;
+
+    matrix[8] = 0;
+    matrix[9] = 0;
+    matrix[10] = 1;
+    matrix[11] = -1;
+
+    matrix[12] = beta;
+    matrix[13] = matrix[7];
+    matrix[14] = -1;
+    matrix[15] = 0;
+
+    return inverse_four_by_four(matrix, result);
+}
+
+
+int inverse_four_by_four(const double m[16], double invOut[16])
+{
+    double inv[16], det;
+    int i;
+
+    inv[0] = m[5]  * m[10] * m[15] - 
+             m[5]  * m[11] * m[14] - 
+             m[9]  * m[6]  * m[15] + 
+             m[9]  * m[7]  * m[14] +
+             m[13] * m[6]  * m[11] - 
+             m[13] * m[7]  * m[10];
+
+    inv[4] = -m[4]  * m[10] * m[15] + 
+              m[4]  * m[11] * m[14] + 
+              m[8]  * m[6]  * m[15] - 
+              m[8]  * m[7]  * m[14] - 
+              m[12] * m[6]  * m[11] + 
+              m[12] * m[7]  * m[10];
+
+    inv[8] = m[4]  * m[9] * m[15] - 
+             m[4]  * m[11] * m[13] - 
+             m[8]  * m[5] * m[15] + 
+             m[8]  * m[7] * m[13] + 
+             m[12] * m[5] * m[11] - 
+             m[12] * m[7] * m[9];
+
+    inv[12] = -m[4]  * m[9] * m[14] + 
+               m[4]  * m[10] * m[13] +
+               m[8]  * m[5] * m[14] - 
+               m[8]  * m[6] * m[13] - 
+               m[12] * m[5] * m[10] + 
+               m[12] * m[6] * m[9];
+
+    inv[1] = -m[1]  * m[10] * m[15] + 
+              m[1]  * m[11] * m[14] + 
+              m[9]  * m[2] * m[15] - 
+              m[9]  * m[3] * m[14] - 
+              m[13] * m[2] * m[11] + 
+              m[13] * m[3] * m[10];
+
+    inv[5] = m[0]  * m[10] * m[15] - 
+             m[0]  * m[11] * m[14] - 
+             m[8]  * m[2] * m[15] + 
+             m[8]  * m[3] * m[14] + 
+             m[12] * m[2] * m[11] - 
+             m[12] * m[3] * m[10];
+
+    inv[9] = -m[0]  * m[9] * m[15] + 
+              m[0]  * m[11] * m[13] + 
+              m[8]  * m[1] * m[15] - 
+              m[8]  * m[3] * m[13] - 
+              m[12] * m[1] * m[11] + 
+              m[12] * m[3] * m[9];
+
+    inv[13] = m[0]  * m[9] * m[14] - 
+              m[0]  * m[10] * m[13] - 
+              m[8]  * m[1] * m[14] + 
+              m[8]  * m[2] * m[13] + 
+              m[12] * m[1] * m[10] - 
+              m[12] * m[2] * m[9];
+
+    inv[2] = m[1]  * m[6] * m[15] - 
+             m[1]  * m[7] * m[14] - 
+             m[5]  * m[2] * m[15] + 
+             m[5]  * m[3] * m[14] + 
+             m[13] * m[2] * m[7] - 
+             m[13] * m[3] * m[6];
+
+    inv[6] = -m[0]  * m[6] * m[15] + 
+              m[0]  * m[7] * m[14] + 
+              m[4]  * m[2] * m[15] - 
+              m[4]  * m[3] * m[14] - 
+              m[12] * m[2] * m[7] + 
+              m[12] * m[3] * m[6];
+
+    inv[10] = m[0]  * m[5] * m[15] - 
+              m[0]  * m[7] * m[13] - 
+              m[4]  * m[1] * m[15] + 
+              m[4]  * m[3] * m[13] + 
+              m[12] * m[1] * m[7] - 
+              m[12] * m[3] * m[5];
+
+    inv[14] = -m[0]  * m[5] * m[14] + 
+               m[0]  * m[6] * m[13] + 
+               m[4]  * m[1] * m[14] - 
+               m[4]  * m[2] * m[13] - 
+               m[12] * m[1] * m[6] + 
+               m[12] * m[2] * m[5];
+
+    inv[3] = -m[1] * m[6] * m[11] + 
+              m[1] * m[7] * m[10] + 
+              m[5] * m[2] * m[11] - 
+              m[5] * m[3] * m[10] - 
+              m[9] * m[2] * m[7] + 
+              m[9] * m[3] * m[6];
+
+    inv[7] = m[0] * m[6] * m[11] - 
+             m[0] * m[7] * m[10] - 
+             m[4] * m[2] * m[11] + 
+             m[4] * m[3] * m[10] + 
+             m[8] * m[2] * m[7] - 
+             m[8] * m[3] * m[6];
+
+    inv[11] = -m[0] * m[5] * m[11] + 
+               m[0] * m[7] * m[9] + 
+               m[4] * m[1] * m[11] - 
+               m[4] * m[3] * m[9] - 
+               m[8] * m[1] * m[7] + 
+               m[8] * m[3] * m[5];
+
+    inv[15] = m[0] * m[5] * m[10] - 
+              m[0] * m[6] * m[9] - 
+              m[4] * m[1] * m[10] + 
+              m[4] * m[2] * m[9] + 
+              m[8] * m[1] * m[6] - 
+              m[8] * m[2] * m[5];
+
+    det = m[0] * inv[0] + m[1] * inv[4] + m[2] * inv[8] + m[3] * inv[12];
+
+    if (det == 0)
+        return 0;
+
+    det = 1.0 / det;
+
+    for (i = 0; i < 16; i++)
+        invOut[i] = inv[i] * det;
+
+    return 1;
+}
 
 void semidefinite_cone_projection(double *z, double *pi_z, int semidefinite, 
                                   double *eigenvectors, double *eigenvalues){

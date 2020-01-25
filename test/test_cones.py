@@ -98,10 +98,11 @@ class BaseTestCone(unittest.TestCase):
                     size_vec(x)) * HOW_LONG_DERIVATIVE_TEST_STEP
                 # print('x + delta:', x + delta)
                 new_cache = self.make_cache(len(x))
-                proj_x_plus_delta = self.test_cone.Pi(x + delta, new_cache)
+                proj_x_plus_delta = self.test_cone.Pi(
+                    np.copy(x + delta), new_cache)
                 # proj_x_plus_delta, new_cache = self.test_cone.Pi(x + delta)
                 # print('x, delta, cache:', x, delta, cache)
-                dproj_x = self.test_cone.D(x, delta, cache)
+                dproj_x = self.test_cone.D(x, np.copy(delta), cache)
 
                 if not np.allclose(proj_x + dproj_x, proj_x_plus_delta):
                     print('x:', x)
@@ -121,10 +122,46 @@ class BaseTestCone(unittest.TestCase):
                 #     proj_x + deriv.T@delta,
                 #     proj_x_plus_delta))
 
+    # def isin_cone(self, z):
+    #     cache = self.make_cache(len(z))
+    #     pi_z = self.test_cone.Pi(np.copy(z), cache)
+    #     return np.allclose(pi_z - z, 0.)
+
+    # def isin_dual_cone(self, z):
+    #     cache = self.make_cache(len(z))
+    #     pi_z = self.dual_test_cone.Pi(np.copy(z), cache)
+    #     return np.allclose(pi_z - z, 0.)
+
+    def test_projection_is_good(self):
+
+        if not ('test_cone' in dir(self)):
+            return
+
+        if (self.test_cone is prod_cone):
+            return
+
+        for i in range(100):
+            z = np.random.randn(self.randomsamplesize)
+            cache = self.make_cache(self.randomsamplesize)
+            pi_z = self.test_cone.Pi(np.copy(z), cache)
+            print()
+            print('z', z)
+            print('pi z', pi_z)
+            print('z - pi z', z - pi_z)
+            # if pi_z[1] > 0:
+            #     print(pi_z[1] * np.exp(pi_z[0] / pi_z[1]) - pi_z[2])
+            self.assertTrue(self.test_cone.isin(np.copy(pi_z)))
+            self.assertTrue(self.dual_test_cone.isin(np.copy(pi_z - z)))
+            print('pi_z @ (z - pi_z)', pi_z @ (pi_z - z))
+            self.assertTrue(np.isclose(pi_z @ (pi_z - z), 0.))
+
 
 class TestNonNeg(BaseTestCone):
 
     test_cone = non_neg_cone_cached
+    dual_test_cone = non_neg_cone_cached
+    randomsamplesize = 10
+
     sample_vecs = [np.array(el, dtype=float) for el in
                    [np.array([-1., 0., 1.]), [1.], [0.], [],
                     [-1.], [-2, 2.], [1, 1], np.arange(1, 100), [-2, -1, 1, 2]]]
@@ -140,6 +177,9 @@ class TestNonNeg(BaseTestCone):
 class TestFree(BaseTestCone):
 
     test_cone = free_cone_cached
+    dual_test_cone = zero_cone_cached
+    randomsamplesize = 10
+
     sample_vecs = [np.array(el, dtype=float) for el in
                    [np.array([-1., 0., 1.]), [1.], [0.], [],
                     [-1.], [-2., 2.], [1, 1], np.arange(1, 100), [-2, -1, 1, 2]]]
@@ -151,6 +191,9 @@ class TestFree(BaseTestCone):
 class TestZero(BaseTestCone):
 
     test_cone = zero_cone_cached
+    dual_test_cone = free_cone_cached
+    randomsamplesize = 10
+
     sample_vecs = [np.array(el, dtype=float) for el in
                    [np.array([-1., 0., 1.]), [1.],
                     [-1.], [-2., 2.], [1,
@@ -167,20 +210,23 @@ class TestZero(BaseTestCone):
 THRESH = 1E-16
 
 
-def isin_kexp(z):
-    return (((z[1] > 0) and (z[1] * np.exp(z[0] / z[1]) - z[2] <= THRESH)) or
-            ((z[0] <= 0) and (np.abs(z[1]) <= THRESH) and (z[2] >= 0)))
+# def isin_kexp(z):
+#     return (((z[1] > 0) and (z[1] * np.exp(z[0] / z[1]) - z[2] <= THRESH)) or
+#             ((z[0] <= 0) and (np.abs(z[1]) <= THRESH) and (z[2] >= 0)))
 
 
-def isin_minus_kexp_star(z):
-    r, s, t = z
-    return (((-r < 0) and r * np.exp(s / r) + np.e * t <= THRESH) or
-            ((np.abs(r) <= THRESH) and (-s >= 0) and (-t >= 0)))
+# def isin_minus_kexp_star(z):
+#     r, s, t = z
+#     return (((-r < 0) and r * np.exp(s / r) + np.e * t <= THRESH) or
+#             ((np.abs(r) <= THRESH) and (-s >= 0) and (-t >= 0)))
 
 
 class TestExpPri(BaseTestCone):
 
     test_cone = exp_pri_cone
+    dual_test_cone = exp_dua_cone
+    randomsamplesize = 3
+
     sample_vecs = [np.array([0., 0., 0.]),
                    np.array([-10., -10., -10.]),
                    np.array([10., 10., 10.]),
@@ -203,26 +249,29 @@ class TestExpPri(BaseTestCone):
                           False, False, False, False, False]
     sample_vecs_are_diff = [False, True, True, True, True, True, True, True]
 
-    def test_projection_is_good(self):
+    # def test_projection_is_good(self):
 
-        for i in range(1000):
-            z = np.random.randn(3)
-            pi_z = exp_pri_cone.Pi(np.copy(z), np.empty(3))
-            print()
-            print('z', z)
-            print('pi z', pi_z)
-            print('z - pi z', z - pi_z)
-            if pi_z[1] > 0:
-                print(pi_z[1] * np.exp(pi_z[0] / pi_z[1]) - pi_z[2])
-            self.assertTrue(isin_kexp(pi_z))
-            self.assertTrue(isin_minus_kexp_star(z - pi_z))
-            print(z @ (pi_z - z))
-            self.assertTrue(np.isclose(z @ (pi_z - z), 0.))
+    #     for i in range(1000):
+    #         z = np.random.randn(3)
+    #         pi_z = exp_pri_cone.Pi(np.copy(z), np.empty(3))
+    #         print()
+    #         print('z', z)
+    #         print('pi z', pi_z)
+    #         print('z - pi z', z - pi_z)
+    #         if pi_z[1] > 0:
+    #             print(pi_z[1] * np.exp(pi_z[0] / pi_z[1]) - pi_z[2])
+    #         self.assertTrue(isin_kexp(pi_z))
+    #         self.assertTrue(isin_minus_kexp_star(z - pi_z))
+    #         print(z @ (pi_z - z))
+    #         self.assertTrue(np.isclose(z @ (pi_z - z), 0.))
 
 
 class TestExpDua(BaseTestCone):
 
     test_cone = exp_dua_cone
+    dual_test_cone = exp_pri_cone
+    randomsamplesize = 3
+
     sample_vecs = [np.array([0., 0., 0.]),
                    np.array([-1., 1., 100.]),
                    np.array([1., 1., 100.]),
@@ -251,6 +300,9 @@ class TestExpDua(BaseTestCone):
 class TestSecondOrder(BaseTestCone):
 
     test_cone = sec_ord_cone
+    dual_test_cone = sec_ord_cone
+    randomsamplesize = 10
+
     sample_vecs = [np.array([1., 0., 0.]),
                    np.array([1., 2., 2.]),
                    np.array([-10., 2., 2.]),
@@ -367,6 +419,9 @@ class TestProduct(BaseTestCone):
 class TestSemiDefinite(BaseTestCone):
 
     test_cone = semi_def_cone_single_cache
+    dual_test_cone = semi_def_cone_single_cache
+    randomsamplesize = 10
+
     sample_vecs = [np.array([2, 0, 0, 2, 0, 2.]), np.array([1.]), np.array([-1.]),
                    np.array([10, 20., 10.]),
                    np.array([10, 0., -3.]),

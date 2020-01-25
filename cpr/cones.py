@@ -763,6 +763,49 @@ def exp_pri_Pi(z, cache):
     return z
 
 
+@nb.njit()
+def fourth_case_D_new(x, y, z, x_star, y_star, z_star, dx, dy, dz):
+    """From BMB'18 appendix C."""
+
+    mu_star = z_star - z
+
+    matrix = np.zeros((4, 4))
+
+    alpha = x_star / y_star
+    beta = np.exp(alpha)
+    gamma = mu_star * beta / y_star
+
+    matrix[0, 0] = 1 + gamma
+    matrix[0, 1] = - gamma * alpha
+    matrix[0, 2] = 0
+    matrix[0, 3] = beta
+
+    matrix[1, 0] = matrix[0, 1]
+    matrix[1, 1] = 1 + gamma * alpha * alpha
+    matrix[1, 2] = 0
+    matrix[1, 3] = (1 - alpha) * beta
+
+    matrix[2, 0] = 0
+    matrix[2, 1] = 0
+    matrix[2, 2] = 1
+    matrix[2, 3] = -1
+
+    matrix[3, 0] = beta
+    matrix[3, 1] = matrix[1, 3]
+    matrix[3, 2] = -1
+    matrix[3, 3] = 0
+
+    matinv = np.linalg.inv(matrix)
+
+    jacobian = matinv[:3, :3]
+
+    d = np.empty(3)
+
+    d[0], d[1], d[2] = dx, dy, dz
+
+    return jacobian @ d
+
+
 @nb.jit(nb.float64[:](nb.float64[:], nb.float64[:], nb.float64[:]), nopython=True)
 def exp_pri_D(z_0, dz, cache):
     """Derivative of proj. on exp. primal cone."""
@@ -819,7 +862,8 @@ def exp_pri_D(z_0, dz, cache):
         return result
 
     # fourth case
-    fourth = fourth_case_D(r, s, t, x, y, z, dr, ds, dt)
+    #fourth = fourth_case_D(r, s, t, x, y, z, dr, ds, dt)
+    fourth = fourth_case_D_new(r, s, t, x, y, z, dr, ds, dt)
     # assert not True in np.isnan(fourth)
     return fourth
 

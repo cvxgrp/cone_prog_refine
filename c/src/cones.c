@@ -21,16 +21,19 @@
 #include <math.h>
 #include <string.h>
 #include <stdbool.h>
+#include <cblas.h>
 
 
-double norm(double *x, int size){
+// double norm(double *x, int size){
     
-    double norm_x = 0.;
-    for (int i = 0; i < size; i++){
-        norm_x += x[i] * x[i];
-    }
-    return sqrt(norm_x);
-}
+//     double norm_x = 0.;
+//     for (int i = 0; i < size; i++){
+//         norm_x += x[i] * x[i];
+//     }
+//     return sqrt(norm_x);
+// }
+
+
 
 // void vecsum(double *x, double *y, int size){
 //     for (int i = 0; i < size; i++){
@@ -44,34 +47,34 @@ double norm(double *x, int size){
 //     }
 // }
 
-void vecalgsum(double *x, double *y, 
-                 double alpha, double beta,
-                 int size){
-    for (int i = 0; i < size; i++){
-        x[i] = alpha * x[i] + beta * y[i];
-    }
-}
+// void vecalgsum(double *x, double *y, 
+//                  double alpha, double beta,
+//                  int size){
+//     for (int i = 0; i < size; i++){
+//         x[i] = alpha * x[i] + beta * y[i];
+//     }
+// }
 
-double dot(double *x, double *y, int size){
-    double result = 0.;
-    for (int i = 0; i < size; i++){
-        result += x[i] * y[i];
-    }
-    return result;
-}
+// double dot(double *x, double *y, int size){
+//     double result = 0.;
+//     for (int i = 0; i < size; i++){
+//         result += x[i] * y[i];
+//     }
+//     return result;
+// }
 
 
 
-void zero_cone_projection(double *z, int64_t size){
+void zero_cone_projection(double *z, const vecsize size){
     memset(z, 0, sizeof(double) * size);
 }
 
-void zero_cone_projection_derivative(double *z, double *x, 
-                                     int64_t size){
-    memset(x, 0, sizeof(double) * size);
+void zero_cone_projection_derivative(const double *z, double *dz, 
+                                     const vecsize size){
+    memset(dz, 0, sizeof(double) * size);
 }
 
-void non_negative_cone_projection(double *z, int64_t size){
+void non_negative_cone_projection(double *z, const vecsize size){
     for (int i = 0; i < size; i++){
         if (z[i] < 0) {
             z[i] = 0;
@@ -79,23 +82,18 @@ void non_negative_cone_projection(double *z, int64_t size){
     }
 }
 
-void non_negative_cone_projection_derivative(double *z, double *x, int64_t size){
+void non_negative_cone_projection_derivative(const double *z, double *dz, const vecsize size){
     for (int i = 0; i < size; i++){
         if (z[i] < 0) {
-            x[i] = 0;
+            dz[i] = 0;
         };
     }
 }
 
+void second_order_cone_projection(double *z, const vecsize size){
 
-void second_order_cone_projection(double *z, int64_t size){
+    double norm_x = cblas_dnrm2(size - 1, z + 1, 1);
 
-    double norm_x = norm(z + 1, size - 1);
-
-    // for (int i = 1; i < size; i++){
-    //     norm_x += z[i] * z[i];
-    // }
-    // norm_x = sqrt(norm_x);
 
     if (norm_x <= z[0]){
         return;
@@ -117,10 +115,11 @@ void second_order_cone_projection(double *z, int64_t size){
     } 
 }
 
-void second_order_cone_projection_derivative(double *z, 
+
+void second_order_cone_projection_derivative(const double *z, 
                                              double *dz, 
-                                             double *pi_z,
-                                             int64_t size){
+                                             const double *pi_z,
+                                             const vecsize size){
 
     // point at which we derive
     // double t = z[0];
@@ -133,7 +132,7 @@ void second_order_cone_projection_derivative(double *z,
     // logic for simple cases
     //norm = np.linalg.norm(z[1:])
 
-    double norm_x = norm(z + 1, size - 1);
+    double norm_x = cblas_dnrm2(size - 1, z + 1, 1);
 
     if (norm_x <= z[0]){return;}
     
@@ -143,16 +142,17 @@ void second_order_cone_projection_derivative(double *z,
     }
 
     // big case
-    double dot_val = dot(dz + 1, z + 1, size - 1);
+    double dot_val = cblas_ddot(size - 1, dz + 1, 1, z + 1, 1);
+
     double old_dzzero = dz[0];
     
     dz[0] = (dz[0] * norm_x + dot_val) / (2 * norm_x);
 
-    vecalgsum(dz + 1, 
-              z + 1, 
-              (z[0] + norm_x) / (2. * norm_x), 
-              (old_dzzero - z[0] * dot_val / (norm_x*norm_x)) / (2. * norm_x),
-              size - 1);
+    double first_coefficient = (z[0] + norm_x) / (2. * norm_x);
+    double second_coefficient = (old_dzzero - z[0] * dot_val / (norm_x*norm_x)) / (2. * norm_x);
+
+    cblas_dscal(size - 1, first_coefficient, dz + 1, 1);
+    cblas_daxpy(size - 1, second_coefficient, z + 1, 1, dz + 1, 1);
 
     return;
 
@@ -161,6 +161,7 @@ void second_order_cone_projection_derivative(double *z,
 
 #define CONE_TOL (1e-16)
 #define CONE_THRESH (1e-16)
+#define CONE_THRESH_TWO (1e-16)
 #define EXP_CONE_MAX_ITERS (200)
 
 const double EulerConstant = 2.718281828459045; //exp(1.0);
@@ -194,7 +195,7 @@ void exp_solve_for_x_with_rho(double *v, double *x, double rho) {
 
 double exp_calc_grad(double *v, double *x, double rho) {
   exp_solve_for_x_with_rho(v, x, rho);
-  if (x[1] <= 1e-12) {
+  if (x[1] <= CONE_THRESH_TWO) {
     return x[0];
   }
   return x[0] + x[1] * log(x[1] / x[2]);
@@ -333,13 +334,17 @@ int exp_cone_projection_derivative(double *z,
         return 1;
       }
 
-
-
     double jacobian[16]; 
 
     int success = compute_jacobian_exp_cone(jacobian,
                                           pi_z[2] - z[2],
                                           pi_z[0], pi_z[1], pi_z[2]);
+
+    if (success == 0){
+        dz[0] = 0.0;
+        dz[1] = 0.0;
+        dz[2] = 0.0;
+    };
 
     double old_dz[3];
 
@@ -347,6 +352,8 @@ int exp_cone_projection_derivative(double *z,
     old_dz[1] = dz[1];
     old_dz[2] = dz[2];
 
+
+    // TODO maybe use BLAS
     dz[0] = jacobian[0] * old_dz[0] + jacobian[1] * old_dz[1] + jacobian[2] * old_dz[2];
     dz[1] = jacobian[4] * old_dz[0] + jacobian[5] * old_dz[1] + jacobian[6] * old_dz[2];
     dz[2] = jacobian[8] * old_dz[0] + jacobian[9] * old_dz[1] + jacobian[10] * old_dz[2];

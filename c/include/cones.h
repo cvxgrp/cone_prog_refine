@@ -20,38 +20,37 @@
 //void embedded_cone_projection(double *z, double *pi_z, int zero, int nonneg, int* second_order);
 
 #include <stdint.h>
-#include <stdbool.h>
-
-double norm(double *x, int size);
-
-void vecsum(double *x, double *y, int size);
-
-void vecdiff(double *x, double *y, int size);
-
-void vecalgsum(double *x, double *y, 
-                 double alpha, double beta,
-                 int size);
-
-double dot(double *x, double *y, int size);
 
 
+// temporarily for interoperability with Python
+typedef int64_t vecsize;
 
-void zero_cone_projection(double *z, int64_t size);
+//double norm(double *x, int size);
+// void vecsum(double *x, double *y, int size);
+// void vecdiff(double *x, double *y, int size);
+// void vecalgsum(double *x, double *y, 
+//                  double alpha, double beta,
+//                  int size);
 
-void zero_cone_projection_derivative(double *z, double *x, 
-                                     int64_t size);
+//double dot(double *x, double *y, int size);
 
-void non_negative_cone_projection(double *z, int64_t size);
 
-void non_negative_cone_projection_derivative(double *z, double *x, 
-                                             int64_t size);
 
-void second_order_cone_projection(double *z, int64_t size);
+void zero_cone_projection(double *z, const vecsize size);
 
-void second_order_cone_projection_derivative(double *z, 
+void zero_cone_projection_derivative(const double *z, double *dz, const vecsize size);
+
+void non_negative_cone_projection(double *z, const vecsize size);
+
+void non_negative_cone_projection_derivative(const double *z, double *x, 
+                                             const vecsize size);
+
+void second_order_cone_projection(double *z, const vecsize size);
+
+void second_order_cone_projection_derivative(const double *z, 
                                              double *dz, 
-                                             double *pi_z,
-                                             int64_t size);
+                                             const double *pi_z,
+                                             const vecsize size);
 
 double exp_newton_one_d(double rho, double y_hat, double z_hat);
 void exp_solve_for_x_with_rho(double *v, double *x, double rho);

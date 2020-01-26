@@ -20,11 +20,7 @@
 #include <stdbool.h>
 #include <math.h>
 
-#ifdef __APPLE__
-  #include <vecLib/vecLib.h>
-#else
-  #include <cblas.h>
-#endif
+#include <cblas.h>
 
 #define ZERO   0.0
 #define ONE    1.0

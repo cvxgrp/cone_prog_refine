@@ -147,12 +147,12 @@ class BaseTestCone(unittest.TestCase):
             print()
             print('z', z)
             print('pi z', pi_z)
-            print('z - pi z', z - pi_z)
+            print('pi z - z', pi_z - z)
             # if pi_z[1] > 0:
             #     print(pi_z[1] * np.exp(pi_z[0] / pi_z[1]) - pi_z[2])
             self.assertTrue(self.test_cone.isin(np.copy(pi_z)))
             self.assertTrue(self.dual_test_cone.isin(np.copy(pi_z - z)))
-            print('pi_z @ (z - pi_z)', pi_z @ (pi_z - z))
+            print('pi_z @ (pi_z - z)', pi_z @ (pi_z - z))
             self.assertTrue(np.isclose(pi_z @ (pi_z - z), 0.))
 
 
@@ -378,9 +378,10 @@ class TestProduct(BaseTestCone):
                     HOW_LONG_DERIVATIVE_TEST_STEP
                 # print('x + delta:', x + delta)
                 new_cache = make_prod_cone_cache(dim_dict)
-                proj_x_plus_delta = prod_cone.Pi(x + delta, *new_cache)
+                proj_x_plus_delta = prod_cone.Pi(
+                    np.copy(x + delta), *new_cache)
 
-                dproj_x = prod_cone.D(x, delta, *cache)
+                dproj_x = prod_cone.D(x, np.copy(delta), *cache)
 
                 error = proj_x + dproj_x - proj_x_plus_delta
 
@@ -519,8 +520,8 @@ class TestEmbeddedCone(unittest.TestCase):
                         # self.assertTrue(False)
                     count += size
 
-                self.assertTrue(np.allclose(proj_u - u_true, 0.))
-                self.assertTrue(np.allclose(proj_v - v_true, 0.))
+                self.assertTrue(np.allclose(proj_u - u_true, 0., atol=1e-6))
+                self.assertTrue(np.allclose(proj_v - v_true, 0., atol=1e-6))
                 dproj = embedded_cone_D(z_true, delta, *cone_caches, n)
 
                 # deriv = EmbeddedConeDerProj(problem.n, z_true, cone)

@@ -908,6 +908,7 @@ def exp_pri_D(z_0, dz, cache):
     if c_exp_p_d(z_0.ctypes.data, dz.ctypes.data, cache.ctypes.data):
         return np.copy(dz)
     else:
+        # return np.zeros(3)
         raise Exception('Exp cone derivative error')
 
     # r = z_0[0]

@@ -736,51 +736,187 @@ sec_ord_cone = cone(sec_ord_Pi, sec_ord_D, sec_ord_D,
 
 #     return result
 
+@nb.njit()
+def compute_error(z, pi_z, rho):
 
-# @nb.jit(nb.float64[:](nb.float64[:], nb.float64[:]), nopython=True)
-# def exp_pri_Pi(z, cache):
-#     """Projection on exp. primal cone, and cache."""
-#     z = np.copy(z)
-#     r = z[0]
-#     s = z[1]
-#     t = z[2]
+    r, s, t = pi_z
 
-#     # temporary...
-#     if np.linalg.norm(z) < 1E-14:
-#         cache[:3] = 0.
-#         return z
+    error = np.zeros(4)
+    alpha = r / s
+    beta = np.exp(alpha)
+    gamma = rho * beta / s
 
-#     # first case
-#     if (s > 0 and s * np.exp(r / s) <= t) or \
-#             (r <= 0 and s == 0 and t >= 0):
-#         cache[:3] = z
-#         return z
+    error[:3] = pi_z - z
+    error[0] += rho * beta
+    error[1] += rho * beta * (1 - alpha)
+    error[2] -= rho
+    error[3] = s * beta - t
 
-#     # second case
-#     if (-r < 0 and r * np.exp(s / r) <= -np.exp(1) * t) or \
-#             (r == 0 and -s >= 0 and -t >= 0):
-#         cache[:3] = 0.
-#         return np.zeros(3)
+    return error
 
-#     # third case
-#     if r < 0 and s < 0:
-#         z[1] = 0
-#         z[2] = max(z[2], 0)
-#         cache[:3] = z
-#         return z
 
-#     pi = fourth_case_enzo_two(z)
+def conjgrad(A, b, x):
+    r = b - A @ x
+    p = r
+    rsold = r@ r
 
-#     cache[:3] = pi
-#     return pi
+    for i in range(len(b)):
+        Ap = A @ p
+        alpha = rsold / (p.T @ Ap)
+        x = x + alpha * p
+        r = r - alpha * Ap
+        rsnew = r @r
+        if np.sqrt(rsnew) < 1e-10:
+            break
+        p = r + (rsnew / rsold) * p
+        rsold = rsnew
+    return x
+
+
+@nb.njit()
+def cone_newton_projection(z, pi_z, rho):
+    """Calculations from Parikh Boyd '14."""
+
+    matrix = np.zeros((4, 4))
+    error = np.zeros(4)
+    step = 1.
+
+    for i in range(200):
+
+        r, s, t = pi_z
+        #print('z iterate', pi_z)
+        #print('rho iterate', rho)
+
+        alpha = r / s
+        beta = np.exp(alpha)
+        gamma = rho * beta / s
+
+        error[:3] = pi_z - z
+        error[0] += rho * beta
+        error[1] += rho * beta * (1 - alpha)
+        error[2] -= rho
+        error[3] = s * beta - t
+
+        #print('error', error)
+
+        if np.max(np.abs(error)) < 1E-15:
+            break
+
+        # if (y_star == 0){
+        #     / *Can't compute derivative.* /
+        #     return 0
+        # }
+
+        matrix[0, 0] = 1 + gamma
+        matrix[0, 1] = - gamma * alpha
+        matrix[0, 2] = 0
+        matrix[0, 3] = beta
+
+        matrix[1, 0] = matrix[0, 1]
+        matrix[1, 1] = 1 + gamma * alpha * alpha
+        matrix[1, 2] = 0
+        matrix[1, 3] = (1 - alpha) * beta
+
+        matrix[2, 0] = 0
+        matrix[2, 1] = 0
+        matrix[2, 2] = 1
+        matrix[2, 3] = -1
+
+        matrix[3, 0] = beta
+        matrix[3, 1] = matrix[1, 3]
+        matrix[3, 2] = -1
+        matrix[3, 3] = 0
+
+        correction = np.linalg.solve(matrix + np.eye(4) * 1E-8, -error)
+
+        #print('correction', correction)
+
+        delta_s = correction[1]
+
+        max_step = -(s / delta_s) * 0.9 if delta_s < 0 else step
+        #print('max step', max_step)
+
+        assert(max_step > 0)
+
+        old_errsize = np.max(np.abs(error))
+
+        mystep = min(step, max_step)
+
+        pi_z += mystep * correction[:3]
+        rho += mystep * correction[3]
+
+        new_errsize = np.max(np.abs(compute_error(z, pi_z, rho)))
+        #print('error_size', new_errsize)
+
+        i = 0
+        while new_errsize > old_errsize:
+            mystep /= 2.
+            pi_z -= mystep * correction[:3]
+            rho -= mystep * correction[3]
+
+            new_errsize = np.max(np.abs(compute_error(z, pi_z, rho)))
+            #print('error_size', new_errsize)
+            i += 1
+            if i > 5:
+                break
+
+            # print('error_size',
+            #       np.max(np.abs(compute_error(z, pi_z, rho))))
+
+        assert(pi_z[1] > 0)
+
+    return pi_z
 
 
 @nb.jit(nb.float64[:](nb.float64[:], nb.float64[:]), nopython=True)
 def exp_pri_Pi(z, cache):
+    """Projection on exp. primal cone, and cache."""
+    z = np.copy(z)
+    r = z[0]
+    s = z[1]
+    t = z[2]
 
-    c_exp_p(z.ctypes.data)
-    cache[:] = z
-    return z
+    # temporary...
+    # if np.linalg.norm(z) < 1E-14:
+    #     cache[:3] = 0.
+    #     return z
+
+    # first case
+    if (s > 0 and s * np.exp(r / s) <= t) or \
+            (r <= 0 and s == 0 and t >= 0):
+        cache[:3] = z
+        return z
+
+    # second case
+    if (-r < 0 and r * np.exp(s / r) <= -np.exp(1) * t) or \
+            (r == 0 and -s >= 0 and -t >= 0):
+        cache[:3] = 0.
+        return np.zeros(3)
+
+    # third case
+    if r < 0 and s < 0:
+        z[1] = 0
+        z[2] = max(z[2], 0)
+        cache[:3] = z
+        return z
+
+    # pi = z  # fourth_case_enzo_two(z)
+    init_z = np.zeros(3)
+    init_z[0] = 1
+    init_z[1] = 1
+    init_z[2] = np.exp(1)
+    pi = cone_newton_projection(z, pi_z=init_z, rho=0)
+
+    cache[:3] = pi
+    return pi
+
+
+# @nb.jit(nb.float64[:](nb.float64[:], nb.float64[:]), nopython=True)
+# def exp_pri_Pi(z, cache):
+
+#     c_exp_p(z.ctypes.data)
+#     cache[:] = z
+#     return z
 
 # CONE_THRESH = 1E-10
 

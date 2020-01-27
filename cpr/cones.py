@@ -774,30 +774,87 @@ def conjgrad(A, b, x):
 
 
 @nb.njit()
-def cone_newton_projection(z, pi_z, rho):
+def g(r, s, t, alpha, beta, gamma):
+    return s * beta - t
+
+
+@nb.njit()
+def grad_g(r, s, t, alpha, beta, gamma):
+    result = np.empty(3)
+    result[0] = beta
+    result[1] = beta * (1 - alpha)
+    result[2] = -1
+    return result
+
+
+@nb.njit()
+def hessian_g(r, s, t, alpha, beta, gamma):
+    result = np.zeros((2, 2))
+    result[0, 0] = gamma
+    result[1, 1] = gamma * alpha * alpha
+    result[0, 1] = - gamma * alpha
+    result[1, 0] = result[0, 1]
+    return result
+
+
+@nb.njit()
+def h(u, v, w, alpha_two, beta_two, gamma_two):
+    return -u * beta_two - np.e * w
+
+
+@nb.njit()
+def grad_h(u, v, w, alpha_two, beta_two, gamma_two):
+    result = np.empty(3)
+    result[0] = beta_two * (alpha_two - 1)
+    result[1] = -beta_two
+    result[2] = -np.e
+    return result
+
+
+@nb.njit()
+def hessian_h(u, v, w, alpha_two, beta_two, gamma_two):
+    result = np.zeros((2, 2))
+    result[0, 0] = gamma_two * alpha_two * alpha_two
+    result[1, 1] = gamma_two
+    result[0, 1] = - gamma_two * alpha_two
+    result[1, 0] = result[0, 1]
+    return result
+
+
+@nb.njit()
+def cone_newton_projection(z, pi_z, rho, mu=0.):
     """Calculations from Parikh Boyd '14."""
 
-    matrix = np.zeros((4, 4))
-    error = np.zeros(4)
+    matrix = np.zeros((5, 5))
+    error = np.zeros(5)
     step = 1.
 
-    for i in range(200):
+    for i in range(20):
 
         r, s, t = pi_z
-        #print('z iterate', pi_z)
+        u, v, w = pi_z - z
+        print('z iterate', pi_z)
+        print('pi_z - z iterate', pi_z - z)
         #print('rho iterate', rho)
 
         alpha = r / s
         beta = np.exp(alpha)
         gamma = rho * beta / s
 
-        error[:3] = pi_z - z
-        error[0] += rho * beta
-        error[1] += rho * beta * (1 - alpha)
-        error[2] -= rho
-        error[3] = s * beta - t
+        alpha_two = v / u
+        beta_two = np.exp(alpha_two)
+        gamma_two = -mu * beta_two / u
 
-        #print('error', error)
+        error[:3] = pi_z - z
+        error[:3] += rho * grad_g(r, s, t, alpha, beta, gamma)
+        error[:3] += mu * grad_h(u, v, w, alpha_two, beta_two, gamma_two)
+        # error[0] += rho * beta
+        # error[1] += rho * beta * (1 - alpha)
+        # error[2] -= rho
+        error[3] = g(r, s, t, alpha, beta, gamma)
+        error[4] = h(u, v, w, alpha_two, beta_two, gamma_two)
+
+        print('error', error)
 
         if np.max(np.abs(error)) < 1E-15:
             break
@@ -807,27 +864,42 @@ def cone_newton_projection(z, pi_z, rho):
         #     return 0
         # }
 
-        matrix[0, 0] = 1 + gamma
-        matrix[0, 1] = - gamma * alpha
-        matrix[0, 2] = 0
-        matrix[0, 3] = beta
+        matrix[:3, 3] = grad_g(r, s, t, alpha, beta, gamma)
+        matrix[:3, 4] = grad_h(u, v, w, alpha_two, beta_two, gamma_two)
 
-        matrix[1, 0] = matrix[0, 1]
-        matrix[1, 1] = 1 + gamma * alpha * alpha
-        matrix[1, 2] = 0
-        matrix[1, 3] = (1 - alpha) * beta
-
-        matrix[2, 0] = 0
-        matrix[2, 1] = 0
+        matrix[0, 0] = 1
+        matrix[1, 1] = 1
         matrix[2, 2] = 1
-        matrix[2, 3] = -1
 
-        matrix[3, 0] = beta
+        matrix[:2, :2] += hessian_g(r, s, t, alpha, beta, gamma)
+        matrix[:2, :2] += hessian_h(u, v, w, alpha_two, beta_two, gamma_two)
+
+        # matrix[0, 0] += gamma
+        # matrix[0, 1] = - gamma * alpha
+        #matrix[0, 2] = 0
+        #matrix[0, 3] = beta
+
+        # matrix[1, 0] = matrix[0, 1]
+        # matrix[1, 1] += gamma * alpha * alpha
+        #matrix[1, 2] = 0
+        #matrix[1, 3] = (1 - alpha) * beta
+
+        #matrix[2, 0] = 0
+        #matrix[2, 1] = 0
+        #matrix[2, 2] = 1
+        #matrix[2, 3] = -1
+
+        matrix[3, 0] = matrix[0, 3]
         matrix[3, 1] = matrix[1, 3]
-        matrix[3, 2] = -1
-        matrix[3, 3] = 0
+        matrix[3, 2] = matrix[2, 3]
 
-        correction = np.linalg.solve(matrix + np.eye(4) * 1E-8, -error)
+        matrix[4, 0] = matrix[0, 4]
+        matrix[4, 1] = matrix[1, 4]
+        matrix[4, 2] = matrix[2, 4]
+
+        # matrix[3, 3] = 0
+
+        correction = np.linalg.solve(matrix + np.eye(5) * 1E-8, -error)
 
         #print('correction', correction)
 
@@ -844,6 +916,7 @@ def cone_newton_projection(z, pi_z, rho):
 
         pi_z += mystep * correction[:3]
         rho += mystep * correction[3]
+        mu += mystep * correction[4]
 
         new_errsize = np.max(np.abs(compute_error(z, pi_z, rho)))
         #print('error_size', new_errsize)

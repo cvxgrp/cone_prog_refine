@@ -1084,7 +1084,7 @@ def semidef_cone_D(z, dz, cache_eivec, cache_eival):
 def Jacobi(A):
     n = A.shape[0]            # matrix size #columns = #lines
     maxit = 100                   # maximum number of iterations
-    eps = 1.0e-30              # accuracy goal
+    eps = 1.0e-14             # accuracy goal
     pi = np.pi
     info = 0                     # return flag
     ev = np.zeros(n)  # ,float)     # initialize eigenvalues
@@ -1155,7 +1155,7 @@ def semidef_cone_Pi(z, cache_eivec, cache_eival):
 
     Z = vec2mat(z)
     eival, eivec = np.linalg.eigh(Z)
-    # eival, eivec, _ = Jacobi(Z)
+    #eival, eivec, _ = Jacobi(Z)
     result = mat2vec(eivec @ np.diag(np.maximum(eival, 0.)) @ eivec.T)
 
     Pi_Z = eivec @ np.diag(np.maximum(eival, 0.)) @ eivec.T

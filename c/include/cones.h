@@ -52,14 +52,16 @@ void second_order_cone_projection_derivative(const double *z,
                                              const double *pi_z,
                                              const vecsize size);
 
+/***************
+Exponential cone
+***************/
+
 double exp_newton_one_d(double rho, double y_hat, double z_hat);
 void exp_solve_for_x_with_rho(double *v, double *x, double rho);
 double exp_calc_grad(double *v, double *x, double rho);
 void exp_get_rho_ub(double *v, double *x, double *ub, double *lb);
-//int isin_kexp(double r, double s, double t);
-int isin_kexp(double * z);
 
-//int isin_minus_kexp_star(double r, double s, double t);
+int isin_kexp(double * z);
 int isin_minus_kexp_star(double * z);
 int isin_special_case(double * z);
 
@@ -68,12 +70,21 @@ int compute_jacobian_exp_cone(double *result, double mu_star,
                               double x_star, double y_star, 
                               double z_star);
 
-
 void exp_cone_projection(double *z);
+int exp_cone_projection_derivative(double *z, double *dz, double *pi_z);
 
-int exp_cone_projection_derivative(double *z, 
-                                    double *dz, 
-                                    double *pi_z);
 
-void semidefinite_cone_projection(double *z, double *pi_z, int semidefinite, 
-                                  double *eigenvectors, double *eigenvalues);
+/*****************
+Semi-definite cone
+*****************/
+
+vecsize sizevec2sizemat(vecsize n);
+vecsize sizemat2sizevec(vecsize m);
+int mat2vec(double * Z, vecsize n, double * z, vecsize m);
+int vec2mat(double * z, vecsize m, double * Z, vecsize n);
+
+
+void semidefinite_cone_projection(double *z, 
+                                  const vecsize semidefinite, 
+                                  double *eigenvectors, 
+                                  double *eigenvalues);

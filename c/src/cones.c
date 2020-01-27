@@ -1,20 +1,19 @@
 /*
-*  CPSR - Cone Program Solution Refinement
+*  CPR - Cone Program Solution Refinement
 *
-*  Copyright (C) 2019, Enzo Busseti
+*  Copyright (C) 2019-2020, Enzo Busseti, Walaa Moursi, and Stephen Boyd
 *
-*  This program is free software: you can redistribute it and/or modify
-*  it under the terms of the GNU General Public License as published by
-*  the Free Software Foundation, either version 3 of the License, or
-*  (at your option) any later version.
-*
-*  This program is distributed in the hope that it will be useful,
-*  but WITHOUT ANY WARRANTY; without even the implied warranty of
-*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*  GNU General Public License for more details.
-*
-*  You should have received a copy of the GNU General Public License
-*  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+* 
+*    http://www.apache.org/licenses/LICENSE-2.0
+* 
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
 */
 
 #include <cones.h>
@@ -22,47 +21,6 @@
 #include <string.h>
 #include <stdbool.h>
 #include <cblas.h>
-
-
-// double norm(double *x, int size){
-    
-//     double norm_x = 0.;
-//     for (int i = 0; i < size; i++){
-//         norm_x += x[i] * x[i];
-//     }
-//     return sqrt(norm_x);
-// }
-
-
-
-// void vecsum(double *x, double *y, int size){
-//     for (int i = 0; i < size; i++){
-//         x[i] += y[i];
-//     }
-// }
-
-// void vecdiff(double *x, double *y, int size){
-//     for (int i = 0; i < size; i++){
-//         x[i] -= y[i];
-//     }
-// }
-
-// void vecalgsum(double *x, double *y, 
-//                  double alpha, double beta,
-//                  int size){
-//     for (int i = 0; i < size; i++){
-//         x[i] = alpha * x[i] + beta * y[i];
-//     }
-// }
-
-// double dot(double *x, double *y, int size){
-//     double result = 0.;
-//     for (int i = 0; i < size; i++){
-//         result += x[i] * y[i];
-//     }
-//     return result;
-// }
-
 
 
 void zero_cone_projection(double *z, const vecsize size){
@@ -75,7 +33,9 @@ void zero_cone_projection_derivative(const double *z, double *dz,
 }
 
 void non_negative_cone_projection(double *z, const vecsize size){
-    for (int i = 0; i < size; i++){
+    int i;
+
+    for (i = 0; i < size; i++){
         if (z[i] < 0) {
             z[i] = 0;
         };
@@ -83,7 +43,9 @@ void non_negative_cone_projection(double *z, const vecsize size){
 }
 
 void non_negative_cone_projection_derivative(const double *z, double *dz, const vecsize size){
-    for (int i = 0; i < size; i++){
+    int i;
+
+    for (i = 0; i < size; i++){
         if (z[i] < 0) {
             dz[i] = 0;
         };
@@ -92,8 +54,10 @@ void non_negative_cone_projection_derivative(const double *z, double *dz, const 
 
 void second_order_cone_projection(double *z, const vecsize size){
 
-    double norm_x = cblas_dnrm2(size - 1, z + 1, 1);
+    double norm_x, rho, mult;
+    int i;
 
+    norm_x = cblas_dnrm2(size - 1, z + 1, 1);
 
     if (norm_x <= z[0]){
         return;
@@ -104,13 +68,13 @@ void second_order_cone_projection(double *z, const vecsize size){
         return;
     }
 
-    double rho = z[0];
+    rho = z[0];
 
     z[0] = (norm_x + rho) / 2.;
 
-    double mult = z[0]/norm_x;
+    mult = z[0]/norm_x;
 
-    for (int i = 1; i < size; i++){
+    for (i = 1; i < size; i++){
         z[i] *= mult;
     } 
 }
@@ -121,18 +85,10 @@ void second_order_cone_projection_derivative(const double *z,
                                              const double *pi_z,
                                              const vecsize size){
 
-    // point at which we derive
-    // double t = z[0];
-    // x = z[1:]
 
-    // projection of point
-    // s = pi_z[0]
-    // y = pi_z[1:]
+    double norm_x, dot_val, old_dzzero, first_coefficient, second_coefficient;
 
-    // logic for simple cases
-    //norm = np.linalg.norm(z[1:])
-
-    double norm_x = cblas_dnrm2(size - 1, z + 1, 1);
+    norm_x = cblas_dnrm2(size - 1, z + 1, 1);
 
     if (norm_x <= z[0]){return;}
     
@@ -141,15 +97,14 @@ void second_order_cone_projection_derivative(const double *z,
         return;
     }
 
-    // big case
-    double dot_val = cblas_ddot(size - 1, dz + 1, 1, z + 1, 1);
+    dot_val = cblas_ddot(size - 1, dz + 1, 1, z + 1, 1);
 
-    double old_dzzero = dz[0];
+    old_dzzero = dz[0];
     
     dz[0] = (dz[0] * norm_x + dot_val) / (2 * norm_x);
 
-    double first_coefficient = (z[0] + norm_x) / (2. * norm_x);
-    double second_coefficient = (old_dzzero - z[0] * dot_val / (norm_x*norm_x)) / (2. * norm_x);
+    first_coefficient = (z[0] + norm_x) / (2. * norm_x);
+    second_coefficient = (old_dzzero - z[0] * dot_val / (norm_x*norm_x)) / (2. * norm_x);
 
     cblas_dscal(size - 1, first_coefficient, dz + 1, 1);
     cblas_daxpy(size - 1, second_coefficient, z + 1, 1, dz + 1, 1);
@@ -164,7 +119,7 @@ void second_order_cone_projection_derivative(const double *z,
 #define CONE_THRESH_TWO (1e-16)
 #define EXP_CONE_MAX_ITERS (200)
 
-const double EulerConstant = 2.718281828459045; //exp(1.0);
+const double EulerConstant = 2.718281828459045; 
 
 double exp_newton_one_d(double rho, double y_hat, double z_hat) {
   double t = (-z_hat > CONE_THRESH) ? -z_hat : CONE_THRESH;
@@ -201,6 +156,7 @@ double exp_calc_grad(double *v, double *x, double rho) {
   return x[0] + x[1] * log(x[1] / x[2]);
 }
 
+
 void exp_get_rho_ub(double *v, double *x, double *ub, double *lb) {
   *lb = 0;
   *ub = 0.125;
@@ -210,20 +166,12 @@ void exp_get_rho_ub(double *v, double *x, double *ub, double *lb) {
   }
 }
 
-// int isin_kexp(double r, double s, double t){
-//     return ((s * exp(r / s) - t <= CONE_THRESH && s > 0) ||
-//       (r <= CONE_THRESH && fabs(s) <= CONE_THRESH && t >= 0));
-// }
 
 int isin_kexp(double * z){
     return (((z[1] * exp(z[0] / z[1]) - z[2] <= CONE_THRESH) && (z[1] > 0)) ||
       ((z[0] <= 0) && (fabs(z[1]) <= CONE_THRESH) && (z[2] >= 0)));
 }
 
-// int isin_minus_kexp_star(double r, double s, double t){
-//     return ((-r < 0 && r * exp(s / r) + EulerConstant * t <= CONE_THRESH) ||
-//       (fabs(r) <= CONE_THRESH && -s >= 0 && -t >= 0));
-// }
 
 int isin_minus_kexp_star(double * z){
     double r = z[0],s = z[1],t = z[2];
@@ -231,27 +179,24 @@ int isin_minus_kexp_star(double * z){
       ((fabs(r) <= CONE_THRESH) && (-s >= 0) && (-t >= 0)));
 }
 
+
 int isin_special_case(double * z){
     return ((z[0] <= CONE_THRESH) && (z[1] <= 0));
 }
+
 
 void exp_cone_projection(double *z) {
   
   int i;
   double ub, lb, g, x[3];
   
-  //double r = z[0], s = z[1], t = z[2];
   
   double tol = CONE_TOL;
 
-  /* v in cl(Kexp) */
-  //if (isin_kexp(r,s,t)) {
   if (isin_kexp(z)) {
     return;
   }
 
-  /* -v in Kexp^* */
-  //if (isin_minus_kexp_star(r, s, t)){
   if (isin_minus_kexp_star(z)){
     memset(z, 0, 3 * sizeof(double));
     return;
@@ -291,52 +236,26 @@ int exp_cone_projection_derivative(double *z,
                                     double *dz, 
                                     double *pi_z){
 
-    // double r = z[0];
-    // double s = z[1];
-    // double t = z[2];
+    double jacobian[16], old_dz[3];
+    int success;
 
-    // double dr = dz[0];
-    // double ds = dz[1];
-    // double dt = dz[2];
-
-    // double x = pi_z[0];
-    // double y = pi_z[1];
-    // double z = pi_z[2];
-
-    //if (isin_kexp(z[0],z[1],z[2])){
     if (isin_kexp(z)) {
         return 1;
     };
 
-    // if ((s > 0) && (s * exp(r / s) < t)){
-    //     return;
-    // };
-        
-    // if (((-r < 0) && (r * exp(s / r) == -EulerConstant * t)) || 
-    //         ((r == 0) && (-s >= 0) && (-t >= 0))){
-    //     dz[0] = 0.0;
-    //     dz[1] = 0.0;
-    //     dz[2] = 0.0;
-    //     return;
-    // };
+    if (isin_minus_kexp_star(z)){
+    memset(dz, 0, 3 * sizeof(double));
+    return 1;
+    }
 
-      /* -v in Kexp^* */
-      //if (isin_minus_kexp_star(z[0],z[1],z[2])){
-      if (isin_minus_kexp_star(z)){
-        memset(dz, 0, 3 * sizeof(double));
-        return 1;
-      }
+    /* special case with analytical solution */
+    if (isin_special_case(z)) {
+    dz[1] = 0.0;
+    if (z[2] < 0.0) {dz[2] = 0.0;}
+    return 1;
+    }
 
-      /* special case with analytical solution */
-      if (isin_special_case(z)) {
-        dz[1] = 0.0;
-        if (z[2] < 0.0) {dz[2] = 0.0;}
-        return 1;
-      }
-
-    double jacobian[16]; 
-
-    int success = compute_jacobian_exp_cone(jacobian,
+    success = compute_jacobian_exp_cone(jacobian,
                                           pi_z[2] - z[2],
                                           pi_z[0], pi_z[1], pi_z[2]);
 
@@ -346,46 +265,17 @@ int exp_cone_projection_derivative(double *z,
         dz[2] = 0.0;
     };
 
-    double old_dz[3];
-
     old_dz[0] = dz[0];
     old_dz[1] = dz[1];
     old_dz[2] = dz[2];
 
 
-    // TODO maybe use BLAS
+    /* TODO maybe use BLAS*/
     dz[0] = jacobian[0] * old_dz[0] + jacobian[1] * old_dz[1] + jacobian[2] * old_dz[2];
     dz[1] = jacobian[4] * old_dz[0] + jacobian[5] * old_dz[1] + jacobian[6] * old_dz[2];
     dz[2] = jacobian[8] * old_dz[0] + jacobian[9] * old_dz[1] + jacobian[10] * old_dz[2];
 
     return success;
-
-
-
-    // if (-r < 0 and r * np.exp(s / r) < -np.exp(1) * t):  # or \
-    //        # (r == 0 and -s > 0 and -t > 0):
-    //     # print('second case')
-    //     return np.zeros(3)
-
-    // if r < 0 and s < 0 and t == 0:
-    //     # raise NonDifferentiable
-    //     return np.zeros(3)
-
-    // # third case
-    // if r < 0 and s < 0:
-    //     # print('third case')
-    //     result = np.zeros(3)
-    //     result[0] = dz[0]
-    //     result[2] = dz[2] if t > 0 else 0.
-    //     # print('result', result)
-    //     return result
-
-    // # fourth case
-    // #fourth = fourth_case_D(r, s, t, x, y, z, dr, ds, dt)
-    // fourth = fourth_case_D_new(r, s, t, x, y, z, dr, ds, dt)
-    // # assert not True in np.isnan(fourth)
-    // return fourth
-
 
 }
 
@@ -394,15 +284,16 @@ int compute_jacobian_exp_cone(double *result, double mu_star,
                               double z_star){
     /* From BMB'18 appendix C. */
 
+    double matrix[16], alpha, beta, gamma;
+
+    alpha = x_star / y_star;
+    beta = exp(alpha);
+    gamma = mu_star * beta / y_star;
+
     if (y_star == 0){
         /*Can't compute derivative.*/
         return 0;
     }
-
-    double matrix[16];
-    double alpha = x_star / y_star;
-    double beta = exp(alpha);
-    double gamma = mu_star * beta / y_star;
 
     matrix[0] = 1 + gamma;
     matrix[1] = - gamma * alpha;
@@ -558,38 +449,124 @@ int inverse_four_by_four(const double m[16], double invOut[16])
     return 1;
 }
 
-void semidefinite_cone_projection(double *z, double *pi_z, int semidefinite, 
-                                  double *eigenvectors, double *eigenvalues){
+
+
+/*****************
+Semi-definite cone
+*****************/
+
+
+vecsize sizevec2sizemat(vecsize n){
+    vecsize m;
+
+    m = floor(sqrt(2 * n));
+    if (n != (m * (m + 1) / 2.0)){
+        return -1;
+    }
+    return m;
+}
+
+
+vecsize sizemat2sizevec(vecsize m){
+    return ((m * (m + 1) / 2));
+}
+
+
+int mat2vec(double * Z, vecsize n, double * z, vecsize m){
+    /*Upper tri row stacked, off diagonal multiplied by sqrt(2).*/
+
+    vecsize cur = 0;
+    int i; 
+    const double sqrt_two = 1.4142135623730951;
+    
+    /*Scale down the diagonal.*/
+    cblas_dscal(n, 1./sqrt_two, Z, n+1);
+
+    for (i = 0; i<n; i++){  
+        memcpy(z + cur, Z + (i * n) + i, sizeof(double) * (n - i));
+        cur += (n - i);
+    };
+
+    /*Scale by sqrt(2).*/
+    cblas_dscal(sizemat2sizevec(n), sqrt_two, z, 1);
 
 }
 
 
-// void embedded_cone_projection(double *z, double *pi_z, int zero, int non_negative, 
-//                               int *second_order_dimensions, int second_order_count,
-//                               int *semidefinite_dimensions, int semidefinite_count,
-//                               double *eigenvectors, double *eigenvalues,
-//                               int exponential_primal, int exponential_dual){
+int vec2mat(double * z, vecsize m, double * Z, vecsize n){
 
-//     int cur = 0;
+    vecsize cur = 0;
+    int i, j;
+    const double sqrt_two = sqrt(2);
 
-//     zero_cone_projection(pi_z, zero);
-//     cur += zero;
+    for (i = 0; i<n; i++){  
+        Z[n * i + i] = z[cur];
+        cur ++;
+        for (j = i+1; j < n; j++){ 
+            Z[n * i + j] = z[cur] / sqrt_two;
+            Z[n * j + i] = Z[n * i + j];
+            cur ++;
+        };
+    };
 
-//     non_negative_cone_projection(z + cur, pi_z + cur, non_negative);
-//     cur += non_negative;
+    if (cur != m){
+        return -1;
+    };
 
-//     for (i = 0; i < second_order_count; i++){
-//         second_order_cone_projection(z + cur, pi_z + cur, second_order_dimensions[i]);
-//         cur += second_order_dimensions[i];
-//     };
+    return 0;
 
-//     for (i = 0; i < semidefinite_count; i++){
-//         semidefinite_cone_projection(z + cur, pi_z + cur, semidefinite_dimensions[i], 
-//                                     );
-//         cur += semidefinite_dimensions[i];
-//     };
-
-//     non_negative_cone_projection(z + cur, pi_z + cur, 1);
-// };
+}
 
 
+void semidefinite_cone_projection(double *z, 
+                                  const vecsize semidefinite, 
+                                  double *eigenvectors, 
+                                  double *eigenvalues){
+
+    const vecsize matsize = sizevec2sizemat(semidefinite);
+
+
+
+    // dsyev_("Vectors", "All", "Lower", semidefinite,
+    //     __CLPK_doublereal *__a, __CLPK_integer *__lda, __CLPK_doublereal *__vl,
+    //     __CLPK_doublereal *__vu, __CLPK_integer *__il, __CLPK_integer *__iu,
+    //     __CLPK_doublereal *__abstol, __CLPK_integer *__m,
+    //     __CLPK_doublereal *__w, __CLPK_doublereal *__z__, __CLPK_integer *__ldz,
+    //     __CLPK_integer *__isuppz, __CLPK_doublereal *__work,
+    //     __CLPK_integer *__lwork, __CLPK_integer *__iwork,
+    //     __CLPK_integer *__liwork,
+    //     __CLPK_integer *__info)
+
+}
+
+
+/*
+void embedded_cone_projection(double *z, double *pi_z, int zero, int non_negative, 
+                              int *second_order_dimensions, int second_order_count,
+                              int *semidefinite_dimensions, int semidefinite_count,
+                              double *eigenvectors, double *eigenvalues,
+                              int exponential_primal, int exponential_dual){
+
+    int cur = 0;
+
+    zero_cone_projection(pi_z, zero);
+    cur += zero;
+
+    non_negative_cone_projection(z + cur, pi_z + cur, non_negative);
+    cur += non_negative;
+
+    for (i = 0; i < second_order_count; i++){
+        second_order_cone_projection(z + cur, pi_z + cur, second_order_dimensions[i]);
+        cur += second_order_dimensions[i];
+    };
+
+    for (i = 0; i < semidefinite_count; i++){
+        semidefinite_cone_projection(z + cur, pi_z + cur, semidefinite_dimensions[i], 
+                                    );
+        cur += semidefinite_dimensions[i];
+    };
+
+    non_negative_cone_projection(z + cur, pi_z + cur, 1);
+};
+
+*/

@@ -34,41 +34,41 @@ import numpy as np
 #     return scale * np.sqrt(scaled_a**2 + scaled_b**2)
 
 # @nb.jit(nopython=True)
-def _sym_ortho(a, b):
+# def _sym_ortho(a, b):
 
-    # c, s, rho = _sym_ortho(rhobar, beta)
-    """
-    Stable implementation of Givens rotation.
+#     # c, s, rho = _sym_ortho(rhobar, beta)
+#     """
+#     Stable implementation of Givens rotation.
 
-    Notes
-    -----
-    The routine 'SymOrtho' was added for numerical stability. This is
-    recommended by S.-C. Choi in [1]_.  It removes the unpleasant potential of
-    ``1/eps`` in some important places (see, for example text following
-    "Compute the next plane rotation Qk" in minres.py).
+#     Notes
+#     -----
+#     The routine 'SymOrtho' was added for numerical stability. This is
+#     recommended by S.-C. Choi in [1]_.  It removes the unpleasant potential of
+#     ``1/eps`` in some important places (see, for example text following
+#     "Compute the next plane rotation Qk" in minres.py).
 
-    References
-    ----------
-    .. [1] S.-C. Choi, "Iterative Methods for Singular Linear Equations
-           and Least-Squares Problems", Dissertation,
-           http://www.stanford.edu/group/SOL/dissertations/sou-cheng-choi-thesis.pdf
+#     References
+#     ----------
+#     .. [1] S.-C. Choi, "Iterative Methods for Singular Linear Equations
+#            and Least-Squares Problems", Dissertation,
+#            http://www.stanford.edu/group/SOL/dissertations/sou-cheng-choi-thesis.pdf
 
-    """
-    if b == 0:
-        return np.sign(a), 0, np.abs(a)
-    elif a == 0:
-        return 0, np.sign(b), np.abs(b)
-    elif np.abs(b) > np.abs(a):
-        tau = a / b
-        s = np.sign(b) / np.sqrt(1 + tau * tau)
-        c = s * tau
-        r = b / s
-    else:
-        tau = b / a
-        c = np.sign(a) / np.sqrt(1 + tau * tau)
-        s = c * tau
-        r = a / c
-    return c, s, r
+#     """
+#     if b == 0:
+#         return np.sign(a), 0, np.abs(a)
+#     elif a == 0:
+#         return 0, np.sign(b), np.abs(b)
+#     elif np.abs(b) > np.abs(a):
+#         tau = a / b
+#         s = np.sign(b) / np.sqrt(1 + tau * tau)
+#         c = s * tau
+#         r = b / s
+#     else:
+#         tau = b / a
+#         c = np.sign(a) / np.sqrt(1 + tau * tau)
+#         s = c * tau
+#         r = a / c
+#     return c, s, r
 
 
 def truncated_lsqr(m, n, matvec, rmatvec, b, max_iter=30):

@@ -66,6 +66,8 @@ from .cones import cache_types
 
 @nb.jit(nopython=True)
 def _sym_ortho(a, b):
+
+    # c, s, rho = _sym_ortho(rhobar, beta)
     """
     Stable implementation of Givens rotation.
 

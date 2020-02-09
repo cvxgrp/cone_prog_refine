@@ -337,32 +337,6 @@ class ProblemTest(unittest.TestCase):
         # self.check_refine_ecos({'l': 20, 'q': [10, 20, 40, 60]})
 
 
-class SparseLinalgTest(unittest.TestCase):
-
-    def test_CSC(self):
-
-        m, n = 40, 30
-        A_csc = sp.random(m, n, density=.2, format='csc')
-
-        b = np.random.randn(n)
-        self.assertTrue(np.allclose(csc_matvec(A_csc.shape[0],
-                                               A_csc.indptr,
-                                               A_csc.indices,
-                                               A_csc.data, b),
-                                    A_csc @ b))
-
-    def test_CSR(self):
-
-        m, n = 40, 30
-        A_csc = sp.random(m, n, density=.2, format='csr')
-
-        b = np.random.randn(n)
-        self.assertTrue(np.allclose(csr_matvec(A_csc.indptr,
-                                               A_csc.indices,
-                                               A_csc.data, b),
-                                    A_csc @ b))
-
-
 class CVXPYTest(unittest.TestCase):
 
     def test_CVXPY(self):

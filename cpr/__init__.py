@@ -18,6 +18,7 @@ from .cones import *
 from .problem import *
 from .utils import *
 from .lsqr import lsqr
+from .truncated_lsqr import truncated_lsqr
 from .solvers import *
 from .refine import *
 from .cvxpy_interface import *

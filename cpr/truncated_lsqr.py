@@ -24,14 +24,14 @@ limitations under the License.
 import numpy as np
 
 
-# def d2norm(a, b):
-#     """np.sqrt(a**2 + b**2) that limits overflow"""
-#     scale = np.abs(a) + np.abs(b)
-#     if scale == 0.:
-#         return 0.
-#     scaled_a = a / scale
-#     scaled_b = b / scale
-#     return scale * np.sqrt(scaled_a**2 + scaled_b**2)
+def d2norm(a, b):
+    """np.sqrt(a**2 + b**2) that limits overflow"""
+    scale = np.abs(a) + np.abs(b)
+    if scale == 0.:
+        return 0.
+    scaled_a = a / scale
+    scaled_b = b / scale
+    return scale * np.sqrt(scaled_a**2 + scaled_b**2)
 
 # @nb.jit(nopython=True)
 # def _sym_ortho(a, b):
@@ -69,6 +69,28 @@ import numpy as np
 #         s = c * tau
 #         r = a / c
 #     return c, s, r
+
+
+#     The matrix A is intended to be large and sparse.  It is accessed
+#     by means of subroutine calls of the form
+#
+#                call aprod ( mode, m, n, x, y, leniw, lenrw, iw, rw )
+#
+#     which must perform the following functions:
+#
+#                If mode = 1, compute  y = y + A*x.
+#                If mode = 2, compute  x = x + A(transpose)*y.
+#
+#     The vectors x and y are input parameters in both cases.
+#     If  mode = 1,  y should be altered without changing x.
+#     If  mode = 2,  x should be altered without changing y.
+#     The parameters leniw, lenrw, iw, rw may be used for workspace
+#     as described below.
+
+
+def aprod(mode, m, n, x, y, leniw, lenrw, iw, rw):
+
+    pass
 
 
 def truncated_lsqr(m, n, matvec, rmatvec, b, max_iter=30):
@@ -110,11 +132,11 @@ def truncated_lsqr(m, n, matvec, rmatvec, b, max_iter=30):
 
         # costruct and apply next orthogonal transformation
 
-        # rho = d2norm(rho_bar, beta)
+        rho = d2norm(rho_bar, beta)
 
         #c, s, rho = _sym_ortho(rho_bar, beta)
 
-        rho = np.sqrt(rho_bar**2 + beta**2)
+        # rho = np.sqrt(rho_bar**2 + beta**2)
         c = rho_bar / rho
         s = beta / rho
 

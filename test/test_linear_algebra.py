@@ -31,7 +31,7 @@ class LSQRTest(unittest.TestCase):
 
     def test_dense(self):
 
-        for m, n in [(30, 20), (50, 10), (10, 50), (30, 30)]:
+        for m, n in [(30, 20), (50, 10), (10, 50), (30, 30), (100, 100)]:
             print(m, n)
 
             A = np.random.randn(m, n)

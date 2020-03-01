@@ -41,7 +41,7 @@
    - cblas_dscal
 */
 
-#include "cblas.h"
+#include "mini_cblas.h"
 
 /*!
   \param[in]     N

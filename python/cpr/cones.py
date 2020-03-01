@@ -1618,11 +1618,11 @@ def embedded_cone_Pi(z, zero, l, q, q_cache, s, s_cache_eivec, s_cache_eival,
     # return v + z, cache
 
     result = np.empty_like(z)
-    result[:n] = z[:n]  # x
-    result[n:-1] = z[n:-1] + prod_cone_Pi(-z[n:-1], zero, l, q, q_cache, s,
-                                          s_cache_eivec,
-                                          s_cache_eival, ep, ep_cache,
-                                          ed, ed_cache)
+    result[:n] = z[:n + zero]  # x
+    result[n + zero:-1] = z[n + zero:-1] + prod_cone_Pi(-z[n + zero:-1], 0, l, q, q_cache, s,
+                                                        s_cache_eivec,
+                                                        s_cache_eival, ep, ep_cache,
+                                                        ed, ed_cache)
     result[-1:] = non_neg_Pi(z[-1:])  # tau
     return result
 

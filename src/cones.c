@@ -16,31 +16,92 @@
 * limitations under the License.
 */
 
-#include <cones.h>
-#include <math.h>
-#include <string.h>
-#include <stdbool.h>
-#include <cblas.h>
+#include "cones.h"
+#include "math.h"
+#include "string.h"
+#include "stdbool.h"
+#include "mini_cblas.h"
 
+int embedded_cone_projection(
+    const double * z, 
+    double * pi_z,
+    const vecsize size_solution,
+    const vecsize size_zero, 
+    const vecsize size_non_neg
+    /*const vecsize num_second_order,
+    const vecsize * sizes_second_order
+    const vecsize num_exp_pri,
+    const vecsize num_exp_dua*/
+    ){
 
-void zero_cone_projection(double *z, const vecsize size){
-    memset(z, 0, sizeof(double) * size);
+    int i, counter;
+
+    /*Zero cone projection.*/
+    counter = size_solution + size_zero;
+    memcpy(pi_z, z, sizeof(double) * (counter));
+
+    /*Non-negative cone projection.*/
+    for (i = counter; 
+        i < counter + size_non_neg; 
+        i++){
+        if (z[i] <= 0) {pi_z[i] = 0;}
+        else {pi_z[i] = z[i];};
+    }
+    counter += size_non_neg;
+
+    /*Second order cones projection.
+    for (i = 0; i < num_second_order; i++){  
+        second_order_cone_projection(
+            z[counter], 
+            pi_z[counter],
+            sizes_second_order[i]);
+        counter += sizes_second_order[i]};*/
+
+    /*Last element of the embedded cone.*/
+    pi_z[counter] = z[counter] <= 0 ? 0 : z[counter];
+
+    return 0;
+
 }
+
+
+// NEEDS FIXING
+// void second_order_cone_projection(const double *z, double * pi_z,
+//     const vecsize size){
+
+//     double norm_x, rho, mult;
+//     int i;
+
+//     norm_x = cblas_dnrm2(size - 1, z + 1, 1);
+
+//     if (norm_x <= z[0]){
+//         return;
+//     }
+
+//     if (norm_x <= -z[0]){
+//         memset(z, 0, sizeof(double) * size);
+//         return;
+//     }
+
+//     rho = z[0];
+
+//     z[0] = (norm_x + rho) / 2.;
+
+//     mult = z[0]/norm_x;
+
+//     for (i = 1; i < size; i++){
+//         z[i] *= mult;
+//     } 
+// }
+
+
+
 
 void zero_cone_projection_derivative(const double *z, double *dz, 
                                      const vecsize size){
     memset(dz, 0, sizeof(double) * size);
 }
 
-void non_negative_cone_projection(double *z, const vecsize size){
-    int i;
-
-    for (i = 0; i < size; i++){
-        if (z[i] < 0) {
-            z[i] = 0;
-        };
-    }
-}
 
 void non_negative_cone_projection_derivative(const double *z, double *dz, const vecsize size){
     int i;
@@ -52,32 +113,7 @@ void non_negative_cone_projection_derivative(const double *z, double *dz, const 
     }
 }
 
-void second_order_cone_projection(double *z, const vecsize size){
 
-    double norm_x, rho, mult;
-    int i;
-
-    norm_x = cblas_dnrm2(size - 1, z + 1, 1);
-
-    if (norm_x <= z[0]){
-        return;
-    }
-
-    if (norm_x <= -z[0]){
-        memset(z, 0, sizeof(double) * size);
-        return;
-    }
-
-    rho = z[0];
-
-    z[0] = (norm_x + rho) / 2.;
-
-    mult = z[0]/norm_x;
-
-    for (i = 1; i < size; i++){
-        z[i] *= mult;
-    } 
-}
 
 
 void second_order_cone_projection_derivative(const double *z, 

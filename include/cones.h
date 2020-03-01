@@ -17,22 +17,15 @@
 *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-//void embedded_cone_projection(double *z, double *pi_z, int zero, int nonneg, int* second_order);
+/*
+void embedded_cone_projection(double *z, double *pi_z, int zero, int nonneg, int* second_order);
+*/
 
 #include <stdint.h>
 
 
-// temporarily for interoperability with Python
+/*temporarily for interoperability with Python */
 typedef int64_t vecsize;
-
-//double norm(double *x, int size);
-// void vecsum(double *x, double *y, int size);
-// void vecdiff(double *x, double *y, int size);
-// void vecalgsum(double *x, double *y, 
-//                  double alpha, double beta,
-//                  int size);
-
-//double dot(double *x, double *y, int size);
 
 
 
@@ -45,7 +38,7 @@ void non_negative_cone_projection(double *z, const vecsize size);
 void non_negative_cone_projection_derivative(const double *z, double *x, 
                                              const vecsize size);
 
-// 
+
 
 void second_order_cone_projection_derivative(const double *z, 
                                              double *dz, 

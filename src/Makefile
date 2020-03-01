@@ -15,8 +15,8 @@ cones.o : cones.c
 mini_cblas.o : mini_cblas.c 
 	$(CC) -c mini_cblas.c $(CFLAGS) $(LIBS)
 
-test: ../test/minunit_example.c cones.o mini_cblas.o
-	$(CC) -o ../test/runtests ../test/minunit_example.c cones.o mini_cblas.o $(CFLAGS) $(LIBS) $(LFLAGS); \
+test: ../test/test.c cones.o mini_cblas.o
+	$(CC) -o ../test/runtests ../test/test.c cones.o mini_cblas.o $(CFLAGS) $(LIBS) $(LFLAGS); \
 	chmod a+x ../test/runtests; ../test/runtests
 
 clean :

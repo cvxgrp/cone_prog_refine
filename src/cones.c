@@ -36,20 +36,17 @@ int embedded_cone_projection(
 
     int i, counter;
 
-    /*Zero cone projection.*/
+    /*Zero cone.*/
     counter = size_solution + size_zero;
     memcpy(pi_z, z, sizeof(double) * (counter));
 
-    /*Non-negative cone projection.*/
-    for (i = counter; 
-        i < counter + size_non_neg; 
-        i++){
-        if (z[i] <= 0) {pi_z[i] = 0;}
-        else {pi_z[i] = z[i];};
+    /*Non-negative cone.*/
+    for (i = counter; i < counter + size_non_neg; i++){
+        pi_z[i] = z[i] <= 0 ? 0 : z[i];
     }
     counter += size_non_neg;
 
-    /*Second order cones projection.
+    /*Second order cones.
     for (i = 0; i < num_second_order; i++){  
         second_order_cone_projection(
             z[counter], 
@@ -64,35 +61,69 @@ int embedded_cone_projection(
 
 }
 
+/*TODO return -1 if non-differentiable.*/
+int embedded_cone_projection_derivative(
+    const double * z, 
+    const double * pi_z,
+    const double * dz,
+    double * dpi_z,
+    const vecsize size_solution,
+    const vecsize size_zero, 
+    const vecsize size_non_neg
+    /*const vecsize num_second_order,
+    const vecsize * sizes_second_order
+    const vecsize num_exp_pri,
+    const vecsize num_exp_dua*/
+    ){
 
-// NEEDS FIXING
-// void second_order_cone_projection(const double *z, double * pi_z,
-//     const vecsize size){
+    int i, counter;
 
-//     double norm_x, rho, mult;
-//     int i;
+    /*Zero cone.*/
+    counter = size_solution + size_zero;
+    memcpy(dpi_z, dz, sizeof(double) * (counter));
 
-//     norm_x = cblas_dnrm2(size - 1, z + 1, 1);
+    /*Non-negative cone.*/
+    for (i = counter; i < counter + size_non_neg; i++){
+        dpi_z[i] = z[i] <= 0. ? 0. : dz[i];
+    }
+    counter += size_non_neg;
 
-//     if (norm_x <= z[0]){
-//         return;
-//     }
+    /*Second order cones.*/
+    dpi_z[counter] = z[counter] <= 0. ? 0. : dz[counter];
 
-//     if (norm_x <= -z[0]){
-//         memset(z, 0, sizeof(double) * size);
-//         return;
-//     }
+    return 0;
 
-//     rho = z[0];
+}
 
-//     z[0] = (norm_x + rho) / 2.;
 
-//     mult = z[0]/norm_x;
+/*NEEDS FIXING
+void second_order_cone_projection(const double *z, double * pi_z,
+    const vecsize size){
 
-//     for (i = 1; i < size; i++){
-//         z[i] *= mult;
-//     } 
-// }
+    double norm_x, rho, mult;
+    int i;
+
+    norm_x = cblas_dnrm2(size - 1, z + 1, 1);
+
+    if (norm_x <= z[0]){
+        return;
+    }
+
+    if (norm_x <= -z[0]){
+        memset(z, 0, sizeof(double) * size);
+        return;
+    }
+
+    rho = z[0];
+
+    z[0] = (norm_x + rho) / 2.;
+
+    mult = z[0]/norm_x;
+
+    for (i = 1; i < size; i++){
+        z[i] *= mult;
+    } 
+}*/
 
 
 
@@ -526,6 +557,7 @@ int mat2vec(double * Z, vecsize n, double * z, vecsize m){
     /*Scale by sqrt(2).*/
     cblas_dscal(sizemat2sizevec(n), sqrt_two, z, 1);
 
+    return 0;
 }
 
 
@@ -558,20 +590,21 @@ void semidefinite_cone_projection(double *z,
                                   const vecsize semidefinite, 
                                   double *eigenvectors, 
                                   double *eigenvalues){
-
+/*
     const vecsize matsize = sizevec2sizemat(semidefinite);
 
 
 
-    // dsyev_("Vectors", "All", "Lower", semidefinite,
-    //     __CLPK_doublereal *__a, __CLPK_integer *__lda, __CLPK_doublereal *__vl,
-    //     __CLPK_doublereal *__vu, __CLPK_integer *__il, __CLPK_integer *__iu,
-    //     __CLPK_doublereal *__abstol, __CLPK_integer *__m,
-    //     __CLPK_doublereal *__w, __CLPK_doublereal *__z__, __CLPK_integer *__ldz,
-    //     __CLPK_integer *__isuppz, __CLPK_doublereal *__work,
-    //     __CLPK_integer *__lwork, __CLPK_integer *__iwork,
-    //     __CLPK_integer *__liwork,
-    //     __CLPK_integer *__info)
+    dsyev_("Vectors", "All", "Lower", semidefinite,
+        __CLPK_doublereal *__a, __CLPK_integer *__lda, __CLPK_doublereal *__vl,
+        __CLPK_doublereal *__vu, __CLPK_integer *__il, __CLPK_integer *__iu,
+        __CLPK_doublereal *__abstol, __CLPK_integer *__m,
+        __CLPK_doublereal *__w, __CLPK_doublereal *__z__, __CLPK_integer *__ldz,
+        __CLPK_integer *__isuppz, __CLPK_doublereal *__work,
+        __CLPK_integer *__lwork, __CLPK_integer *__iwork,
+        __CLPK_integer *__liwork,
+        __CLPK_integer *__info)
+        */
 
 }
 

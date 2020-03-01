@@ -3,7 +3,7 @@ OSX_CBLAS_AND_LAPACK = "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/Syst
 CFLAGS = -I"../include" -ansi -pedantic -Wall -O3 -I$(OSX_CBLAS_AND_LAPACK)
 LFLAGS = -lm -lcblas -llapack
 
-cone_prog_refine : main.o cones.o mini_cblas.o
+cone_prog_refine : main.o cones.o mini_cblas.o linalg.o
 	cc -o cone_prog_refine main.o cones.o mini_cblas.o $(LFLAGS)
 
 main.o : main.c 
@@ -12,11 +12,14 @@ main.o : main.c
 cones.o : cones.c 
 	$(CC) -c cones.c $(CFLAGS) $(LIBS)
 
+linalg.o : linalg.c 
+	$(CC) -c linalg.c $(CFLAGS) $(LIBS)
+
 mini_cblas.o : mini_cblas.c 
 	$(CC) -c mini_cblas.c $(CFLAGS) $(LIBS)
 
-test: ../test/test.c cones.o mini_cblas.o
-	$(CC) -o ../test/runtests ../test/test.c cones.o mini_cblas.o $(CFLAGS) $(LIBS) $(LFLAGS); \
+test: ../test/test.c ../test/test.h cones.o mini_cblas.o linalg.o
+	$(CC) -o ../test/runtests ../test/test.c cones.o mini_cblas.o linalg.o $(CFLAGS) $(LIBS) $(LFLAGS); \
 	chmod a+x ../test/runtests; ../test/runtests
 
 clean :

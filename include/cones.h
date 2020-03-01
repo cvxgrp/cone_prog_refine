@@ -97,3 +97,17 @@ int embedded_cone_projection(
     const vecsize num_exp_dua*/
     );
 
+int embedded_cone_projection_derivative(
+    const double * z, 
+    const double * pi_z,
+    const double * dz,
+    double * dpi_z,
+    const vecsize size_solution,
+    const vecsize size_zero, 
+    const vecsize size_non_neg
+    /*const vecsize num_second_order,
+    const vecsize * sizes_second_order
+    const vecsize num_exp_pri,
+    const vecsize num_exp_dua*/
+    );
+

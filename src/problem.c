@@ -19,6 +19,8 @@
 #include "problem.h"
 #include "linalg.h"
 #include "mini_cblas.h"
+#include "cones.h"
+#include <math.h>
 
 /* 
 result = result + Q * vector
@@ -39,10 +41,11 @@ void Q_matvec(
     const double * b,
     const double * c,
     double * result,
-    const double * vector
+    const double * vector,
+    const bool sign_plus
     ){
 
-    /*result[0:n] = result[0:n] + A^T * vector[n:n+m]*/
+    /*result[0:n] = result[0:n] (+-) A^T * vector[n:n+m]*/
     csr_matvec(
     n, /*number of rows of A^T*/
     A_col_pointers, 
@@ -50,11 +53,12 @@ void Q_matvec(
     A_data,
     result,
     vector + n,
-    1
+    sign_plus
     );
 
     /*result[0:n] = result[0:n] + c * vector[n+m]*/
-    cblas_daxpy(n, vector[m+n], c, 1, result, 1);
+    cblas_daxpy(n, sign_plus ? vector[m+n]:-vector[m+n], 
+        c, 1, result, 1);
 
     /*result[n:n+m] = result[n:n+m] - A * vector[0:n]*/
     csc_matvec(
@@ -64,16 +68,78 @@ void Q_matvec(
     A_data,
     result + n ,
     vector,
-    0
+    !sign_plus
     );
 
     /*result[n:n+m] = result[n:n+m] + b * vector[n+m]*/
-    cblas_daxpy(m, vector[m+n], b, 1, result + n, 1);
+    cblas_daxpy(m, sign_plus ? vector[m+n]:-vector[m+n], 
+        b, 1, result + n, 1);
 
     /*result[n+m] -= c^T * vector[:n]*/
-    result[n+m] -= cblas_ddot(n, c, 1, vector, 1);
+    if (sign_plus) result[n+m] -= cblas_ddot(n, c, 1, vector, 1);
+    else result[n+m] += cblas_ddot(n, c, 1, vector, 1);
 
     /*result[n+m] -= b^T * vector[n:m]*/
-    result[n+m] -= cblas_ddot(m, b, 1, vector + n, 1);
+    if (sign_plus) result[n+m] -= cblas_ddot(m, b, 1, vector + n, 1);
+    else result[n+m] += cblas_ddot(m, b, 1, vector + n, 1);
+
+}
+
+/*
+N(z) and Pi(z).
+*/
+int projection_and_normalized_residual(
+    const int m,
+    const int n,
+    const int size_zero,
+    const int size_nonneg,
+    const int num_sec_ord,
+    const int *sizes_sec_ord,
+    const int num_exp_pri,
+    const int num_exp_dua,
+    const int * A_col_pointers, 
+    const int * A_row_indeces,
+    const double * A_data,
+    const double * b,
+    const double * c,
+    double * result,
+    double * pi_z,
+    const double * z
+    ){
+
+    if (z[n+m] == 0.) return -1;
+
+    /*pi_z = Pi(z)*/
+    embedded_cone_projection(
+        z, 
+        pi_z,
+        n,
+        size_zero, 
+        size_nonneg);
+
+    /*result = Q * pi_z */
+    Q_matvec(
+    m,
+    n,
+    A_col_pointers, 
+    A_row_indeces,
+    A_data,
+    b,
+    c,
+    result,
+    pi_z,
+    1
+    );
+
+    /*result -= pi_z*/
+    cblas_daxpy(n+m+1, -1, pi_z, 1, result, 1);
+
+    /*result += z*/
+    cblas_daxpy(n+m+1, 1, z, 1, result, 1);
+
+    /*result /= |z[n+m]| */
+    cblas_dscal(n+m+1, 1./fabs(z[n+m]), result, 1);
+
+    return 0;
 
 }

@@ -12,6 +12,7 @@ int tests_run = 0;
      mu_run_test(test_csc_matvec);
      mu_run_test(test_csr_matvec);
      mu_run_test(test_Q_matvec);
+     mu_run_test(test_normalized_residual);
      return 0;
  }
  

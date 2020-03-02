@@ -1,3 +1,6 @@
+#ifndef CONES_H
+#define CONES_H
+
 /*
 *  CPSR - Cone Program Solution Refinement
 *
@@ -111,3 +114,4 @@ int embedded_cone_projection_derivative(
     const vecsize num_exp_dua*/
     );
 
+#endif

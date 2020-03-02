@@ -1,3 +1,6 @@
+#ifndef LINALG_H
+#define LINALG_H
+
 /*
 *  Cone Program Refinement
 *
@@ -37,3 +40,4 @@ void csr_matvec(
     const bool sign_plus
     );
 
+#endif

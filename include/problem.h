@@ -16,9 +16,10 @@
 * limitations under the License.
 */
 
+#include <stdbool.h>
 
 /* 
-result = result + Q * vector
+result = result + (sign_plus) * Q * vector - (!sign_plus) * Q * vector
 */
 void Q_matvec(
     const int m,
@@ -29,28 +30,16 @@ void Q_matvec(
     const double * b,
     const double * c,
     double * result,
-    const double * vector
+    const double * vector,
+    const bool sign_plus
     );
 
-/* 
-result = result + Q^T * vector
-*/
-void Q_vecmat(
-    const int m,
-    const int n,
-    const int * A_col_pointers, 
-    const int * A_row_indeces,
-    const double * A_data,
-    const double * b,
-    const double * c,
-    double * result,
-    const double * vector
-    );
+
 
 /*
 N(z) and Pi(z).
 */
-void projection_and_normalized_residual(
+int projection_and_normalized_residual(
     const int m,
     const int n,
     const int size_zero,

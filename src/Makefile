@@ -22,7 +22,7 @@ mini_cblas.o : mini_cblas.c
 	$(CC) -c mini_cblas.c $(CFLAGS) $(LIBS)
 
 test: ../test/test.c ../test/test.h cones.o mini_cblas.o linalg.o problem.o
-	$(CC) -o ../test/runtests ../test/test.c cones.o mini_cblas.o linalg.o $(CFLAGS) $(LIBS) $(LFLAGS); \
+	$(CC) -o ../test/runtests ../test/test.c cones.o mini_cblas.o linalg.o problem.o $(CFLAGS) $(LIBS) $(LFLAGS); \
 	chmod a+x ../test/runtests; ../test/runtests
 
 clean :

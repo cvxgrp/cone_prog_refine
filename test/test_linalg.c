@@ -1,3 +1,4 @@
+#include "test.h"
 #include "linalg.h"
 
 static const char * test_csc_matvec(){

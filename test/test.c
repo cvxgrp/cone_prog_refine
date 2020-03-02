@@ -4,9 +4,9 @@
 #include "test.h"
 #include <stdlib.h>
 #include "cones.h"
-#include "linalg.h"
+#include "math.h"
 
-#include <sys/time.h>
+/*#include <sys/time.h>*/
 
  
 int tests_run = 0;
@@ -65,30 +65,6 @@ static const char * test_embedded_cone_projection(){
      return 0;
  }
 
-/*
-static const char * test_embedded_cone_projection(){
-const char * result = 0;
-
-result = test_embedded_cone_projection_variable_size(0,0,0);
-if (!result) {return result;};
-result = test_embedded_cone_projection_variable_size(1,0,0);
-if (!result) {return result;};
-result = test_embedded_cone_projection_variable_size(0,1,0);
-if (!result) {return result;};
-result = test_embedded_cone_projection_variable_size(0,0,1);
-if (!result) {return result;};
-result = test_embedded_cone_projection_variable_size(1,1,0);
-if (!result) {return result;};
-result = test_embedded_cone_projection_variable_size(0,1,1);
-if (!result) {return result;};
-result = test_embedded_cone_projection_variable_size(1,0,1);
-if (!result) {return result;};
-result = test_embedded_cone_projection_variable_size(1,1,1);
-
-return 0;
-}
-*/
-
 
  static const char * test_embedded_cone_projection_derivative() {
     double z[N], pi_z[N], dz[N], z_p_dz[N], dpi_z[N], pi_z_p_dz[N];
@@ -138,78 +114,7 @@ return 0;
      return 0;
  }
 
-  static const char * test_csc_matvec(){
-    /*
-
-    [[0.,   0.,   0.81],
-     [0.,   0.20, 0.  ],
-     [0.87, 0.,   0.23]]
-
-    as CSC matrix */
-    double mat_elements[4] = {0.87, 0.20, 0.81, 0.23};
-    int col_pointers[4] = {0, 1, 2, 4};
-    int row_indeces[4] = {2, 1, 0, 2};
-
-    int n = 3;
-    
-    double vector[3] = {1., 2., 3.};
-    double result[3] = {0., 0., 0.};
-
-    csc_matvec(
-    n, /*number of columns*/
-    col_pointers, 
-    row_indeces,
-    mat_elements,
-    result,
-    vector
-    );
-
-    if (DEBUG_PRINT) printf("%f, %f, %f\n",result[0], result[1], result[2] );
-
-    mu_assert("wrong result CSC matrix vector multiplication",
-    (result[0] == 2.43) &&
-    (result[1] == 0.4) &&
-    (result[2] == 1.56));
-
-    return 0;
-  }
- 
-static const char * test_csr_matvec(){
-    /*
-
-    [[0.,   0.,   0.87],
-     [0.,   0.20, 0.  ],
-     [0.81, 0.,   0.23]]
-
-    as CSR matrix */
-    double mat_elements[4] = {0.87, 0.20, 0.81, 0.23};
-    int row_pointers[4] = {0, 1, 2, 4};
-    int col_indeces[4] = {2, 1, 0, 2};
-
-    int n = 3;
-    
-    double vector[3] = {1., 2., 3.};
-    double result[3] = {0., 0., 0.};
-
-    csr_matvec(
-    n, /*number of columns*/
-    row_pointers, 
-    col_indeces,
-    mat_elements,
-    result,
-    vector
-    );
-
-    if (DEBUG_PRINT) printf("%f, %f, %f\n",result[0], result[1], result[2] );
-
-    mu_assert("wrong result CSC matrix vector multiplication",
-    (result[0] == 2.61) &&
-    (result[1] == 0.4) &&
-    (result[2] == 1.5));
-
-    return 0;
-  }
-
+#include "test_linalg.c"
  
  static const char * all_tests() {
      mu_run_test(test_embedded_cone_projection);

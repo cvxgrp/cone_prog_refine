@@ -25,7 +25,7 @@ void Q_matvec(
     const int n,
     const int * A_col_pointers, 
     const int * A_row_indeces,
-    const double * A_data
+    const double * A_data,
     const double * b,
     const double * c,
     double * result,
@@ -40,7 +40,7 @@ void Q_vecmat(
     const int n,
     const int * A_col_pointers, 
     const int * A_row_indeces,
-    const double * A_data
+    const double * A_data,
     const double * b,
     const double * c,
     double * result,
@@ -61,12 +61,12 @@ void projection_and_normalized_residual(
     const int num_exp_dua,
     const int * A_col_pointers, 
     const int * A_row_indeces,
-    const double * A_data
+    const double * A_data,
     const double * b,
     const double * c,
     double * result,
     double * pi_z,
-    const double * z,
+    const double * z
     );
 
 /*
@@ -83,13 +83,13 @@ void normalized_residual_matvec(
     const int num_exp_dua,
     const int * A_col_pointers, 
     const int * A_row_indeces,
-    const double * A_data
+    const double * A_data,
     const double * b,
     const double * c,
     const double * z,
     const double * pi_z, /*Useful for fast derivatives.*/
     double * result,
-    const double * vector,
+    const double * vector
     );
 
 /*
@@ -106,11 +106,11 @@ void normalized_residual_vecmat(
     const int num_exp_dua,
     const int * A_col_pointers, 
     const int * A_row_indeces,
-    const double * A_data
+    const double * A_data,
     const double * b,
     const double * c,
     const double * z,
     const double * pi_z, /*Useful for fast derivatives.*/
     double * result,
-    const double * vector,
+    const double * vector
     );

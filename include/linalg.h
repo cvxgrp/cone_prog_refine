@@ -15,6 +15,7 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 */
+#include <stdbool.h>
 
 void csc_matvec(
     const int n, /*number of columns*/
@@ -22,7 +23,8 @@ void csc_matvec(
     const int * row_indeces,
     const double * mat_elements,
     double * result,
-    const double * vector
+    const double * vector,
+    const bool sign_plus
     );
 
 void csr_matvec(
@@ -31,5 +33,7 @@ void csr_matvec(
     const int * col_indeces,
     const double * mat_elements,
     double * result,
-    const double * vector
+    const double * vector,
+    const bool sign_plus
     );
+

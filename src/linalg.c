@@ -18,45 +18,54 @@
 
 #include "linalg.h"
 
-/*Multiply (m,n) matrix in compressed sparse 
-columns format by n-vector.*/
+
+/*result = result + (sign_plus) * A * vector - (!sign_plus) * A * vector
+A in CSC sparse format.*/
 void csc_matvec(
     const int n, /*number of columns*/
     const int * col_pointers, 
     const int * row_indeces,
     const double * mat_elements,
     double * result,
-    const double * vector
+    const double * vector,
+    const bool sign_plus
     ){
     int j, i;
+    if (sign_plus) {
     for (j = 0; j<n; j++)
         for (i = col_pointers[j]; i < col_pointers[j + 1]; i++)
             result[row_indeces[i]] +=  mat_elements[i] * vector[j];
+    } else {
+    for (j = 0; j<n; j++)
+        for (i = col_pointers[j]; i < col_pointers[j + 1]; i++)
+            result[row_indeces[i]] -=  mat_elements[i] * vector[j];
+    }
 }
 
-/*Multiply (m,n) matrix in compressed sparse 
-rows format by n-vector.*/
+
+
+/*result = result + A * vector
+A in CSR sparse format.*/
 void csr_matvec(
     const int m, /*number of rows*/
     const int * row_pointers, 
     const int * col_indeces,
     const double * mat_elements,
     double * result,
-    const double * vector
+    const double * vector,
+    const bool sign_plus
     ){
     int j, i;
+    if (sign_plus){
     for (i = 0; i<m; i++)
         for (j = row_pointers[i]; j < row_pointers[i + 1]; j++)
             result[i] +=  mat_elements[j] * vector[col_indeces[j]];
-
-        // for i in range(m):
-        //  js = col_indeces[row_pointers[i]:row_pointers[i + 1]]
-        //  elements = mat_elements[row_pointers[i]:row_pointers[i + 1]]
-        //  for cur, j in enumerate(js):
-        //     result[i] += vector[j] * elements[cur]
-
-
-
+    }   
+    else {
+    for (i = 0; i<m; i++)
+        for (j = row_pointers[i]; j < row_pointers[i + 1]; j++)
+            result[i] -=  mat_elements[j] * vector[col_indeces[j]];
+    }
 }
 
 /*

@@ -3,11 +3,11 @@ OSX_CBLAS_AND_LAPACK = "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/Syst
 CFLAGS = -I"../include" -ansi -pedantic -Wall -O3 -I$(OSX_CBLAS_AND_LAPACK)
 LFLAGS = -lm -lcblas -llapack
 
-cone_prog_refine : main.o cones.o mini_cblas.o linalg.o problem.o truncated_lsqr.o
-	cc -o cone_prog_refine main.o cones.o mini_cblas.o $(LFLAGS)
+cone_prog_refine : cone_prog_refine.o cones.o mini_cblas.o linalg.o problem.o truncated_lsqr.o
+	cc -o cone_prog_refine cone_prog_refine.o cones.o mini_cblas.o $(LFLAGS)
 
-main.o : main.c 
-	$(CC) -c main.c $(CFLAGS) $(LIBS)
+cone_prog_refine.o : cone_prog_refine.c 
+	$(CC) -c cone_prog_refine.c $(CFLAGS) $(LIBS)
 
 cones.o : cones.c 
 	$(CC) -c cones.c $(CFLAGS) $(LIBS)
@@ -29,4 +29,4 @@ test: ../test/test.c ../test/test.h cones.o mini_cblas.o truncated_lsqr.o linalg
 	chmod a+x ../test/runtests; ../test/runtests
 
 clean :
-	rm cone_prog_refine main.o cones.o mini_cblas.o linalg.o problem.o truncated_lsqr.o ../test/runtests
+	rm cone_prog_refine cone_prog_refine.o cones.o mini_cblas.o linalg.o problem.o truncated_lsqr.o ../test/runtests

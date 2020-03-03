@@ -20,6 +20,8 @@
 */
 #include <stdbool.h>
 
+/*result = result + (sign_plus) * A * vector - (!sign_plus) * A * vector
+A in CSC sparse format.*/
 void csc_matvec(
     const int n, /*number of columns*/
     const int * col_pointers, 
@@ -30,6 +32,8 @@ void csc_matvec(
     const bool sign_plus
     );
 
+/*result = result + A * vector
+A in CSR sparse format.*/
 void csr_matvec(
     const int m, /*number of rows*/
     const int * row_pointers, 

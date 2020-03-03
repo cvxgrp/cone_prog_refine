@@ -3,6 +3,8 @@
 #include "test_linalg.c"
 #include "test_problem.c"
 #include "test_cones.c"
+#include "test_truncated_lsqr.c"
+
 
 int tests_run = 0;
  
@@ -16,6 +18,7 @@ int tests_run = 0;
      mu_run_test(test_normalized_residual_matvec);
       mu_run_test(test_normalized_residual_vecmat);
       mu_run_test(test_Q_vecmat);
+      mu_run_test(test_truncated_lsqr);
 
      return 0;
  }

@@ -117,7 +117,10 @@ int projection_and_normalized_residual(
         size_zero, 
         size_nonneg);
 
-    /*result = Q * pi_z */
+    /*result = 0.*/
+    memset(result, 0, sizeof(double) * (m+n+1));
+
+    /*result += Q * pi_z */
     Q_matvec(
     m,
     n,
@@ -143,3 +146,108 @@ int projection_and_normalized_residual(
     return 0;
 
 }
+
+/*
+result = result + DN(z) * vector
+*/
+int normalized_residual_matvec(
+    const int m,
+    const int n,
+    const int size_zero,
+    const int size_nonneg,
+    const int num_sec_ord,
+    const int *sizes_sec_ord,
+    const int num_exp_pri,
+    const int num_exp_dua,
+    const int * A_col_pointers, 
+    const int * A_row_indeces,
+    const double * A_data,
+    const double * b,
+    const double * c,
+    const double * z,
+    const double * pi_z, /*Used by cone derivatives.*/
+    const double * norm_res_z, /*Used by second term of derivative*/
+    double * result,
+    double * d_pi_z, /*Used as internal storage space.*/
+    double * vector /*It gets changed.*/
+    ){
+
+    int non_diff;
+
+    if (fabs(z[n+m]) == 0.) return -1;
+
+    /* vector /= |w| */
+    cblas_dscal(n+m+1, 1./fabs(z[n+m]), vector, 1);
+
+    /* result += vector */
+    cblas_daxpy(n+m+1, 1, (const double *)vector, 1, result, 1);
+
+    /* d_pi_z = DPi(z) * vector */
+    non_diff = embedded_cone_projection_derivative(
+    (const double *)z, 
+    (const double *)pi_z,
+    (const double *)vector,
+    d_pi_z,
+    n,
+    size_zero, 
+    size_nonneg
+    /*const vecsize num_second_order,
+    const vecsize * sizes_second_order
+    const vecsize num_exp_pri,
+    const vecsize num_exp_dua*/
+    );
+
+    /* result -= d_pi_z */
+    cblas_daxpy(n+m+1, -1, (const double *)d_pi_z, 1, result, 1);
+
+
+    /* result += Q d_pi_z; */
+    Q_matvec(
+        m,
+        n,
+        A_col_pointers, 
+        A_row_indeces,
+        A_data,
+        b,
+        c,
+        result,
+        (const double *) d_pi_z,
+        1
+        );
+    
+    /*result += (vector[n+m] * -sign(w)) * N(z) */
+    cblas_daxpy(n+m+1, vector[n+m] * (z[n+m] > 0 ? -1. : 1.), 
+        (const double *) norm_res_z, 1, result, 1);
+
+    return non_diff;
+}
+
+/*
+result = result + DN(z)^T * vector
+*/
+void normalized_residual_vecmat(
+    const int m,
+    const int n,
+    const int size_zero,
+    const int size_nonneg,
+    const int num_sec_ord,
+    const int *sizes_sec_ord,
+    const int num_exp_pri,
+    const int num_exp_dua,
+    const int * A_col_pointers, 
+    const int * A_row_indeces,
+    const double * A_data,
+    const double * b,
+    const double * c,
+    const double * z,
+    const double * pi_z, /*Used by cone derivatives.*/
+    const double * norm_res_z, /*Used by second term of derivative*/
+    double * d_pi_z, /*Used internally.*/
+    double * result,
+    double * vector /*It gets changed.*/
+    ){
+
+
+}
+
+

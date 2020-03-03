@@ -61,7 +61,7 @@ int projection_and_normalized_residual(
 /*
 result = result + DN(z) * vector
 */
-void normalized_residual_matvec(
+int normalized_residual_matvec(
     const int m,
     const int n,
     const int size_zero,
@@ -76,9 +76,11 @@ void normalized_residual_matvec(
     const double * b,
     const double * c,
     const double * z,
-    const double * pi_z, /*Useful for fast derivatives.*/
+    const double * pi_z, /*Used by cone derivatives.*/
+    const double * norm_res_z, /*Used by second term of derivative*/
     double * result,
-    const double * vector
+    double * d_pi_z, /*Used internally.*/
+    double * vector /*It gets changed.*/
     );
 
 /*
@@ -99,7 +101,9 @@ void normalized_residual_vecmat(
     const double * b,
     const double * c,
     const double * z,
-    const double * pi_z, /*Useful for fast derivatives.*/
+    const double * pi_z, /*Used by cone derivatives.*/
+    const double * norm_res_z, /*Used by second term of derivative*/
+    double * d_pi_z, /*Used internally.*/
     double * result,
-    const double * vector
+    double * vector /*It gets changed.*/
     );

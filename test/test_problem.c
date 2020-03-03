@@ -186,3 +186,142 @@ return 0;
 
 }
 
+
+static const char * test_normalized_residual_matvec(){
+
+    int i;
+    int k;
+    const int m = 3;
+    const int n = 3;
+    const int size_zero = 1;
+    const int size_nonneg = 2;
+    const int num_sec_ord = 0;
+    const int * sizes_sec_ord = NULL;
+    const int num_exp_pri = 0;
+    const int num_exp_dua = 0;
+
+
+    const double A_data[4] = {0.8, 0.20, 0.1, 0.23};
+    const int A_col_pointers[4] = {0, 1, 2, 4};
+    const int A_row_indeces[4] = {2, 1, 0, 2};
+    const double b[3] = {3,5,7};
+    const double c[3] = {11,13,17};
+    double z[7];
+    double pi_z[7];
+    double norm_res_z[7];
+    double result[7]= {0., 0., 0., 0., 0., 0., 0.};
+    double d_pi_z[7];
+    double dz[7]; 
+    double z_p_dz[7];
+    double check[7];
+
+    double error;
+
+    for (k = 0; k < NUM_CONES_TESTS; k++){
+
+        if (DEBUG_PRINT) printf("\nTesting DN(z) * x\n");
+
+    random_uniform_vector(n+m+1, z, 
+                        -1, 1, (1+k)*1234);
+
+    /* Setting z[n+m] = 1. or -1 simplifies the test.*/ 
+    /* z[n+m] = 1.; */ 
+
+    projection_and_normalized_residual(
+    m,
+    n,
+    size_zero,
+    size_nonneg,
+    num_sec_ord,
+    sizes_sec_ord,
+    num_exp_pri,
+    num_exp_dua,
+    A_col_pointers, 
+    A_row_indeces,
+    A_data,
+    b,
+    c,
+    norm_res_z,
+    pi_z,
+    (const double *) z
+    );
+
+    random_uniform_vector(n+m+1, dz, 
+                        -1E-8, 1E-8, (1+k)*5678);
+
+    for (i = 0; i < n+m+1; i++) {
+        z_p_dz[i] = z[i] + dz[i];
+                /*   printf("z[%d] = %e, dz[%d] = %e\n", 
+                i, z[i],i, dz[i]); */
+                }
+
+    result[0] = 0.;
+    result[1] = 0.;
+    result[2] = 0.;
+    result[3] = 0.;
+    result[4] = 0.;
+    result[5] = 0.;
+    result[6] = 0.;
+
+    normalized_residual_matvec(
+        m,
+        n,
+        size_zero,
+        size_nonneg,
+        num_sec_ord,
+        sizes_sec_ord,
+        num_exp_pri,
+        num_exp_dua,
+        A_col_pointers, 
+        A_row_indeces,
+        A_data,
+        b,
+        c,
+        (const double *)  z,
+        (const double *) pi_z, /*Used by cone derivatives.*/
+        (const double *) norm_res_z, /*Used by second term of derivative*/
+        result,
+        d_pi_z, /*Used internally.*/
+        dz /*It gets changed.*/
+        );
+
+
+        projection_and_normalized_residual(
+        m,
+        n,
+        size_zero,
+        size_nonneg,
+        num_sec_ord,
+        sizes_sec_ord,
+        num_exp_pri,
+        num_exp_dua,
+        A_col_pointers, 
+        A_row_indeces,
+        A_data,
+        b,
+        c,
+        check, /*N(z + dz)*/
+        pi_z, 
+        (const double *) z_p_dz 
+        );
+
+        for (i = 0; i < n+m+1; i++){
+            error = check[i] - norm_res_z[i] - result[i];
+            if (DEBUG_PRINT) printf("(N(z + dz) - N(z) - DN(z) dz)[%d] = %e\n", 
+                i, error);
+            mu_assert("Large error normalized_residual_matvec",(fabs(error) < 1E-12));
+
+            if (DEBUG_PRINT)  printf("(N(z + dz)[%d] = %e, N(z)[%d] = %e,  DN(z)dz[%d] = %e\n", 
+                i, check[i],i, norm_res_z[i],i, result[i]);
+
+        }
+
+    }
+
+
+
+
+
+    return 0;
+}
+

@@ -42,12 +42,12 @@ static const char * test_embedded_cone_projection(){
 
     for (j=0; j<NUM_CONES_TESTS; j++){
         random_uniform_vector(N, z, -1, 1, j*1234);
-        random_uniform_vector(N, dz, -1, 1, j*5678);
+        random_uniform_vector(N, dz, -1E-8, 1E-8, j*5678);
         embedded_cone_projection(z, pi_z, LENSOL, LENZERO, LENNONEG);
 
         for (k = 0; k < NUM_BACKTRACKS; k++){
 
-        if (DEBUG_PRINT) printf("\nscaling dz by (1/2)^%d\n",k);
+        if (DEBUG_PRINT) printf("\nscaling dz by (0.9)^%d\n",k);
 
         for (i= 0; i<N;i++) z_p_dz[i] = z[i] + dz[i];
 
@@ -66,14 +66,17 @@ static const char * test_embedded_cone_projection(){
         /* pi_z + dpi_z == pi_z_p_dz*/
         equal = 0;
         for (i = 0; i <N; i++){
-            if (pi_z[i] + dpi_z[i] != pi_z_p_dz[i]) {
+            if (DEBUG_PRINT)
+                    printf("error[%d] = %e\n", i,
+                        pi_z[i] + dpi_z[i] - pi_z_p_dz[i]);
+            if (fabs(pi_z[i] + dpi_z[i] - pi_z_p_dz[i])>1E-15) {
                 equal = -1;
                 break;} 
         }
         if (equal == 0) break;
         
 
-        for (i= 0; i<N;i++) dz[i] /= 2.;
+        for (i= 0; i<N;i++) dz[i] *= (0.9);
 }
 
         mu_assert("error, pi_z + dpi_z != pi_z_p_dz", !equal);

@@ -4,6 +4,8 @@
 #include "test_problem.c"
 #include "test_cones.c"
 #include "test_truncated_lsqr.c"
+#include "test_cone_prog_refine.c"
+
 
 
 int tests_run = 0;
@@ -20,6 +22,7 @@ int tests_run = 0;
       mu_run_test(test_Q_vecmat);
       mu_run_test(test_truncated_lsqr);
     mu_run_test(test_truncated_lsqr1);
+    mu_run_test(test_cone_prog_refine);
      return 0;
  }
  

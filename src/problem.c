@@ -219,8 +219,11 @@ int normalized_residual_matvec(
         );
     
     /*result += (vector[n+m] * -sign(w)) * N(z) */
-    cblas_daxpy(n+m+1, vector[n+m] * (z[n+m] > 0 ? -1. : 1.), 
+    cblas_daxpy(n+m+1, ((const double *)vector)[n+m] * (z[n+m] > 0 ? -1. : 1.), 
         (const double *) norm_res_z, 1, result, 1);
+
+    /* vector *= |w| */
+    cblas_dscal(n+m+1, fabs(z[n+m]), vector, 1);
 
     return non_diff;
 }
@@ -249,7 +252,7 @@ int normalized_residual_vecmat(
     double * internal, /*Used as internal storage space.*/
     double * internal2, 
     /*Used as internal storage space, change DPi(x) so that it adds to result and remove this.*/
-    double * vector /*It gets changed.*/
+    double * vector /*It gets changed but then restored.*/
     ){
 
     int non_diff = 0;
@@ -264,9 +267,9 @@ int normalized_residual_vecmat(
 
     /* result[n+m] += (vector^T N(z)) * (-sign(z[n+m])) */
     if (z[n+m] > 0)
-        result[n+m] -= cblas_ddot(n+m+1, vector, 1, norm_res_z, 1);
+        result[n+m] -= cblas_ddot(n+m+1, (const double *)vector, 1, norm_res_z, 1);
     else 
-        result[n+m] += cblas_ddot(n+m+1, vector, 1, norm_res_z, 1);
+        result[n+m] += cblas_ddot(n+m+1, (const double *)vector, 1, norm_res_z, 1);
 
 
     /*internal = -vector */
@@ -305,9 +308,76 @@ int normalized_residual_vecmat(
     /* result += internal2 */
     cblas_daxpy(n+m+1, 1, (const double *)internal2, 1, result, 1);
 
+    /*scale back vector*/
+    cblas_dscal(n+m+1, fabs(z[n+m]), vector, 1);
+
     return non_diff;
 
 
 }
+
+
+void normalized_residual_aprod(
+    const int mode, const int lsqr_m, const int lsqr_n, 
+    double * x, double * y, void *UsrWrk){
+
+    /* y = y + A*x */
+    if (mode == 1){
+
+    normalized_residual_matvec(
+    *((struct lsqr_workspace *)UsrWrk)->m,
+    *((struct lsqr_workspace *)UsrWrk)->n,
+    *((struct lsqr_workspace *)UsrWrk)-> size_zero,
+    *((struct lsqr_workspace *)UsrWrk)->size_nonneg,
+    *((struct lsqr_workspace *)UsrWrk)->num_sec_ord,
+    *((struct lsqr_workspace *)UsrWrk)->sizes_sec_ord,
+    *((struct lsqr_workspace *)UsrWrk)->num_exp_pri,
+    *((struct lsqr_workspace *)UsrWrk)->num_exp_dua,
+    *((struct lsqr_workspace *)UsrWrk)->A_col_pointers, 
+    *((struct lsqr_workspace *)UsrWrk)->A_row_indeces,
+    *((struct lsqr_workspace *)UsrWrk)->A_data,
+    *((struct lsqr_workspace *)UsrWrk)->b,
+    *((struct lsqr_workspace *)UsrWrk)->c,
+    ((struct lsqr_workspace *)UsrWrk)->z,
+    ((struct lsqr_workspace *)UsrWrk)->pi_z, /*Used by cone derivatives.*/
+    ((struct lsqr_workspace *)UsrWrk)->norm_res_z, /*Used by second term of derivative*/
+    y,
+    ((struct lsqr_workspace *)UsrWrk)->internal, /*Used internally.*/
+    x /*It gets changed but then restored.*/
+    );
+    }
+
+    /* x = x + A(transpose)*y */
+    if (mode == 2){
+
+    normalized_residual_vecmat(
+    *((struct lsqr_workspace *)UsrWrk)->m,
+    *((struct lsqr_workspace *)UsrWrk)->n,
+    *((struct lsqr_workspace *)UsrWrk)-> size_zero,
+    *((struct lsqr_workspace *)UsrWrk)->size_nonneg,
+    *((struct lsqr_workspace *)UsrWrk)->num_sec_ord,
+    *((struct lsqr_workspace *)UsrWrk)->sizes_sec_ord,
+    *((struct lsqr_workspace *)UsrWrk)->num_exp_pri,
+    *((struct lsqr_workspace *)UsrWrk)->num_exp_dua,
+    *((struct lsqr_workspace *)UsrWrk)->A_col_pointers, 
+    *((struct lsqr_workspace *)UsrWrk)->A_row_indeces,
+    *((struct lsqr_workspace *)UsrWrk)->A_data,
+    *((struct lsqr_workspace *)UsrWrk)->b,
+    *((struct lsqr_workspace *)UsrWrk)->c,
+    ((struct lsqr_workspace *)UsrWrk)->z,
+    ((struct lsqr_workspace *)UsrWrk)->pi_z, /*Used by cone derivatives.*/
+    ((struct lsqr_workspace *)UsrWrk)->norm_res_z, /*Used by second term of derivative*/
+    x,
+    ((struct lsqr_workspace *)UsrWrk)->internal, /*Used as internal storage space.*/
+    ((struct lsqr_workspace *)UsrWrk)->internal2, 
+    /*Used as internal storage space, change DPi(x) so that it adds to result and remove this.*/
+    y /*It gets changed but then restored.*/
+    );
+
+
+    }
+
+}
+
 
 

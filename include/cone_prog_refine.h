@@ -15,12 +15,15 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 */
+#ifndef CONE_PROG_REFINE_H
+#define CONE_PROG_REFINE_H
 
-#define MAX_CPR_BACKTRACKS 10
+#define MAX_CONE_PROG_REFINE_BACKTRACKS 10
 
-void cone_prog_refine(
-    const int m, 
-    const int n, /*size of solution*/
+
+int cone_prog_refine(
+    const int m, /*number of rows of A*/
+    const int n, /*number of columns of A*/
     const int size_zero, /*size of zero cone*/
     const int size_nonneg, /*size of non-negative cone*/
     const int num_sec_ord, /*number of second order cones*/
@@ -36,5 +39,8 @@ void cone_prog_refine(
                     approximate primal-dual embedded solution,
                     will be overwritten by refined solution*/
     const int num_lsqr_iters, /*number of lsqr iterations*/
-    const int num_iters /*number of refine iterations*/
+    const int num_iters, /*number of refine iterations*/
+    const int print_info /*print informations on convergence*/
     );
+
+#endif

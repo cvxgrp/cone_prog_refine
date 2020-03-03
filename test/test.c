@@ -14,6 +14,9 @@ int tests_run = 0;
      mu_run_test(test_Q_matvec);
      mu_run_test(test_normalized_residual);
      mu_run_test(test_normalized_residual_matvec);
+      mu_run_test(test_normalized_residual_vecmat);
+      mu_run_test(test_Q_vecmat);
+
      return 0;
  }
  

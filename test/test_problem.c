@@ -1,6 +1,8 @@
 #include "test.h"
 #include "problem.h"
 #include "math.h"
+#include <string.h>
+
 
 static const char * test_Q_matvec(){
 
@@ -315,6 +317,263 @@ static const char * test_normalized_residual_matvec(){
                 i, check[i],i, norm_res_z[i],i, result[i]);
 
         }
+
+    }
+
+
+
+
+
+    return 0;
+}
+
+static const char * test_Q_vecmat(){
+
+    int i;
+    int k;
+    const int m = 3;
+    const int n = 3;
+
+    const double A_data[4] = {0.8, 0.20, 0.1, 0.23};
+    const int A_col_pointers[4] = {0, 1, 2, 4};
+    const int A_row_indeces[4] = {2, 1, 0, 2};
+    const double b[3] = {3,5,7};
+    const double c[3] = {11,13,17};
+
+    /*We build the matrix by using matvec and vecmat,
+    and check that they are equal if transposed.*/
+    int j;
+    double result_matvec [7][7];
+    double result_vecmat [7][7];
+    double d [7];
+
+    for (k = 0; k < 10; k++){
+
+        if (DEBUG_PRINT)  printf("\nTesting Q^T\n");
+
+    /* Setting z[n+m] = 1. or -1 simplifies the test.*/ 
+    /* z[n+m] = 1.; */
+
+    for (j = 0; j < 7; j++){
+        memset(result_matvec[j], 0, sizeof(double) * (7));
+        memset(d, 0, sizeof(double) * (7));
+        d[j] = 1.;
+
+    Q_matvec(
+    m,
+    n,
+    A_col_pointers, 
+    A_row_indeces,
+    A_data,
+    b,
+    c,
+    result_matvec[j],
+    d,
+    1
+    );
+
+        for (i = 0; i < 7; i++){
+            if (DEBUG_PRINT)  printf("%.2e  ", result_matvec[j][i]);
+        }
+        if (DEBUG_PRINT)  printf("\n");
+
+        }
+
+
+    for (j = 0; j < 7; j++){
+        memset(result_vecmat[j], 0, sizeof(double) * (7));
+        memset(d, 0, sizeof(double) * (7));
+
+        d[j] = 1.;
+
+    Q_matvec(
+    m,
+    n,
+    A_col_pointers, 
+    A_row_indeces,
+    A_data,
+    b,
+    c,
+    result_vecmat[j],
+    d,
+    0
+    );
+
+        }
+
+    if (DEBUG_PRINT) printf("\n\n\n");
+    for (j = 0; j < 7; j++){
+    for (i = 0; i < 7; i++){
+        if (DEBUG_PRINT)  printf("%.2e  ", result_vecmat[i][j]);
+        
+        mu_assert("Q transpose not equal to Q",
+            (result_matvec[i][j] == result_vecmat[j][i]));
+
+    }
+    if (DEBUG_PRINT) printf("\n");
+    }
+
+    }
+
+    return 0;
+}
+
+
+static const char * test_normalized_residual_vecmat(){
+
+    int i;
+    int k;
+    const int m = 3;
+    const int n = 3;
+    const int size_zero = 1;
+    const int size_nonneg = 2;
+    const int num_sec_ord = 0;
+    const int * sizes_sec_ord = NULL;
+    const int num_exp_pri = 0;
+    const int num_exp_dua = 0;
+
+
+    const double A_data[4] = {0.8, 0.20, 0.1, 0.23};
+    const int A_col_pointers[4] = {0, 1, 2, 4};
+    const int A_row_indeces[4] = {2, 1, 0, 2};
+    const double b[3] = {3,5,7};
+    const double c[3] = {11,13,17};
+    double z[7];
+    double pi_z[7];
+    double norm_res_z[7];
+    double internal[7];
+    double internal2[7];
+    double d[7]; 
+
+
+    /*We build the matrix by using matvec and vecmat,
+    and check that they are equal if transposed.*/
+    int j;
+    double result_matvec [7][7];
+    double result_vecmat [7][7];
+
+    for (k = 0; k < 10; k++){
+
+        if (DEBUG_PRINT)  printf("\nTesting DN(z)^T\n");
+
+    random_uniform_vector(n+m+1, z, 
+                        -1, 1, (1+k)*1234);
+
+    /* Setting z[n+m] = 1. or -1 simplifies the test.*/ 
+    /* z[n+m] = 1.; */
+
+    if (DEBUG_PRINT)  printf("z[n+m] = %f\n", z[n+m]);
+
+    projection_and_normalized_residual(
+    m,
+    n,
+    size_zero,
+    size_nonneg,
+    num_sec_ord,
+    sizes_sec_ord,
+    num_exp_pri,
+    num_exp_dua,
+    A_col_pointers, 
+    A_row_indeces,
+    A_data,
+    b,
+    c,
+    norm_res_z,
+    pi_z,
+    (const double *) z
+    );
+
+
+    for (j = 0; j < 7; j++){
+        memset(result_matvec[j], 0, sizeof(double) * (7));
+        memset(d, 0, sizeof(double) * (7));
+        memset(internal, 0, sizeof(double) * (7));
+        d[j] = 1.;
+
+    normalized_residual_matvec(
+        m,
+        n,
+        size_zero,
+        size_nonneg,
+        num_sec_ord,
+        sizes_sec_ord,
+        num_exp_pri,
+        num_exp_dua,
+        A_col_pointers, 
+        A_row_indeces,
+        (const double *)A_data,
+        (const double *)b,
+        (const double *)c,
+        (const double *)  z,
+        (const double *) pi_z, /*Used by cone derivatives.*/
+        (const double *) norm_res_z, /*Used by second term of derivative*/
+        result_matvec[j],
+        internal, /*Used internally.*/
+        d /*It gets changed.*/
+        );
+
+        for (i = 0; i < 7; i++){
+            if (DEBUG_PRINT)  printf("%.2e  ", result_matvec[j][i]);
+        }
+        if (DEBUG_PRINT)  printf("\n");
+
+        }
+
+
+    for (j = 0; j < 7; j++){
+        memset(result_vecmat[j], 0, sizeof(double) * (7));
+        memset(d, 0, sizeof(double) * (7));
+        memset(internal, 0, sizeof(double) * (7));
+        memset(internal2, 0, sizeof(double) * (7));
+
+        d[j] = 1.;
+
+    normalized_residual_vecmat(
+        m,
+        n,
+        size_zero,
+        size_nonneg,
+        num_sec_ord,
+        sizes_sec_ord,
+        num_exp_pri,
+        num_exp_dua,
+        A_col_pointers, 
+        A_row_indeces,
+        (const double *)A_data,
+        (const double *)b,
+        (const double *)c,
+        (const double *) z,
+        (const double *) pi_z, /*Used by cone derivatives.*/
+        (const double *) norm_res_z, /*Used by second term of derivative*/
+        result_vecmat[j],
+        internal, /*Used internally.*/
+        internal2, /*Used internally.*/
+        d /*It gets changed.*/
+        );
+
+        }
+
+        if (DEBUG_PRINT)  printf("\n\n\n");
+        for (j = 0; j < 7; j++){
+        for (i = 0; i < 7; i++){
+            if (DEBUG_PRINT)  printf("%.2e  ", result_vecmat[i][j]);
+            
+            mu_assert("DN(z) transpose not equal to DN(z)",
+                (result_matvec[i][j] == result_vecmat[j][i]));
+
+        }
+        if (DEBUG_PRINT)  printf("\n");
+    }
+
+     if (DEBUG_PRINT) {
+                printf("\nError * 1E8:\n");
+        for (j = 0; j < 7; j++){
+        for (i = 0; i < 7; i++){
+            printf("%.2e   ", (result_vecmat[i][j] - result_matvec[j][i])*1E8);
+
+        }
+        printf("\n");
+    }}
 
     }
 

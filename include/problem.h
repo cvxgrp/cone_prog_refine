@@ -19,7 +19,7 @@
 #include <stdbool.h>
 
 /* 
-result = result + (sign_plus) * Q * vector - (!sign_plus) * Q * vector
+result = result + (forward) * Q * vector + (!forward) * Q^T * vector
 */
 void Q_matvec(
     const int m,
@@ -31,7 +31,7 @@ void Q_matvec(
     const double * c,
     double * result,
     const double * vector,
-    const bool sign_plus
+    const bool forward
     );
 
 
@@ -86,7 +86,7 @@ int normalized_residual_matvec(
 /*
 result = result + DN(z)^T * vector
 */
-void normalized_residual_vecmat(
+int normalized_residual_vecmat(
     const int m,
     const int n,
     const int size_zero,
@@ -103,7 +103,9 @@ void normalized_residual_vecmat(
     const double * z,
     const double * pi_z, /*Used by cone derivatives.*/
     const double * norm_res_z, /*Used by second term of derivative*/
-    double * d_pi_z, /*Used internally.*/
     double * result,
+    double * internal, /*Used as internal storage space.*/
+    double * internal2, 
+    /*Used as internal storage space, change DPi(x) so that it adds to result and remove this.*/
     double * vector /*It gets changed.*/
     );

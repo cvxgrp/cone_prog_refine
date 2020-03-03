@@ -21,6 +21,7 @@
 #include "mini_cblas.h"
 #include "cones.h"
 #include <math.h>
+#include <string.h>
 
 /* 
 result = result + Q * vector
@@ -42,7 +43,7 @@ void Q_matvec(
     const double * c,
     double * result,
     const double * vector,
-    const bool sign_plus
+    const bool forward
     ){
 
     /*result[0:n] = result[0:n] (+-) A^T * vector[n:n+m]*/
@@ -53,11 +54,11 @@ void Q_matvec(
     A_data,
     result,
     vector + n,
-    sign_plus
+    forward
     );
 
     /*result[0:n] = result[0:n] + c * vector[n+m]*/
-    cblas_daxpy(n, sign_plus ? vector[m+n]:-vector[m+n], 
+    cblas_daxpy(n, forward ? vector[m+n]:-vector[m+n], 
         c, 1, result, 1);
 
     /*result[n:n+m] = result[n:n+m] - A * vector[0:n]*/
@@ -68,22 +69,24 @@ void Q_matvec(
     A_data,
     result + n ,
     vector,
-    !sign_plus
+    !forward
     );
 
     /*result[n:n+m] = result[n:n+m] + b * vector[n+m]*/
-    cblas_daxpy(m, sign_plus ? vector[m+n]:-vector[m+n], 
+    cblas_daxpy(m, forward ? vector[m+n]:-vector[m+n], 
         b, 1, result + n, 1);
 
     /*result[n+m] -= c^T * vector[:n]*/
-    if (sign_plus) result[n+m] -= cblas_ddot(n, c, 1, vector, 1);
+    if (forward) result[n+m] -= cblas_ddot(n, c, 1, vector, 1);
     else result[n+m] += cblas_ddot(n, c, 1, vector, 1);
 
     /*result[n+m] -= b^T * vector[n:m]*/
-    if (sign_plus) result[n+m] -= cblas_ddot(m, b, 1, vector + n, 1);
+    if (forward) result[n+m] -= cblas_ddot(m, b, 1, vector + n, 1);
     else result[n+m] += cblas_ddot(m, b, 1, vector + n, 1);
 
 }
+
+
 
 /*
 N(z) and Pi(z).
@@ -172,7 +175,7 @@ int normalized_residual_matvec(
     double * vector /*It gets changed.*/
     ){
 
-    int non_diff;
+    int non_diff = 0;
 
     if (fabs(z[n+m]) == 0.) return -1;
 
@@ -225,7 +228,7 @@ int normalized_residual_matvec(
 /*
 result = result + DN(z)^T * vector
 */
-void normalized_residual_vecmat(
+int normalized_residual_vecmat(
     const int m,
     const int n,
     const int size_zero,
@@ -242,10 +245,67 @@ void normalized_residual_vecmat(
     const double * z,
     const double * pi_z, /*Used by cone derivatives.*/
     const double * norm_res_z, /*Used by second term of derivative*/
-    double * d_pi_z, /*Used internally.*/
     double * result,
+    double * internal, /*Used as internal storage space.*/
+    double * internal2, 
+    /*Used as internal storage space, change DPi(x) so that it adds to result and remove this.*/
     double * vector /*It gets changed.*/
     ){
+
+    int non_diff = 0;
+    
+    if (fabs(z[n+m]) == 0.) return -1;
+
+    /* vector /= |w| */
+    cblas_dscal(n+m+1, 1./fabs(z[n+m]), vector, 1);
+
+    /* result += vector */
+    cblas_daxpy(n+m+1, 1., (const double *)vector, 1, result, 1);
+
+    /* result[n+m] += (vector^T N(z)) * (-sign(z[n+m])) */
+    if (z[n+m] > 0)
+        result[n+m] -= cblas_ddot(n+m+1, vector, 1, norm_res_z, 1);
+    else 
+        result[n+m] += cblas_ddot(n+m+1, vector, 1, norm_res_z, 1);
+
+
+    /*internal = -vector */
+    cblas_dcopy(m+n+1, (const double *)vector, 1, internal, 1);
+    cblas_dscal(m+n+1, -1., internal, 1);
+
+    /* internal += Q^T vector */
+    Q_matvec(
+        m,
+        n,
+        A_col_pointers, 
+        A_row_indeces,
+        A_data,
+        b,
+        c,
+        internal,
+        (const double *) vector,
+        0 /*Q^T */
+        );
+
+    /* internal2 = DPi(z)^T * internal . TODO add transpose to embedded_cone_projection_derivative */
+    non_diff = embedded_cone_projection_derivative(
+    (const double *)z, 
+    (const double *)pi_z,
+    (const double *)internal,
+    internal2,
+    n,
+    size_zero, 
+    size_nonneg
+    /*const vecsize num_second_order,
+    const vecsize * sizes_second_order
+    const vecsize num_exp_pri,
+    const vecsize num_exp_dua*/
+    );
+
+    /* result += internal2 */
+    cblas_daxpy(n+m+1, 1, (const double *)internal2, 1, result, 1);
+
+    return non_diff;
 
 
 }

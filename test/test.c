@@ -19,7 +19,7 @@ int tests_run = 0;
       mu_run_test(test_normalized_residual_vecmat);
       mu_run_test(test_Q_vecmat);
       mu_run_test(test_truncated_lsqr);
-
+    mu_run_test(test_truncated_lsqr1);
      return 0;
  }
  

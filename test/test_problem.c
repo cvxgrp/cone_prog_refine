@@ -617,45 +617,24 @@ static const char * test_aprod(){
 
 
     /*Assign constants to workspace used by LSQR.*/
-    workspace.m = &m;
-    workspace.n = &n;
-    workspace.size_zero = &size_zero;
-    workspace.size_nonneg = &size_nonneg;
-    workspace.num_sec_ord = &num_sec_ord;
-    workspace.sizes_sec_ord = &sizes_sec_ord;
-    workspace.num_exp_pri = &num_exp_pri;
-    workspace.num_exp_dua = &num_exp_dua;
-    workspace.A_col_pointers = &A_col_pointers;
-    workspace.A_row_indeces = &A_row_indeces;
-    workspace.A_data = &A_data;
-    workspace.b = &b;
+    workspace.m = m;
+    workspace.n = n;
+    workspace.size_zero = size_zero;
+    workspace.size_nonneg = size_nonneg;
+    workspace.num_sec_ord = num_sec_ord;
+    workspace.sizes_sec_ord = sizes_sec_ord;
+    workspace.num_exp_pri = num_exp_pri;
+    workspace.num_exp_dua = num_exp_dua;
+    workspace.A_col_pointers = A_col_pointers;
+    workspace.A_row_indeces = A_row_indeces;
+    workspace.A_data = A_data;
+    workspace.b = b;
     workspace.c = c;
     workspace.internal = internal;
     workspace.internal2 = internal2;
     workspace.z = z;
     workspace.pi_z = pi_z;
     workspace.norm_res_z = norm_res_z;
-
-//     struct lsqr_workspace {
-//     const int *m;
-//     const int *n;
-//     const int *size_zero;
-//     const int *size_nonneg;
-//     const int *num_sec_ord;
-//     const int **sizes_sec_ord;
-//     const int *num_exp_pri;
-//     const int *num_exp_dua;
-//     const int ** A_col_pointers;
-//     const int ** A_row_indeces;
-//     const double ** A_data;
-//     const double ** b;
-//     const double ** c;
-//     double * z;
-//     double * pi_z; /*Used by cone derivatives.*/
-//     double * norm_res_z; /*Used by second term of derivative*/
-//     double * internal; /* (n+m+1) array for internal storage space.*/
-//     double * internal2; /* (n+m+1) array for internal storage space.*/
-// };
 
 
 

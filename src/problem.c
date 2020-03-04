@@ -321,28 +321,30 @@ void normalized_residual_aprod(
     const int mode, const int lsqr_m, const int lsqr_n, 
     double * x, double * y, void *UsrWrk){
 
+    struct lsqr_workspace * workspace = UsrWrk;
+
     /* y = y + A*x */
     if (mode == 1){
 
     normalized_residual_matvec(
-    *((struct lsqr_workspace *)UsrWrk)->m,
-    *((struct lsqr_workspace *)UsrWrk)->n,
-    *((struct lsqr_workspace *)UsrWrk)-> size_zero,
-    *((struct lsqr_workspace *)UsrWrk)->size_nonneg,
-    *((struct lsqr_workspace *)UsrWrk)->num_sec_ord,
-    *((struct lsqr_workspace *)UsrWrk)->sizes_sec_ord,
-    *((struct lsqr_workspace *)UsrWrk)->num_exp_pri,
-    *((struct lsqr_workspace *)UsrWrk)->num_exp_dua,
-    *((struct lsqr_workspace *)UsrWrk)->A_col_pointers, 
-    *((struct lsqr_workspace *)UsrWrk)->A_row_indeces,
-    *((struct lsqr_workspace *)UsrWrk)->A_data,
-    *((struct lsqr_workspace *)UsrWrk)->b,
-    *((struct lsqr_workspace *)UsrWrk)->c,
-    ((struct lsqr_workspace *)UsrWrk)->z,
-    ((struct lsqr_workspace *)UsrWrk)->pi_z, /*Used by cone derivatives.*/
-    ((struct lsqr_workspace *)UsrWrk)->norm_res_z, /*Used by second term of derivative*/
+    workspace->m,
+    workspace->n,
+    workspace-> size_zero,
+    workspace->size_nonneg,
+    workspace->num_sec_ord,
+    workspace->sizes_sec_ord,
+    workspace->num_exp_pri,
+    workspace->num_exp_dua,
+    workspace->A_col_pointers, 
+    workspace->A_row_indeces,
+    workspace->A_data,
+    workspace->b,
+    workspace->c,
+    workspace->z,
+    workspace->pi_z, /*Used by cone derivatives.*/
+    workspace->norm_res_z, /*Used by second term of derivative*/
     y,
-    ((struct lsqr_workspace *)UsrWrk)->internal, /*Used internally.*/
+    workspace->internal, /*Used internally.*/
     x /*It gets changed but then restored.*/
     );
     }
@@ -351,25 +353,25 @@ void normalized_residual_aprod(
     if (mode == 2){
 
     normalized_residual_vecmat(
-    *((struct lsqr_workspace *)UsrWrk)->m,
-    *((struct lsqr_workspace *)UsrWrk)->n,
-    *((struct lsqr_workspace *)UsrWrk)-> size_zero,
-    *((struct lsqr_workspace *)UsrWrk)->size_nonneg,
-    *((struct lsqr_workspace *)UsrWrk)->num_sec_ord,
-    *((struct lsqr_workspace *)UsrWrk)->sizes_sec_ord,
-    *((struct lsqr_workspace *)UsrWrk)->num_exp_pri,
-    *((struct lsqr_workspace *)UsrWrk)->num_exp_dua,
-    *((struct lsqr_workspace *)UsrWrk)->A_col_pointers, 
-    *((struct lsqr_workspace *)UsrWrk)->A_row_indeces,
-    *((struct lsqr_workspace *)UsrWrk)->A_data,
-    *((struct lsqr_workspace *)UsrWrk)->b,
-    *((struct lsqr_workspace *)UsrWrk)->c,
-    ((struct lsqr_workspace *)UsrWrk)->z,
-    ((struct lsqr_workspace *)UsrWrk)->pi_z, /*Used by cone derivatives.*/
-    ((struct lsqr_workspace *)UsrWrk)->norm_res_z, /*Used by second term of derivative*/
+    workspace->m,
+    workspace->n,
+    workspace-> size_zero,
+    workspace->size_nonneg,
+    workspace->num_sec_ord,
+    workspace->sizes_sec_ord,
+    workspace->num_exp_pri,
+    workspace->num_exp_dua,
+    workspace->A_col_pointers, 
+    workspace->A_row_indeces,
+    workspace->A_data,
+    workspace->b,
+    workspace->c,
+    workspace->z,
+    workspace->pi_z, /*Used by cone derivatives.*/
+    workspace->norm_res_z, /*Used by second term of derivative*/
     x,
-    ((struct lsqr_workspace *)UsrWrk)->internal, /*Used as internal storage space.*/
-    ((struct lsqr_workspace *)UsrWrk)->internal2, 
+    workspace->internal, /*Used as internal storage space.*/
+    workspace->internal2, 
     /*Used as internal storage space, change DPi(x) so that it adds to result and remove this.*/
     y /*It gets changed but then restored.*/
     );

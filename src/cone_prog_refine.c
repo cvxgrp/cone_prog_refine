@@ -98,19 +98,19 @@ int cone_prog_refine(
     struct lsqr_workspace workspace; 
 
     /*Assign constants to workspace used by LSQR.*/
-    workspace.m = &m;
-    workspace.n = &n;
-    workspace.size_zero = &size_zero;
-    workspace.size_nonneg = &size_nonneg;
-    workspace.num_sec_ord = &num_sec_ord;
-    workspace.sizes_sec_ord = &sizes_sec_ord;
-    workspace.num_exp_pri = &num_exp_pri;
-    workspace.num_exp_dua = &num_exp_dua;
-    workspace.A_col_pointers = &A_col_pointers;
-    workspace.A_row_indeces = &A_row_indeces;
-    workspace.A_data = &A_data;
-    workspace.b = &b;
-    workspace.c = &c;
+    workspace.m = m;
+    workspace.n = n;
+    workspace.size_zero = size_zero;
+    workspace.size_nonneg = size_nonneg;
+    workspace.num_sec_ord = num_sec_ord;
+    workspace.sizes_sec_ord = sizes_sec_ord;
+    workspace.num_exp_pri = num_exp_pri;
+    workspace.num_exp_dua = num_exp_dua;
+    workspace.A_col_pointers = A_col_pointers;
+    workspace.A_row_indeces = A_row_indeces;
+    workspace.A_data = A_data;
+    workspace.b = b;
+    workspace.c = c;
 
     alloc_success = cone_prog_refine_alloc(
                     m, 

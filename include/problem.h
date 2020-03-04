@@ -113,19 +113,19 @@ int normalized_residual_vecmat(
     );
 
 struct lsqr_workspace {
-    const int *m;
-    const int *n;
-    const int *size_zero;
-    const int *size_nonneg;
-    const int *num_sec_ord;
-    const int **sizes_sec_ord;
-    const int *num_exp_pri;
-    const int *num_exp_dua;
-    const int ** A_col_pointers;
-    const int ** A_row_indeces;
-    const double ** A_data;
-    const double ** b;
-    const double ** c;
+    int m;
+    int n;
+    int size_zero;
+    int size_nonneg;
+    int num_sec_ord;
+    const int * sizes_sec_ord;
+    int num_exp_pri;
+    int num_exp_dua;
+    const int * A_col_pointers;
+    const int * A_row_indeces;
+    const double * A_data;
+    const double * b;
+    const double * c;
     double * z;
     double * pi_z; /*Used by cone derivatives.*/
     double * norm_res_z; /*Used by second term of derivative*/

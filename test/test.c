@@ -23,7 +23,7 @@ int tests_run = 0;
       mu_run_test(test_truncated_lsqr);
     mu_run_test(test_truncated_lsqr1);
     mu_run_test(test_cone_prog_refine);
-    //mu_run_test(test_aprod);
+    mu_run_test(test_aprod);
      return 0;
  }
  

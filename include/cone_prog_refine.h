@@ -51,6 +51,7 @@ int cone_prog_refine(
                     approximate primal-dual embedded solution,
                     will be overwritten by refined solution*/
     const int num_lsqr_iters, /*number of lsqr iterations*/
+    const double lambda, /*sqrt(lambda) is the lsqr damping parameter*/
     const int num_iters, /*number of refine iterations*/
     const int print_info /*print informations on convergence*/
     );

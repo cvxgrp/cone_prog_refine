@@ -315,31 +315,6 @@ void normalized_residual_aprod(
     y /*It gets changed but then restored.*/
     );
 
-    // normalized_residual_vecmat(
-    // workspace->m,
-    // workspace->n,
-    // workspace-> size_zero,
-    // workspace->size_nonneg,
-    // workspace->num_sec_ord,
-    // workspace->sizes_sec_ord,
-    // workspace->num_exp_pri,
-    // workspace->num_exp_dua,
-    // workspace->A_col_pointers, 
-    // workspace->A_row_indeces,
-    // workspace->A_data,
-    // workspace->b,
-    // workspace->c,
-    // workspace->z,
-    // workspace->pi_z, /*Used by cone derivatives.*/
-    // workspace->norm_res_z, /*Used by second term of derivative*/
-    // x,
-    // workspace->internal, /*Used as internal storage space.*/
-    // workspace->internal2, 
-    // /*Used as internal storage space, change DPi(x) so that it adds to result and remove this.*/
-    // y /*It gets changed but then restored.*/
-    // );
-
-
     }
 
 }

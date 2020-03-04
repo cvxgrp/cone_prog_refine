@@ -6,6 +6,9 @@
    The present file is maintained by
       Michael Saunders <saunders@stanford.edu>
 
+   Available at
+    https://web.stanford.edu/group/SOL/software/lsqr/c/clsqr2.zip
+
    31 Aug 2007: First version of this file lsqr.c obtained from
                 Michael Friedlander's BCLS package, svn version number
                 $Revision: 273 $ $Date: 2006-09-04 15:59:04 -0700 (Mon, 04 Sep 2006) $

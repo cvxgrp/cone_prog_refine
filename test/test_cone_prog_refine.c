@@ -77,6 +77,7 @@ cone_prog_refine(
         approximate primal-dual embedded solution,
         will be overwritten by refined solution*/
     30, /*number of lsqr iterations*/
+    1E-8, /*lambda*/
     2, /*number of refine iterations*/
     DEBUG_PRINT /*print informations on convergence*/
     );

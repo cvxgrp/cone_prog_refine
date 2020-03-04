@@ -21,7 +21,7 @@
 #include <stdlib.h>
 #include "problem.h"
 #include "mini_cblas.h"
-#include "truncated_lsqr.h"
+#include "lsqr.h"
 #include <math.h>
 
 int cone_prog_refine_alloc(
@@ -81,6 +81,7 @@ int cone_prog_refine(
                     approximate primal-dual embedded solution,
                     will be overwritten by refined solution*/
     const int num_lsqr_iters, /*number of lsqr iterations*/
+    const double lambda,
     const int num_iters, /*number of refine iterations*/
     const int print_info /*print informations on convergence*/
     ){
@@ -92,6 +93,11 @@ int cone_prog_refine(
     double *u, *v, *w;
     int alloc_success;
     int j;
+
+    /*LSQR result*/
+    int istop_out, itn_out;
+    double anorm_out, acond_out, rnorm_out, arnorm_out, xnorm_out;
+
 
     double old_normres, new_normres;
 
@@ -145,7 +151,7 @@ int cone_prog_refine(
         workspace.pi_z = pi_z; /*Used by cone derivatives.*/
         workspace.norm_res_z = norm_res; /*Used by second term of derivative*/
 
-        if (print_info>1) printf("\nIteration %d\n", i);
+        if (print_info>3) printf("\nIteration %d\n", i);
         
         /*LSQR*/
         truncated_lsqr(m+n+1, 
@@ -160,7 +166,40 @@ int cone_prog_refine(
                         (void *)&workspace /*workspace for aprod*/
         );
 
-        if (print_info>1){
+    /*u = N(z)*/
+    memcpy(u, norm_res, sizeof(double)*(m+n+1));
+
+    lsqr(m+n+1,
+      m+n+1,
+      normalized_residual_aprod,
+      sqrt(lambda), /*damp*/
+      (void *)&workspace,
+      u,    // len = m
+      v,    // len = n
+      w,    // len = n
+      delta,    // len = n
+      NULL,   // len = *
+      0., /*atol*/
+      0., /*btol*/
+      0., /*conlim*/
+      num_lsqr_iters,
+      (print_info>2)? stdout:NULL,
+      // The remaining variables are output only.
+      &istop_out,
+      &itn_out,
+      &anorm_out,
+      &acond_out,
+      &rnorm_out,
+      &arnorm_out,
+      &xnorm_out
+     );
+
+    if (print_info>1)
+        printf("\nanorm_out = %.2e, acond_out = %.2e, rnorm_out = %.2e, \narnorm_out = %.2e, xnorm_out = %.2e\n\n",
+        anorm_out, acond_out, rnorm_out, arnorm_out, xnorm_out );
+            
+
+    if (print_info>3){
         printf("\n");
             for (j = 0; j < m+n+1; j++)
                 printf("delta[%d] = %e\n", j, delta[j]);
@@ -172,9 +211,9 @@ int cone_prog_refine(
 
         for (k = 0; k < MAX_CONE_PROG_REFINE_BACKTRACKS; k++){
 
-            if (print_info>1) printf("Backtrack %d\n", k);
+            if (print_info>2) printf("Backtrack %d\n", k);
 
-            if (print_info>1) 
+            if (print_info>3) 
                 {printf("\n");
             for (j = 0; j < m+n+1; j++)
                 printf("z[%d] = %e\n", j, z[j]);
@@ -189,18 +228,19 @@ int cone_prog_refine(
 
             new_normres = cblas_dnrm2(n+m+1, norm_res, 1);
 
-            if (print_info>1)
+            if (print_info>2)
                 printf("new ||N(z)|| = %e\n\n", new_normres);
 
             if (new_normres < old_normres){
                 old_normres = new_normres;
                 if (print_info)
-                    printf("It. %d, %d backtracks, ||N(z)|| = %.2e, %s (z[-1] = %.2e)\n",
-                        i, k, new_normres, z[m+n]>0?"SOL":"CERT", z[m+n]);
+                    printf("It. %d, %d lsqr_its, %d btrs, ||N(z)|| = %.2e, %s (z[-1] = %.2e)\n",
+                        i, itn_out, k, new_normres, z[m+n]>0?"SOL":"CERT", z[m+n]);
                 break;
+                /*TODO It's not exiting it fails to refine.*/
             }
 
-            if (print_info>1) 
+            if (print_info>2) 
                 printf("removing %e times delta\n", pow(.5, k+1) );
             cblas_daxpy(m+n+1, pow(.5, k+1), delta, 1, z, 1);
 

@@ -154,76 +154,63 @@ int projection_and_normalized_residual(
 result = result + DN(z) * vector
 */
 int normalized_residual_matvec(
-    const int m,
-    const int n,
-    const int size_zero,
-    const int size_nonneg,
-    const int num_sec_ord,
-    const int *sizes_sec_ord,
-    const int num_exp_pri,
-    const int num_exp_dua,
-    const int * A_col_pointers, 
-    const int * A_row_indeces,
-    const double * A_data,
-    const double * b,
-    const double * c,
-    const double * z,
-    const double * pi_z, /*Used by cone derivatives.*/
-    const double * norm_res_z, /*Used by second term of derivative*/
+    lsqr_workspace * workspace,
     double * result,
-    double * d_pi_z, /*Used as internal storage space.*/
     double * vector /*It gets changed.*/
     ){
 
     int non_diff = 0;
+    int size;
 
-    if (fabs(z[n+m]) == 0.) return -1;
+    size = workspace->n + workspace->m + 1;
+
+    if (fabs(workspace->z[size-1]) == 0.) return -1;
 
     /* vector /= |w| */
-    cblas_dscal(n+m+1, 1./fabs(z[n+m]), vector, 1);
+    cblas_dscal(size, 1./fabs(workspace->z[size-1]), vector, 1);
 
     /* result += vector */
-    cblas_daxpy(n+m+1, 1, (const double *)vector, 1, result, 1);
+    cblas_daxpy(size, 1, (const double *)vector, 1, result, 1);
 
-    /* d_pi_z = DPi(z) * vector */
+    /* internal = DPi(z) * vector */
     non_diff = embedded_cone_projection_derivative(
-    (const double *)z, 
-    (const double *)pi_z,
+    (const double *)workspace->z, 
+    (const double *)workspace->pi_z,
     (const double *)vector,
-    d_pi_z,
-    n,
-    size_zero, 
-    size_nonneg
+    workspace->internal,
+    workspace->n,
+    workspace->size_zero, 
+    workspace->size_nonneg
     /*const vecsize num_second_order,
     const vecsize * sizes_second_order
     const vecsize num_exp_pri,
     const vecsize num_exp_dua*/
     );
 
-    /* result -= d_pi_z */
-    cblas_daxpy(n+m+1, -1, (const double *)d_pi_z, 1, result, 1);
+    /* result -= internal */
+    cblas_daxpy(size, -1, (const double *)workspace->internal, 1, result, 1);
 
 
-    /* result += Q d_pi_z; */
+    /* result += Q internal; */
     Q_matvec(
-        m,
-        n,
-        A_col_pointers, 
-        A_row_indeces,
-        A_data,
-        b,
-        c,
+        workspace->m,
+        workspace->n,
+        workspace->A_col_pointers, 
+        workspace->A_row_indeces,
+        workspace->A_data,
+        workspace->b,
+        workspace->c,
         result,
-        (const double *) d_pi_z,
+        (const double *) workspace->internal,
         1
         );
     
     /*result += (vector[n+m] * -sign(w)) * N(z) */
-    cblas_daxpy(n+m+1, ((const double *)vector)[n+m] * (z[n+m] > 0 ? -1. : 1.), 
-        (const double *) norm_res_z, 1, result, 1);
+    cblas_daxpy(size, ((const double *)vector)[size-1] * (workspace->z[size-1] > 0 ? -1. : 1.), 
+        (const double *) workspace->norm_res_z, 1, result, 1);
 
     /* vector *= |w| */
-    cblas_dscal(n+m+1, fabs(z[n+m]), vector, 1);
+    cblas_dscal(size, fabs(workspace->z[size-1]), vector, 1);
 
     return non_diff;
 }
@@ -236,28 +223,6 @@ int normalized_residual_vecmat(
     double * result, 
     double * vector /*It gets changed but then restored.*/
     )
-    // const int m,
-    // const int n,
-    // const int size_zero,
-    // const int size_nonneg,
-    // const int num_sec_ord,
-    // const int *sizes_sec_ord,
-    // const int num_exp_pri,
-    // const int num_exp_dua,
-    // const int * A_col_pointers, 
-    // const int * A_row_indeces,
-    // const double * A_data,
-    // const double * b,
-    // const double * c,
-    // const double * z,
-    // const double * pi_z, /*Used by cone derivatives.*/
-    // const double * norm_res_z, /*Used by second term of derivative*/
-    // double * result,
-    // double * internal, /*Used as internal storage space.*/
-    // double * internal2, 
-    // /*Used as internal storage space, change DPi(x) so that it adds to result and remove this.*/
-    // double * vector /*It gets changed but then restored.*/
-    // )
 {
 
     int non_diff = 0;
@@ -335,24 +300,8 @@ void normalized_residual_aprod(
     if (mode == 1){
 
     normalized_residual_matvec(
-    workspace->m,
-    workspace->n,
-    workspace-> size_zero,
-    workspace->size_nonneg,
-    workspace->num_sec_ord,
-    workspace->sizes_sec_ord,
-    workspace->num_exp_pri,
-    workspace->num_exp_dua,
-    workspace->A_col_pointers, 
-    workspace->A_row_indeces,
-    workspace->A_data,
-    workspace->b,
-    workspace->c,
-    workspace->z,
-    workspace->pi_z, /*Used by cone derivatives.*/
-    workspace->norm_res_z, /*Used by second term of derivative*/
+    workspace,
     y,
-    workspace->internal, /*Used internally.*/
     x /*It gets changed but then restored.*/
     );
     }

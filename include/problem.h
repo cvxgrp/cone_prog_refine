@@ -87,25 +87,9 @@ int projection_and_normalized_residual(
 result = result + DN(z) * vector
 */
 int normalized_residual_matvec(
-    const int m,
-    const int n,
-    const int size_zero,
-    const int size_nonneg,
-    const int num_sec_ord,
-    const int *sizes_sec_ord,
-    const int num_exp_pri,
-    const int num_exp_dua,
-    const int * A_col_pointers, 
-    const int * A_row_indeces,
-    const double * A_data,
-    const double * b,
-    const double * c,
-    const double * z,
-    const double * pi_z, /*Used by cone derivatives.*/
-    const double * norm_res_z, /*Used by second term of derivative*/
-    double * result,
-    double * d_pi_z, /*Used internally.*/
-    double * vector /*It gets changed.*/
+    lsqr_workspace * workspace,
+    double * result, 
+    double * vector /*It gets changed but then restored.*/
     );
 
 /*

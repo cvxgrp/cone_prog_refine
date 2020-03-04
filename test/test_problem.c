@@ -218,6 +218,8 @@ static const char * test_normalized_residual_matvec(){
     double z_p_dz[7];
     double check[7];
 
+    lsqr_workspace workspace;
+
     double error;
 
     for (k = 0; k < NUM_CONES_TESTS; k++){
@@ -249,6 +251,27 @@ static const char * test_normalized_residual_matvec(){
     (const double *) z
     );
 
+    /*Assign constants to workspace used by LSQR.*/
+    workspace.m = m;
+    workspace.n = n;
+    workspace.size_zero = size_zero;
+    workspace.size_nonneg = size_nonneg;
+    workspace.num_sec_ord = num_sec_ord;
+    workspace.sizes_sec_ord = sizes_sec_ord;
+    workspace.num_exp_pri = num_exp_pri;
+    workspace.num_exp_dua = num_exp_dua;
+    workspace.A_col_pointers = A_col_pointers;
+    workspace.A_row_indeces = A_row_indeces;
+    workspace.A_data = A_data;
+    workspace.b = b;
+    workspace.c = c;
+    workspace.internal = d_pi_z;
+    workspace.internal2 = NULL;
+    workspace.z = z;
+    workspace.pi_z = pi_z;
+    workspace.norm_res_z = norm_res_z;
+
+
     random_uniform_vector(n+m+1, dz, 
                         -1E-8, 1E-8, (1+k)*5678);
 
@@ -267,24 +290,8 @@ static const char * test_normalized_residual_matvec(){
     result[6] = 0.;
 
     normalized_residual_matvec(
-        m,
-        n,
-        size_zero,
-        size_nonneg,
-        num_sec_ord,
-        sizes_sec_ord,
-        num_exp_pri,
-        num_exp_dua,
-        A_col_pointers, 
-        A_row_indeces,
-        A_data,
-        b,
-        c,
-        (const double *)  z,
-        (const double *) pi_z, /*Used by cone derivatives.*/
-        (const double *) norm_res_z, /*Used by second term of derivative*/
+        &workspace,
         result,
-        d_pi_z, /*Used internally.*/
         dz /*It gets changed.*/
         );
 
@@ -487,54 +494,6 @@ static const char * test_normalized_residual_vecmat(){
     (const double *) z
     );
 
-
-    for (j = 0; j < 7; j++){
-        memset(result_matvec[j], 0, sizeof(double) * (7));
-        memset(d, 0, sizeof(double) * (7));
-        memset(internal, 0, sizeof(double) * (7));
-        d[j] = 1.;
-
-    normalized_residual_matvec(
-        m,
-        n,
-        size_zero,
-        size_nonneg,
-        num_sec_ord,
-        sizes_sec_ord,
-        num_exp_pri,
-        num_exp_dua,
-        A_col_pointers, 
-        A_row_indeces,
-        (const double *)A_data,
-        (const double *)b,
-        (const double *)c,
-        (const double *)  z,
-        (const double *) pi_z, /*Used by cone derivatives.*/
-        (const double *) norm_res_z, /*Used by second term of derivative*/
-        result_matvec[j],
-        internal, /*Used internally.*/
-        d /*It gets changed.*/
-        );
-
-        for (i = 0; i < 7; i++){
-            if (DEBUG_PRINT)  printf("%.2e  ", result_matvec[j][i]);
-        }
-        if (DEBUG_PRINT)  printf("\n");
-
-        }
-
-
-    for (j = 0; j < 7; j++){
-        memset(result_vecmat[j], 0, sizeof(double) * (7));
-        memset(d, 0, sizeof(double) * (7));
-        memset(internal, 0, sizeof(double) * (7));
-        memset(internal2, 0, sizeof(double) * (7));
-
-        d[j] = 1.;
-
-    /*We build the matrix by using aprod forward and backward,
-    and check that they are equal if transposed.*/
-
     /*Assign constants to workspace used by LSQR.*/
     workspace.m = m;
     workspace.n = n;
@@ -554,6 +513,40 @@ static const char * test_normalized_residual_vecmat(){
     workspace.z = z;
     workspace.pi_z = pi_z;
     workspace.norm_res_z = norm_res_z;
+
+
+    for (j = 0; j < 7; j++){
+        memset(result_matvec[j], 0, sizeof(double) * (7));
+        memset(d, 0, sizeof(double) * (7));
+        memset(workspace.internal, 0, sizeof(double) * (7));
+        d[j] = 1.;
+
+    normalized_residual_matvec(
+        &workspace,
+        result_matvec[j],
+        d /*It gets changed.*/
+        );
+
+        for (i = 0; i < 7; i++){
+            if (DEBUG_PRINT)  printf("%.2e  ", result_matvec[j][i]);
+        }
+        if (DEBUG_PRINT)  printf("\n");
+
+        }
+
+
+    for (j = 0; j < 7; j++){
+        memset(result_vecmat[j], 0, sizeof(double) * (7));
+        memset(d, 0, sizeof(double) * (7));
+        memset(workspace.internal, 0, sizeof(double) * (7));
+        memset(workspace.internal2, 0, sizeof(double) * (7));
+
+        d[j] = 1.;
+
+    /*We build the matrix by using aprod forward and backward,
+    and check that they are equal if transposed.*/
+
+
 
 
     normalized_residual_vecmat(

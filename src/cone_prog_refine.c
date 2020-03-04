@@ -195,8 +195,8 @@ int cone_prog_refine(
             if (new_normres < old_normres){
                 old_normres = new_normres;
                 if (print_info)
-                    printf("It. %d, %d backtracks, ||N(z)|| = %.2e, %s \n",
-                        i, k, new_normres, z[m+n]>0?"SOL":"CERT");
+                    printf("It. %d, %d backtracks, ||N(z)|| = %.2e, %s (z[-1] = %.2e)\n",
+                        i, k, new_normres, z[m+n]>0?"SOL":"CERT", z[m+n]);
                 break;
             }
 

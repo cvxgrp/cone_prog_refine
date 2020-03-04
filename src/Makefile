@@ -1,6 +1,7 @@
 CC = gcc
 OSX_CBLAS_AND_LAPACK = "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/Headers/"
 CFLAGS = -I"../include" -ansi -pedantic -Wall -O3 -I$(OSX_CBLAS_AND_LAPACK)
+GDBCFLAGS = -I"../include" -ansi -pedantic -Wall  -I$(OSX_CBLAS_AND_LAPACK)
 LFLAGS = -lm -lcblas -llapack
 
 cone_prog_refine : cone_prog_refine.o main.o cones.o lsqr.o mini_cblas.o linalg.o problem.o truncated_lsqr.o
@@ -33,6 +34,10 @@ mini_cblas.o : mini_cblas.c
 test: ../test/test.c ../test/test.h cones.o lsqr.o mini_cblas.o truncated_lsqr.o linalg.o problem.o  cone_prog_refine.o
 	$(CC) -o ../test/runtests ../test/test.c cones.o lsqr.o mini_cblas.o truncated_lsqr.o linalg.o problem.o  cone_prog_refine.o $(CFLAGS) $(LIBS) $(LFLAGS); \
 	chmod a+x ../test/runtests; ../test/runtests
+
+gdbtest: ../test/test.c ../test/test.h cones.o lsqr.o mini_cblas.o truncated_lsqr.o linalg.o problem.o  cone_prog_refine.o
+	$(CC) -g -o ../test/runtests ../test/test.c cones.o lsqr.o mini_cblas.o truncated_lsqr.o linalg.o problem.o  cone_prog_refine.o $(GDBCFLAGS) $(LIBS) $(LFLAGS); \
+	gdb ../test/runtests
 
 clean :
 	rm cone_prog_refine cone_prog_refine.o cones.o lsqr.o mini_cblas.o linalg.o problem.o truncated_lsqr.o ../test/runtests

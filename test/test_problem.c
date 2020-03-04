@@ -2,6 +2,7 @@
 #include "problem.h"
 #include "math.h"
 #include <string.h>
+#include "cone_prog_refine.h"
 
 
 static const char * test_Q_matvec(){
@@ -580,3 +581,179 @@ static const char * test_normalized_residual_vecmat(){
     return 0;
 }
 
+static const char * test_aprod(){
+
+    int i;
+    int k;
+    const int m = 3;
+    const int n = 3;
+    const int size_zero = 1;
+    const int size_nonneg = 2;
+    const int num_sec_ord = 0;
+    const int * sizes_sec_ord = NULL;
+    const int num_exp_pri = 0;
+    const int num_exp_dua = 0;
+
+
+    const double A_data[] = {0.8, 0.20, 0.1, 0.23};
+    const int A_col_pointers[] = {0, 1, 2, 4};
+    const int A_row_indeces[] = {2, 1, 0, 2};
+    const double b[] = {3,5,7};
+    const double c[] = {11,13,17};
+    double z[7];
+    double pi_z[7];
+    double norm_res_z[7];
+    double internal[7];
+    double internal2[7];
+    double d[7]; 
+    int j;
+
+    struct lsqr_workspace workspace; 
+
+    /*We build the matrix by using aprod forward and backward,
+    and check that they are equal if transposed.*/
+    double result_matvec [7][7];
+    double result_vecmat [7][7];
+
+
+    /*Assign constants to workspace used by LSQR.*/
+    workspace.m = &m;
+    workspace.n = &n;
+    workspace.size_zero = &size_zero;
+    workspace.size_nonneg = &size_nonneg;
+    workspace.num_sec_ord = &num_sec_ord;
+    workspace.sizes_sec_ord = &sizes_sec_ord;
+    workspace.num_exp_pri = &num_exp_pri;
+    workspace.num_exp_dua = &num_exp_dua;
+    workspace.A_col_pointers = &A_col_pointers;
+    workspace.A_row_indeces = &A_row_indeces;
+    workspace.A_data = &A_data;
+    workspace.b = &b;
+    workspace.c = c;
+    workspace.internal = internal;
+    workspace.internal2 = internal2;
+    workspace.z = z;
+    workspace.pi_z = pi_z;
+    workspace.norm_res_z = norm_res_z;
+
+//     struct lsqr_workspace {
+//     const int *m;
+//     const int *n;
+//     const int *size_zero;
+//     const int *size_nonneg;
+//     const int *num_sec_ord;
+//     const int **sizes_sec_ord;
+//     const int *num_exp_pri;
+//     const int *num_exp_dua;
+//     const int ** A_col_pointers;
+//     const int ** A_row_indeces;
+//     const double ** A_data;
+//     const double ** b;
+//     const double ** c;
+//     double * z;
+//     double * pi_z; /*Used by cone derivatives.*/
+//     double * norm_res_z; /*Used by second term of derivative*/
+//     double * internal; /* (n+m+1) array for internal storage space.*/
+//     double * internal2; /* (n+m+1) array for internal storage space.*/
+// };
+
+
+
+    for (k = 0; k < 10; k++){
+
+        if (DEBUG_PRINT)  printf("\nTesting DN(z)^T\n");
+
+    random_uniform_vector(n+m+1, z, 
+                        -1, 1, (1+k)*1234);
+
+    /* Setting z[n+m] = 1. or -1 simplifies the test.*/ 
+    /* z[n+m] = 1.; */
+
+    if (DEBUG_PRINT)  printf("z[n+m] = %f\n", z[n+m]);
+
+    projection_and_normalized_residual(
+    m,
+    n,
+    size_zero,
+    size_nonneg,
+    num_sec_ord,
+    sizes_sec_ord,
+    num_exp_pri,
+    num_exp_dua,
+    A_col_pointers, 
+    A_row_indeces,
+    A_data,
+    b,
+    c,
+    norm_res_z,
+    pi_z,
+    (const double *) z
+    );
+
+
+    for (j = 0; j <  m+n+1; j++){
+        memset(result_matvec[j], 0, sizeof(double) * ( m+n+1));
+        memset(d, 0, sizeof(double) * ( m+n+1));
+        memset(internal, 0, sizeof(double) * ( m+n+1));
+        d[j] = 1.;
+/*
+*   If mode = 1, compute  y = y + DN * x
+*   If mode = 2, compute  x = x + DN^T * y
+*/
+    normalized_residual_aprod(
+        1, m+n+1, m+n+1, 
+        d, result_matvec[j], (void *) &workspace);
+
+        for (i = 0; i < 7; i++){
+            if (DEBUG_PRINT)  printf("%.2e  ", result_matvec[j][i]);
+        }
+        if (DEBUG_PRINT)  printf("\n");
+
+        }
+
+
+    for (j = 0; j < 7; j++){
+        memset(result_vecmat[j], 0, sizeof(double) * (7));
+        memset(d, 0, sizeof(double) * (7));
+        memset(internal, 0, sizeof(double) * (7));
+        memset(internal2, 0, sizeof(double) * (7));
+
+        d[j] = 1.;
+
+    /*
+*   If mode = 1, compute  y = y + DN * x
+*   If mode = 2, compute  x = x + DN^T * y
+*/
+    normalized_residual_aprod(
+        2, m+n+1, m+n+1, 
+        result_vecmat[j], d, (void *) &workspace);
+
+
+        }
+
+        if (DEBUG_PRINT)  printf("\n\n\n");
+        for (j = 0; j < 7; j++){
+        for (i = 0; i < 7; i++){
+            if (DEBUG_PRINT)  printf("%.2e  ", result_vecmat[i][j]);
+            
+            mu_assert("DN(z) transpose not equal to DN(z)",
+                (result_matvec[i][j] == result_vecmat[j][i]));
+
+        }
+        if (DEBUG_PRINT)  printf("\n");
+    }
+
+     if (DEBUG_PRINT) {
+                printf("\nError * 1E8:\n");
+        for (j = 0; j < 7; j++){
+        for (i = 0; i < 7; i++){
+            printf("%.2e   ", (result_vecmat[i][j] - result_matvec[j][i])*1E8);
+
+        }
+        printf("\n");
+    }}
+
+    }
+
+    return 0;
+}

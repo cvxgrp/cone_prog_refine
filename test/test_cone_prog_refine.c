@@ -11,7 +11,7 @@
 double cblas_dnrm2(const int n, const double *X, const int incX);
 
 
-static const double A_elements_cpr[32] = {
+static double A_elements_cpr[32] = {
         0.24140296, 0.46029897, 0.8460227 , 0.68658545, 0.58383685,
        0.36225789, 0.52523198, 0.49818503, 0.17863091, 0.40690994,
        0.74128545, 0.926194  , 0.26751764, 0.93814559, 0.95026184,
@@ -38,14 +38,18 @@ static const char * test_cone_prog_refine(){
     for (k = 0; k < 10; k++){
 
     if (DEBUG_PRINT) 
-        printf("Cone prog refine test %d", k);
+        printf("Cone prog refine test %d\n\n", k);
 
     random_uniform_vector(TEST_CPR_M + TEST_CPR_N + 1, 
-        z, -10, 10, 1234);
+        z, -10, 10, (k+1)*1234);
     random_uniform_vector(TEST_CPR_M, b, 
-            -10, 10, 123456);
+            -10, 10, (k+1)*123456);
     random_uniform_vector(TEST_CPR_N, c, 
-           -10, 10, 12345678);
+           -10, 10, (k+1)*12345678);
+
+    random_uniform_vector(32, A_elements_cpr, 
+           -1, 1, (k+1)*123);
+
 
     projection_and_normalized_residual(
     TEST_CPR_M, TEST_CPR_N, TEST_CPR_SIZE_ZERO, TEST_CPR_SIZE_NONNEG, 

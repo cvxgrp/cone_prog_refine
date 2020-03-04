@@ -24,6 +24,42 @@
 #include "truncated_lsqr.h"
 #include <math.h>
 
+int cone_prog_refine_alloc(
+    const int m, 
+    const int n,
+    double ** norm_res,
+    double ** pi_z,
+    double ** internal,  /*Used by DN(z)*/
+    double ** internal2,  /*Used by DN(z)*/
+    double ** u, /*Used by LSQR*/
+    double ** v, /*Used by LSQR*/
+    double ** w, /*Used by LSQR*/
+    double ** delta /*Used by LSQR*/
+    ){
+
+    void * allocated_memory;
+
+    allocated_memory = malloc(8*(n+m+1) * sizeof(double));
+
+    if (allocated_memory == NULL) /*Allocation failed*/
+        return -1;
+    
+    *norm_res = (double *) allocated_memory;
+    *pi_z = ((double *) allocated_memory) + (n + m + 1);
+    /*Used by DN(z)*/
+    *internal = ((double *) allocated_memory) + 2*(n + m + 1);
+    *internal2 = ((double *) allocated_memory) + 3*(n + m + 1);
+    /*Used by LSQR*/
+    *u = ((double *) allocated_memory) + 4*(n + m + 1);
+    *v = ((double *) allocated_memory) + 5*(n + m + 1);
+    *w = ((double *) allocated_memory) + 6*(n + m + 1);
+    /*LSQR result*/
+    *delta = ((double *) allocated_memory) + 7*(n + m + 1);
+
+    return 0;
+
+}
+
 
 
 
@@ -54,7 +90,8 @@ int cone_prog_refine(
     double * pi_z;
     double * delta;
     double *u, *v, *w;
-    void * allocated_memory;
+    int alloc_success;
+    int j;
 
     double old_normres, new_normres;
 
@@ -75,27 +112,18 @@ int cone_prog_refine(
     workspace.b = &b;
     workspace.c = &c;
 
-//     double * z;
-//     double * pi_z; /*Used by cone derivatives.*/
-//     double * norm_res_z; /*Used by second term of derivative*/
-//     double * internal; /* (n+m+1) array for internal storage space.*/
-//     double * internal2; /* (n+m+1) array for internal storage space.*/
-// };
-
-
-    /*All memory allocations.*/
-    allocated_memory = malloc(8*(n+m+1) * sizeof(double));
-    norm_res = (double *) allocated_memory;
-    pi_z = ((double *) allocated_memory) + (n + m + 1);
-    /*Used by DN(z)*/
-    workspace.internal = ((double *) allocated_memory) + 2*(n + m + 1);
-    workspace.internal2 = ((double *) allocated_memory) + 3*(n + m + 1);
-    /*Used by LSQR*/
-    u = ((double *) allocated_memory) + 4*(n + m + 1);
-    v = ((double *) allocated_memory) + 5*(n + m + 1);
-    w = ((double *) allocated_memory) + 6*(n + m + 1);
-    /*LSQR result*/
-    delta = ((double *) allocated_memory) + 7*(n + m + 1);
+    alloc_success = cone_prog_refine_alloc(
+                    m, 
+                    n,
+                    &norm_res,
+                    &pi_z,
+                    &workspace.internal,  /*Used by DN(z)*/
+                    &workspace.internal2,  /*Used by DN(z)*/
+                    &u, /*Used by LSQR*/
+                    &v, /*Used by LSQR*/
+                    &w, /*Used by LSQR*/
+                    &delta /*Used by LSQR*/
+                    );
 
     /*Compute normalized residual*/
     nondiff = projection_and_normalized_residual(
@@ -111,13 +139,14 @@ int cone_prog_refine(
 
     for (i = 0; i < num_iters; i++){
 
-        //cblas_dscal(m+n+1, 1./fabs(z[m+n]), z, 1);
+        /*cblas_dscal(m+n+1, 1./fabs(z[m+n]), z, 1);*/
 
         workspace.z = z;
         workspace.pi_z = pi_z; /*Used by cone derivatives.*/
         workspace.norm_res_z = norm_res; /*Used by second term of derivative*/
 
-        if (print_info) printf("Iteration %d\n", i);
+        if (print_info>1) printf("\nIteration %d\n", i);
+        
         /*LSQR*/
         truncated_lsqr(m+n+1, 
                        m+n+1,
@@ -131,9 +160,9 @@ int cone_prog_refine(
                         (void *)&workspace /*workspace for aprod*/
         );
 
-        if (print_info){
+        if (print_info>1){
         printf("\n");
-            for (int j = 0; j < m+n+1; j++)
+            for (j = 0; j < m+n+1; j++)
                 printf("delta[%d] = %e\n", j, delta[j]);
             
         printf("\n");
@@ -143,11 +172,11 @@ int cone_prog_refine(
 
         for (k = 0; k < MAX_CONE_PROG_REFINE_BACKTRACKS; k++){
 
-            if (print_info) printf("Backtrack %d\n", k);
+            if (print_info>1) printf("Backtrack %d\n", k);
 
-            if (print_info) 
+            if (print_info>1) 
                 {printf("\n");
-            for (int j = 0; j < m+n+1; j++)
+            for (j = 0; j < m+n+1; j++)
                 printf("z[%d] = %e\n", j, z[j]);
             
             printf("\n");
@@ -160,15 +189,18 @@ int cone_prog_refine(
 
             new_normres = cblas_dnrm2(n+m+1, norm_res, 1);
 
-            if (print_info)
+            if (print_info>1)
                 printf("new ||N(z)|| = %e\n\n", new_normres);
 
             if (new_normres < old_normres){
                 old_normres = new_normres;
+                if (print_info)
+                    printf("It. %d, %d backtracks, ||N(z)|| = %.2e, %s \n",
+                        i, k, new_normres, z[m+n]>0?"SOL":"CERT");
                 break;
             }
 
-            if (print_info) 
+            if (print_info>1) 
                 printf("removing %e times delta\n", pow(.5, k+1) );
             cblas_daxpy(m+n+1, pow(.5, k+1), delta, 1, z, 1);
 
@@ -177,12 +209,6 @@ int cone_prog_refine(
     if (old_normres < 1E-14){
         break;
     }
-
-
-
-        /*Backtrack*/
-
-
 
 }
 

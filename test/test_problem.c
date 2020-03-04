@@ -577,10 +577,6 @@ static const char * test_normalized_residual_vecmat(){
 
     }
 
-
-
-
-
     return 0;
 }
 

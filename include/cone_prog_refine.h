@@ -20,6 +20,18 @@
 
 #define MAX_CONE_PROG_REFINE_BACKTRACKS 10
 
+int cone_prog_refine_alloc(
+    const int m, 
+    const int n,
+    double ** norm_res,
+    double ** pi_z,
+    double ** internal,  /*Used by DN(z)*/
+    double ** internal2,  /*Used by DN(z)*/
+    double ** u, /*Used by LSQR*/
+    double ** v, /*Used by LSQR*/
+    double ** w, /*Used by LSQR*/
+    double ** delta /*Used by LSQR*/
+    );
 
 int cone_prog_refine(
     const int m, /*number of rows of A*/

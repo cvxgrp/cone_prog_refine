@@ -95,7 +95,7 @@ int cone_prog_refine(
 
     double old_normres, new_normres;
 
-    struct lsqr_workspace workspace; 
+    lsqr_workspace workspace; 
 
     /*Assign constants to workspace used by LSQR.*/
     workspace.m = m;

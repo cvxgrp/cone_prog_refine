@@ -446,6 +446,9 @@ static const char * test_normalized_residual_vecmat(){
     double internal2[7];
     double d[7]; 
 
+    lsqr_workspace workspace; 
+
+
 
     /*We build the matrix by using matvec and vecmat,
     and check that they are equal if transposed.*/
@@ -529,26 +532,33 @@ static const char * test_normalized_residual_vecmat(){
 
         d[j] = 1.;
 
+    /*We build the matrix by using aprod forward and backward,
+    and check that they are equal if transposed.*/
+
+    /*Assign constants to workspace used by LSQR.*/
+    workspace.m = m;
+    workspace.n = n;
+    workspace.size_zero = size_zero;
+    workspace.size_nonneg = size_nonneg;
+    workspace.num_sec_ord = num_sec_ord;
+    workspace.sizes_sec_ord = sizes_sec_ord;
+    workspace.num_exp_pri = num_exp_pri;
+    workspace.num_exp_dua = num_exp_dua;
+    workspace.A_col_pointers = A_col_pointers;
+    workspace.A_row_indeces = A_row_indeces;
+    workspace.A_data = A_data;
+    workspace.b = b;
+    workspace.c = c;
+    workspace.internal = internal;
+    workspace.internal2 = internal2;
+    workspace.z = z;
+    workspace.pi_z = pi_z;
+    workspace.norm_res_z = norm_res_z;
+
+
     normalized_residual_vecmat(
-        m,
-        n,
-        size_zero,
-        size_nonneg,
-        num_sec_ord,
-        sizes_sec_ord,
-        num_exp_pri,
-        num_exp_dua,
-        A_col_pointers, 
-        A_row_indeces,
-        (const double *)A_data,
-        (const double *)b,
-        (const double *)c,
-        (const double *) z,
-        (const double *) pi_z, /*Used by cone derivatives.*/
-        (const double *) norm_res_z, /*Used by second term of derivative*/
+        &workspace,
         result_vecmat[j],
-        internal, /*Used internally.*/
-        internal2, /*Used internally.*/
         d /*It gets changed.*/
         );
 
@@ -608,7 +618,7 @@ static const char * test_aprod(){
     double d[7]; 
     int j;
 
-    struct lsqr_workspace workspace; 
+    lsqr_workspace workspace; 
 
     /*We build the matrix by using aprod forward and backward,
     and check that they are equal if transposed.*/

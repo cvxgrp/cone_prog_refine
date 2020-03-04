@@ -17,20 +17,26 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include <stdbool.h>
 #include <math.h>
 
-#include <cblas.h>
+/*#ifdef __APPLE__
+  #include <vecLib/vecLib.h>
+#else
+  #include <cblas.h>
+#endif
+*/
+
+#include <mini_cblas.h>
 
 #define ZERO   0.0
 #define ONE    1.0
 
-// ---------------------------------------------------------------------
+/* ---------------------------------------------------------------------
 // d2norm  returns  sqrt( a**2 + b**2 )  with precautions
 // to avoid overflow.
 //
 // 21 Mar 1990: First version.
-// ---------------------------------------------------------------------
+// -------------------------------------------------------------------*/
 static double
 d2norm( const double a, const double b )
 {
@@ -52,9 +58,9 @@ dload( const int n, const double alpha, double x[] )
     return;
 }
 
-// ---------------------------------------------------------------------
+/* ---------------------------------------------------------------------
 // LSQR
-// ---------------------------------------------------------------------
+// -------------------------------------------------------------------*/
 void lsqr( 
           int m,
           int n,
@@ -62,17 +68,17 @@ void lsqr(
                         void *UsrWrk),
           double damp,
           void   *UsrWrk,
-          double u[],     // len = m
-          double v[],     // len = n
-          double w[],     // len = n
-          double x[],     // len = n
-          double se[],    // len at least n.  May be NULL.
+          double u[],     /* len = m */
+          double v[],     /* len = n */
+          double w[],     /* len = n */
+          double x[],     /* len = n */
+          double se[],    /* len at least n.  May be NULL. */
           double atol,
           double btol,
           double conlim,
           int    itnlim,
           FILE   *nout,
-          // The remaining variables are output only.
+          /* The remaining variables are output only. */
           int    *istop_out,
           int    *itn_out,
           double *anorm_out,
@@ -82,7 +88,7 @@ void lsqr(
           double *xnorm_out
          )
 {
-//     ------------------------------------------------------------------
+/*     ------------------------------------------------------------------
 //
 //     LSQR  finds a solution x to the following problems:
 //
@@ -434,9 +440,9 @@ void lsqr(
 //     Dept of Operations Research          na.Msaunders@na-net.ornl.gov
 //     Stanford University
 //     Stanford, CA 94305-4022              (415) 723-1875
-//-----------------------------------------------------------------------
+//---------------------------------------------------------------------*/
 
-//  Local copies of output variables.  Output vars are assigned at exit.
+/*  Local copies of output variables.  Output vars are assigned at exit. */
     int
         istop  = 0,
         itn    = 0;
@@ -447,10 +453,10 @@ void lsqr(
         arnorm = ZERO,
         xnorm  = ZERO;
 
-//  Local variables
+/*  Local variables */
 
-    const bool
-        extra  = false,       // true for extra printing below.
+    const int 
+        extra  = 0,       /* true for extra printing below. */
         damped = damp > ZERO,
         wantse = se != NULL;
     int
@@ -462,7 +468,7 @@ void lsqr(
         gamma, gambar, phi, phibar, psi,
         res2, rho, rhobar, rhbar1,
         rhs, rtol, sn, sn1, sn2,
-        t, tau, temp, test1, test2, test3,
+        t, tau, temp, test1, test2 = 0., test3,
         theta, t1, t2, t3, xnorm1, z, zbar;
     char
         enter[] = "Enter LSQR.  ",
@@ -476,9 +482,9 @@ void lsqr(
             {"Cond(Abar) seems to be too large, given conlim"},
             {"The iteration limit was reached"}
         };
-//-----------------------------------------------------------------------
+/*---------------------------------------------------------------------*/
 
-//  Format strings.
+/*  Format strings. */
     char fmt_1000[] = 
         " %s        Least-squares solution of  Ax = b\n"
         " The matrix  A  has %7d rows  and %7d columns\n"
@@ -513,7 +519,7 @@ void lsqr(
     char fmt_3000[] =
         " %s       %s\n";
 
-//  Initialize.
+/*  Initialize. */
 
     if (nout != NULL)
         fprintf(nout, fmt_1000,
@@ -538,10 +544,10 @@ void lsqr(
     sn2    =   ZERO;
     z      =   ZERO;
 
-//  ------------------------------------------------------------------
+/*  ------------------------------------------------------------------
 //  Set up the first vectors u and v for the bidiagonalization.
 //  These satisfy  beta*u = b,  alpha*v = A(transpose)*u.
-//  ------------------------------------------------------------------
+//  ----------------------------------------------------------------*/
     dload( n, 0.0, v );
     dload( n, 0.0, x );
 
@@ -572,39 +578,39 @@ void lsqr(
 
     if (nout != NULL) {
         if ( damped ) 
-            fprintf(nout, fmt_1300);
+            fprintf(nout, "%s", fmt_1300);
         else
-            fprintf(nout, fmt_1200);
+            fprintf(nout, "%s", fmt_1200);
 
         test1  = ONE;
         test2  = alpha / beta;
         
         if ( extra ) 
-            fprintf(nout, fmt_1400);
+            fprintf(nout, "%s", fmt_1400);
 
         fprintf(nout, fmt_1550, itn, x[0], rnorm, test1, test2);
-        fprintf(nout, fmt_1600);
+        fprintf(nout, "%s", fmt_1600);
     }
 
 
-//  ==================================================================
+/*  ==================================================================
 //  Main iteration loop.
-//  ==================================================================
+//  ================================================================*/
     while (1) {
         itn    = itn + 1;
         
-//      ------------------------------------------------------------------
+/*      ------------------------------------------------------------------
 //      Perform the next step of the bidiagonalization to obtain the
 //      next  beta, u, alpha, v.  These satisfy the relations
 //                 beta*u  =  A*v  -  alpha*u,
 //                alpha*v  =  A(transpose)*u  -  beta*v.
-//      ------------------------------------------------------------------
+//      ----------------------------------------------------------------*/
         cblas_dscal ( m, (- alpha), u, 1 );
         aprod ( 1, m, n, v, u, UsrWrk );
         beta   =   cblas_dnrm2 ( m, u, 1 );
 
-//      Accumulate  anorm = || Bk ||
-//                        =  sqrt( sum of  alpha**2 + beta**2 + damp**2 ).
+/*      Accumulate  anorm = || Bk ||
+//                        =  sqrt( sum of  alpha**2 + beta**2 + damp**2 ). */
 
         temp   =   d2norm( alpha, beta );
         temp   =   d2norm( temp , damp );
@@ -620,10 +626,10 @@ void lsqr(
             }
         }
 
-//      ------------------------------------------------------------------
+/*      ------------------------------------------------------------------
 //      Use a plane rotation to eliminate the damping parameter.
 //      This alters the diagonal (rhobar) of the lower-bidiagonal matrix.
-//      ------------------------------------------------------------------
+//      ----------------------------------------------------------------*/
         rhbar1 = rhobar;
         if ( damped ) {
             rhbar1 = d2norm( rhobar, damp );
@@ -633,10 +639,10 @@ void lsqr(
             phibar = cs1 * phibar;
         }
 
-//      ------------------------------------------------------------------
+/*      ------------------------------------------------------------------
 //      Use a plane rotation to eliminate the subdiagonal element (beta)
 //      of the lower-bidiagonal matrix, giving an upper-bidiagonal matrix.
-//      ------------------------------------------------------------------
+//      ----------------------------------------------------------------*/
         rho    =   d2norm( rhbar1, beta );
         cs     =   rhbar1 / rho;
         sn     =   beta   / rho;
@@ -646,9 +652,9 @@ void lsqr(
         phibar =   sn * phibar;
         tau    =   sn * phi;
 
-//      ------------------------------------------------------------------
+/*      ------------------------------------------------------------------
 //      Update  x, w  and (perhaps) the standard error estimates.
-//      ------------------------------------------------------------------
+//      ----------------------------------------------------------------*/
         t1     =   phi   / rho;
         t2     = - theta / rho;
         t3     =   ONE   / rho;
@@ -673,12 +679,12 @@ void lsqr(
             }
         }
 
-//      ------------------------------------------------------------------
+/*      ------------------------------------------------------------------
 //      Monitor the norm of d_k, the update to x.
 //      dknorm = norm( d_k )
 //      dnorm  = norm( D_k ),        where   D_k = (d_1, d_2, ..., d_k )
 //      dxk    = norm( phi_k d_k ),  where new x = x_k + phi_k d_k.
-//      ------------------------------------------------------------------
+//      ----------------------------------------------------------------*/
         dknorm = sqrt( dknorm );
         dnorm  = d2norm( dnorm, dknorm );
         dxk    = fabs( phi * dknorm );
@@ -687,11 +693,11 @@ void lsqr(
             maxdx   =  itn;
         }
 
-//      ------------------------------------------------------------------
+/*      ------------------------------------------------------------------
 //      Use a plane rotation on the right to eliminate the
 //      super-diagonal element (theta) of the upper-bidiagonal matrix.
 //      Then use the result to estimate  norm(x).
-//      ------------------------------------------------------------------
+//      ----------------------------------------------------------------*/
         delta  =   sn2 * rho;
         gambar = - cs2 * rho;
         rhs    =   phi    - delta * z;
@@ -703,33 +709,33 @@ void lsqr(
         z      =   rhs    / gamma;
         xnorm1 =   d2norm( xnorm1, z     );
 
-//      ------------------------------------------------------------------
+/*      ------------------------------------------------------------------
 //      Test for convergence.
 //      First, estimate the norm and condition of the matrix  Abar,
 //      and the norms of  rbar  and  Abar(transpose)*rbar.
-//      ------------------------------------------------------------------
+//      ----------------------------------------------------------------*/
         acond  =   anorm * dnorm;
         res2   =   d2norm( res2 , psi    );
         rnorm  =   d2norm( res2 , phibar );
         arnorm =   alpha * fabs( tau );
 
-//      Now use these norms to estimate certain other quantities,
-//      some of which will be small near a solution.
+/*      Now use these norms to estimate certain other quantities,
+//      some of which will be small near a solution. */
 
         alfopt =   sqrt( rnorm / (dnorm * xnorm) );
         test1  =   rnorm /  bnorm;
         test2  =   ZERO;
         if (rnorm   > ZERO) test2 = arnorm / (anorm * rnorm);
-//      if (arnorm0 > ZERO) test2 = arnorm / arnorm0;  //(Michael Friedlander's modification)
+/*      if (arnorm0 > ZERO) test2 = arnorm / arnorm0;  //(Michael Friedlander's modification) */
         test3  =   ONE   /  acond;
         t1     =   test1 / (ONE  +  anorm * xnorm / bnorm);
         rtol   =   btol  +  atol *  anorm * xnorm / bnorm;
 
-//      The following tests guard against extremely small values of
+/*      The following tests guard against extremely small values of
 //      atol, btol  or  ctol.  (The user may have set any or all of
 //      the parameters  atol, btol, conlim  to zero.)
 //      The effect is equivalent to the normal tests using
-//      atol = relpr,  btol = relpr,  conlim = 1/relpr.
+//      atol = relpr,  btol = relpr,  conlim = 1/relpr. */
 
         t3     =   ONE + test3;
         t2     =   ONE + test2;
@@ -739,15 +745,15 @@ void lsqr(
         if (t2  <= ONE   ) istop = 2;
         if (t1  <= ONE   ) istop = 1;
 
-//      Allow for tolerances set by the user.
+/*      Allow for tolerances set by the user. */
 
         if (test3 <= ctol) istop = 4;
         if (test2 <= atol) istop = 2;
-        if (test1 <= rtol) istop = 1;   //(Michael Friedlander had this commented out)
+        if (test1 <= rtol) istop = 1;   /*(Michael Friedlander had this commented out) */
 
-//      ------------------------------------------------------------------
+/*      ------------------------------------------------------------------
 //      See if it is time to print something.
-//      ------------------------------------------------------------------
+//      ----------------------------------------------------------------*/
         if (nout  == NULL     ) goto goto_600;
         if (n     <= 40       ) goto goto_400;
         if (itn   <= 10       ) goto goto_400;
@@ -759,8 +765,8 @@ void lsqr(
         if (istop != 0        ) goto goto_400;
         goto goto_600;
 
-//      Print a line for this iteration.
-//      "extra" is for experimental purposes.
+/*      Print a line for this iteration.
+//      "extra" is for experimental purposes. */
 
     goto_400:
         if ( extra ) {
@@ -772,14 +778,14 @@ void lsqr(
             fprintf(nout, fmt_1500,
                     itn, x[0], rnorm, test1, test2, anorm, acond);
         }
-        if (itn % 10 == 0) fprintf(nout, fmt_1600);
+        if (itn % 10 == 0) fprintf(nout, "%s", fmt_1600);
 
-//      ------------------------------------------------------------------
+/*      ------------------------------------------------------------------
 //      Stop if appropriate.
 //      The convergence criteria are required to be met on  nconv
 //      consecutive iterations, where  nconv  is set below.
 //      Suggested value:  nconv = 1, 2  or  3.
-//      ------------------------------------------------------------------
+//      ----------------------------------------------------------------*/
     goto_600:
         if (istop == 0) {
             nstop  = 0;
@@ -793,11 +799,11 @@ void lsqr(
         if (istop != 0) break;
         
     }
-//  ==================================================================
+/*  ==================================================================
 //  End of iteration loop.
 //  ==================================================================
 
-//  Finish off the standard error estimates.
+//  Finish off the standard error estimates. */
 
     if ( wantse ) {
         t    =   ONE;
@@ -810,8 +816,8 @@ void lsqr(
         
     }
 
-//  Decide if istop = 2 or 3.
-//  Print the stopping condition.
+/*  Decide if istop = 2 or 3.
+//  Print the stopping condition. */
  goto_800:
     if (damped  &&  istop == 2) istop = 3;
     if (nout != NULL) {
@@ -827,7 +833,7 @@ void lsqr(
                 exit, msg[istop]);
     }
 
-//  Assign output variables from local copies.
+/*  Assign output variables from local copies. */
     *istop_out  = istop;
     *itn_out    = itn;
     *anorm_out  = anorm;

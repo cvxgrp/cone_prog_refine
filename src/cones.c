@@ -137,8 +137,9 @@ int second_order_cone_projection_derivative(const int size,
                                              ){
 
 
-    double norm_x, dot_val, 
-        first_coefficient, second_coefficient;
+    /*Compute DPi(t,x) * (s,u) */
+
+    double norm_x, temp;
 
     norm_x = cblas_dnrm2(size - 1, z + 1, 1);
 
@@ -152,16 +153,22 @@ int second_order_cone_projection_derivative(const int size,
         return 0;
     }
 
-    dot_val = cblas_ddot(size - 1, dz + 1, 1, z + 1, 1);
+    /* temp = x^T * u / ||x|| */
+    temp = cblas_ddot(size - 1, dz + 1, 1, z + 1, 1);
+    temp /= norm_x;
     
-    dpi_z[0] = (dz[0] * norm_x + dot_val) / (2 * norm_x);
+    /*result[0] */
+    dpi_z[0] = (dz[0] + temp) / 2.;
 
-    first_coefficient = (dpi_z[0] + norm_x) / (2. * norm_x);
-    second_coefficient = (dz[0] - dpi_z[0] * dot_val / (norm_x*norm_x)) / (2. * norm_x);
-
+    /* result[1:] = u */
     memcpy(dpi_z+1, dz+1, sizeof(double) * (size-1));
-    cblas_dscal(size - 1, first_coefficient, dpi_z + 1, 1);
-    cblas_daxpy(size - 1, second_coefficient, z + 1, 1, dpi_z + 1, 1);
+
+    /* result[1:] *= (t / ||x|| + 1) / 2 */
+    cblas_dscal(size - 1, (z[0] / norm_x + 1. )/2., dpi_z + 1, 1);
+    
+    /* result[1:] += x (s - temp * t /||x||) / ( 2 * ||x||)*/
+    cblas_daxpy(size - 1, (dz[0] - temp * z[0] / norm_x) / (norm_x * 2), 
+        z + 1, 1, dpi_z + 1, 1);
 
     return 0;
 

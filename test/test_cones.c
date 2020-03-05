@@ -136,9 +136,8 @@ static const char * test_embedded_cone_projection(){
  }
 
 #define EMB_CONE_PROJ_DER_SIZE 17
-#define DZ_RANGE 1E-6
-#define DPIZ_RANGE 1E-6
-
+#define DZ_RANGE 1E-8
+#define DPIZ_RANGE 1E-15
 
 static const char * test_embedded_cone_projection_derivative() {
 
@@ -185,7 +184,7 @@ static const char * test_embedded_cone_projection_derivative() {
 
     workspace.pi_z = pi_z;
 
-    for (j=0; j<NUM_CONES_TESTS; j++){
+    for (j=0; j<NUM_CONES_TESTS*3; j++){
         random_uniform_vector(size, z, -1, 1, j*1234);
         random_uniform_vector(size, dz, -DZ_RANGE, 
                                 DZ_RANGE, j*5678);
@@ -194,7 +193,7 @@ static const char * test_embedded_cone_projection_derivative() {
         /* workspace.pi_z = Pi workspace.z */
         embedded_cone_projection(&workspace);
 
-        for (k = 0; k < NUM_BACKTRACKS; k++){
+        for (k = 0; k < 1; k++){
 
         if (DEBUG_PRINT) printf("\nscaling dz by (0.9)^%d\n",k);
 
@@ -227,15 +226,12 @@ static const char * test_embedded_cone_projection_derivative() {
         }
     }
 
-        /* pi_z + dpi_z == pi_z_p_dz*/
 
         equal = 0;
         if (DEBUG_PRINT) printf("\n\n((Pi(z + dz) - Pi(z - dz))/2 - DPi(z)dz)\n");
         if (DEBUG_PRINT) normerr = cblas_dnrm2(size, dz, 1);
         for (i = 0; i <size; i++){
             if (DEBUG_PRINT)
-                    // printf("(Pi(z + dz) - Pi(z) - DPi(z)dz)[%d] = %e,  \n", i,
-                    //     pi_z_p_dz[i] - dpi_z[i] - pi_z[i] );
 
                     printf("[%d] = %e,  \n", i,
                         ((pi_z_p_dz[i] - pi_z_m_dz[i])/2. - dpi_z[i]));

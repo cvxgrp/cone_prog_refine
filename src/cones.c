@@ -48,6 +48,13 @@ int embedded_cone_projection(
         counter += workspace->sizes_sec_ord[i];
     };
 
+    /* Exponential primal cones. */
+    for (i = 0; i < workspace->num_exp_pri; i++){  
+        exp_cone_projection(workspace->z + counter, 
+            workspace->pi_z + counter);
+        counter += 3;
+    };
+
     /*Last element of the embedded cone.*/
     workspace->pi_z[counter] = workspace->z[counter] <= 0 ? 0 : workspace->z[counter];
 
@@ -178,7 +185,7 @@ int second_order_cone_projection_derivative(const int size,
 #define CONE_TOL (1e-16)
 #define CONE_THRESH (1e-16)
 #define CONE_THRESH_TWO (1e-16)
-#define EXP_CONE_MAX_ITERS (200)
+#define EXP_CONE_MAX_ITERS (50)
 
 const double EulerConstant = 2.718281828459045; 
 
@@ -246,35 +253,40 @@ int isin_special_case(double * z){
 }
 
 
-void exp_cone_projection(double *z) {
+void exp_cone_projection(double *z, double *pi_z) {
   
   int i;
-  double ub, lb, g, x[3];
-  
+  double ub, lb, g;
   
   double tol = CONE_TOL;
 
   if (isin_kexp(z)) {
+    pi_z[0] = z[0];
+    pi_z[1] = z[1];
+    pi_z[2] = z[2];
     return;
   }
 
   if (isin_minus_kexp_star(z)){
-    memset(z, 0, 3 * sizeof(double));
+    pi_z[0] = 0.;
+    pi_z[1] = 0.;
+    pi_z[2] = 0.;
     return;
   }
 
   /* special case with analytical solution */
   if (isin_special_case(z)) {
-    z[1] = 0.0;
-    z[2] = (z[2] > 0.0) ? z[2] : 0.0;
+    pi_z[1] = 0.0;
+    pi_z[2] = (z[2] > 0.0) ? z[2] : 0.0;
+    pi_z[0] = z[0];
     return;
   }
 
   /* iterative procedure to find projection, bisects on dual variable: */
-  exp_get_rho_ub(z, x, &ub, &lb); /* get starting upper and lower bounds */
+  exp_get_rho_ub(z, pi_z, &ub, &lb); /* get starting upper and lower bounds */
   for (i = 0; i < EXP_CONE_MAX_ITERS; ++i) {
     double rho = (ub + lb) / 2;          /* halfway between upper and lower bounds */
-    g = exp_calc_grad(z, x, rho); /* calculates gradient wrt dual var */
+    g = exp_calc_grad(z, pi_z, rho); /* calculates gradient wrt dual var */
     if (g > 0) {
       lb = rho;
     } else {
@@ -285,35 +297,42 @@ void exp_cone_projection(double *z) {
     }
   }
 
-  z[0] = x[0];
-  z[1] = x[1];
-  z[2] = x[2];
+  // z[0] = x[0];
+  // z[1] = x[1];
+  // z[2] = x[2];
   return;
 }
 
 
 
 int exp_cone_projection_derivative(double *z, 
-                                    double *dz, 
+                                    double *dz,
+                                    double *dpi_z, 
                                     double *pi_z){
 
-    double jacobian[16], old_dz[3];
+    double jacobian[16];
     int success;
 
     if (isin_kexp(z)) {
-        return 1;
+        dpi_z[0] = dz[0];
+        dpi_z[1] = dz[1];
+        dpi_z[2] = dz[2];
+        return 0;
     };
 
     if (isin_minus_kexp_star(z)){
-    memset(dz, 0, 3 * sizeof(double));
-    return 1;
+        dpi_z[0] = 0.;
+        dpi_z[1] = 0.;
+        dpi_z[2] = 0.;
+    return 0;
     }
 
     /* special case with analytical solution */
     if (isin_special_case(z)) {
-    dz[1] = 0.0;
-    if (z[2] < 0.0) {dz[2] = 0.0;}
-    return 1;
+    dpi_z[1] = 0.0;
+    dpi_z[2] = (z[2] < 0.0) ? 0.0: dz[2];
+    dpi_z[0] = dz[0];
+    return 0;
     }
 
     success = compute_jacobian_exp_cone(jacobian,
@@ -321,22 +340,20 @@ int exp_cone_projection_derivative(double *z,
                                           pi_z[0], pi_z[1], pi_z[2]);
 
     if (success == 0){
-        dz[0] = 0.0;
-        dz[1] = 0.0;
-        dz[2] = 0.0;
-    };
+        dpi_z[0] = 0.0;
+        dpi_z[1] = 0.0;
+        dpi_z[2] = 0.0;
+        return -1;
 
-    old_dz[0] = dz[0];
-    old_dz[1] = dz[1];
-    old_dz[2] = dz[2];
+    };
 
 
     /* TODO maybe use BLAS*/
-    dz[0] = jacobian[0] * old_dz[0] + jacobian[1] * old_dz[1] + jacobian[2] * old_dz[2];
-    dz[1] = jacobian[4] * old_dz[0] + jacobian[5] * old_dz[1] + jacobian[6] * old_dz[2];
-    dz[2] = jacobian[8] * old_dz[0] + jacobian[9] * old_dz[1] + jacobian[10] * old_dz[2];
+    dpi_z[0] = jacobian[0] * dz[0] + jacobian[1] * dz[1] + jacobian[2] * dz[2];
+    dpi_z[1] = jacobian[4] * dz[0] + jacobian[5] * dz[1] + jacobian[6] * dz[2];
+    dpi_z[2] = jacobian[8] * dz[0] + jacobian[9] * dz[1] + jacobian[10] * dz[2];
 
-    return success;
+    return 0;
 
 }
 

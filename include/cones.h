@@ -55,9 +55,11 @@ int compute_jacobian_exp_cone(double *result, double mu_star,
                               double x_star, double y_star, 
                               double z_star);
 
-void exp_cone_projection(double *z);
-int exp_cone_projection_derivative(double *z, double *dz, double *pi_z);
-
+void exp_cone_projection(double *z, double *pi_z);
+int exp_cone_projection_derivative(double *z, 
+                                    double *dz,
+                                    double *dpi_z, 
+                                    double *pi_z);
 
 /*****************
 Semi-definite cone

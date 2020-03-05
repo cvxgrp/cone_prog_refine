@@ -9,7 +9,7 @@
 
 /*Constants for testing.*/
 
-#define DEBUG_PRINT 0 /*O is no print, 1 some, 2 more, ...*/
+#define DEBUG_PRINT 1 /*O is no print, 1 some, 2 more, ...*/
 
 /* Simple Macros from http://www.jera.com/techinfo/jtns/jtn002.html */
 #define mu_assert(message, test)  do {if (!(test)) return message; } while (0)

@@ -9,6 +9,105 @@
 #define NUM_CONES_TESTS 10
 #define NUM_BACKTRACKS 10
 
+#define EXP_CONE_TOLERANCE 1E-14
+
+static void * test_isin_kexp(double * pi_z){
+
+    mu_assert("Exp cone projection: y < 0", pi_z[1] >= 0);
+
+    if  (pi_z[1] == 0)
+        mu_assert("Exp cone projection: y == 0 and not (x <= 0 and z >= 0)", 
+            (pi_z[0] <= 0) && (pi_z[2] >= 0));
+    else
+        mu_assert("Exp cone projection: y > 0 and not y exp (x/y) >= z", 
+            pi_z[1] * exp(pi_z[0] / pi_z[1]) <= pi_z[2] + EXP_CONE_TOLERANCE);
+
+}
+
+static void * test_isin_kexp_star(double * x){
+
+    mu_assert("Exp cone projection: u > 0", x[0] <= 0);
+
+    if  (x[0] == 0)
+        mu_assert("Exp cone projection: u == 0 and not (v >= 0 and w >= 0)", 
+            (x[1] >= 0) && (x[2] >= 0));
+    else
+        mu_assert("Exp cone projection: u < 0 and not -u e(v/u) <= w ", 
+            - x[0] * exp(x[1] / x[0]) <= exp(1.) * x[2] + EXP_CONE_TOLERANCE);
+
+}
+
+static const char * test_exp_cone_proj(){
+
+    double z[3+1], 
+    pi_z[3+1];
+
+    double pi_z_m_z[3];
+
+    int i,j;
+    double normx;
+    cone_prog_refine_workspace workspace;
+
+    workspace.m = 0;
+    workspace.n = 0;
+    workspace.size_zero = 0;
+    workspace.size_nonneg = 0;
+    workspace.num_sec_ord = 0;
+    workspace.sizes_sec_ord = NULL;
+    workspace.num_exp_pri = 1;
+    workspace.num_exp_dua = 0;
+    workspace.z = z;
+    workspace.pi_z = pi_z;
+
+    for (j=0; j<100; j++){
+        random_uniform_vector(3+1, z, -1, 1,j);
+        
+        embedded_cone_projection(&workspace);
+       
+       if (DEBUG_PRINT){
+        printf("\nTesting exp cone projection\n"); 
+        for (i= 0; i<3;i++){
+            printf("z[%d] = %f, pi_z[%d] = %f\n", i, z[i], i, pi_z[i]);
+        }
+        
+        test_isin_kexp(pi_z);
+
+        pi_z_m_z[0] = pi_z[0] - z[0];
+        pi_z_m_z[1] = pi_z[1] - z[1];
+        pi_z_m_z[2] = pi_z[2] - z[2];
+
+        test_isin_kexp_star(pi_z_m_z);
+
+     }
+
+
+     // mu_assert("second order cone projection error", 
+     //    (pi_z[0] - normx) >= -1E-15);
+
+     // /*Also test that (pi_z - z) is in the second order cone */
+
+     // cblas_daxpy(LEN_TEST_SOCP_CONE, -1., z, 1, pi_z, 1);
+
+     // if (DEBUG_PRINT) printf("dual cone\n");
+
+     //    if (DEBUG_PRINT)
+     //        for (i= 0; i<LEN_TEST_SOCP_CONE+1;i++){
+     //        printf("(pi_z - z)[%d] = %f\n",  i, pi_z[i]);
+     //     }
+
+
+     // normx = cblas_dnrm2(LEN_TEST_SOCP_CONE-1,pi_z+1,1);
+
+     // if (DEBUG_PRINT) printf("||x|| = %e\n", normx);
+
+     // mu_assert("second order cone projection error", 
+     //    (pi_z[0] - normx) >= -1E-15);
+
+        }
+     return 0;
+ }
+
+
 static const char * test_second_order_cone(){
 
     double z[LEN_TEST_SOCP_CONE+1], 

@@ -25,8 +25,10 @@ int tests_run = 0;
     mu_run_test(test_aprod);
     mu_run_test(test_lsqr);
     mu_run_test(test_second_order_cone);
+        mu_run_test(test_embedded_cone_projection_derivative);
+
     mu_run_test(test_cone_prog_refine);
-    mu_run_test(test_embedded_cone_projection_derivative);
+    mu_run_test(test_exp_cone_proj);
 
 
      return 0;

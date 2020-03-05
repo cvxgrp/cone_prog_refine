@@ -92,6 +92,8 @@ void Q_matvec(
 N(z) and Pi(z).
 */
 int projection_and_normalized_residual(
+    lsqr_workspace * workspace){
+    /*
     const int m,
     const int n,
     const int size_zero,
@@ -108,45 +110,49 @@ int projection_and_normalized_residual(
     double * result,
     double * pi_z,
     const double * z
-    ){
+    ){*/
 
-    if (z[n+m] == 0.) return -1;
+    int size;
+
+    size = workspace->n + workspace->m + 1;
+
+    if (workspace->z[size-1] == 0.) return -1;
 
     /*pi_z = Pi(z)*/
     embedded_cone_projection(
-        z, 
-        pi_z,
-        n,
-        size_zero, 
-        size_nonneg,
-        num_sec_ord,
-        sizes_sec_ord);
+        workspace->z, 
+        workspace->pi_z,
+        workspace->n,
+        workspace->size_zero, 
+        workspace->size_nonneg,
+        workspace->num_sec_ord,
+        workspace->sizes_sec_ord);
 
-    /*result = 0.*/
-    memset(result, 0, sizeof(double) * (m+n+1));
+    /*N(z) = 0.*/
+    memset(workspace->norm_res_z, 0, sizeof(double) * (size));
 
-    /*result += Q * pi_z */
+    /*N(z) += Q * pi_z */
     Q_matvec(
-    m,
-    n,
-    A_col_pointers, 
-    A_row_indeces,
-    A_data,
-    b,
-    c,
-    result,
-    pi_z,
+    workspace->m,
+    workspace->n,
+    workspace->A_col_pointers, 
+    workspace->A_row_indeces,
+    workspace->A_data,
+    workspace->b,
+    workspace->c,
+    workspace->norm_res_z,
+    workspace->pi_z,
     1
     );
 
-    /*result -= pi_z*/
-    cblas_daxpy(n+m+1, -1, pi_z, 1, result, 1);
+    /*N(z) -= pi_z*/
+    cblas_daxpy(size, -1, workspace->pi_z, 1, workspace->norm_res_z, 1);
 
-    /*result += z*/
-    cblas_daxpy(n+m+1, 1, z, 1, result, 1);
+    /*N(z) += z*/
+    cblas_daxpy(size, 1, workspace->z, 1, workspace->norm_res_z, 1);
 
-    /*result /= |z[n+m]| */
-    cblas_dscal(n+m+1, 1./fabs(z[n+m]), result, 1);
+    /*N(z) /= |z[n+m]| */
+    cblas_dscal(size, 1./fabs(workspace->z[size-1]), workspace->norm_res_z, 1);
 
     return 0;
 

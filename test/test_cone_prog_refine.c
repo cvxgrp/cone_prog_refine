@@ -1,4 +1,6 @@
 #include "cone_prog_refine.h"
+#include "problem.h"
+
 #include "test.h"
 
 #define TEST_CPR_M 12
@@ -35,6 +37,8 @@ static const char * test_cone_prog_refine(){
     double c[TEST_CPR_N];
     int k;
 
+    lsqr_workspace workspace;
+
     for (k = 0; k < 10; k++){
 
     if (DEBUG_PRINT) 
@@ -50,11 +54,32 @@ static const char * test_cone_prog_refine(){
     random_uniform_vector(32, A_elements_cpr, 
            -1, 1, (k+1)*123);
 
+    workspace.m = TEST_CPR_M;
+    workspace.n = TEST_CPR_N;
+    workspace.size_zero = TEST_CPR_SIZE_ZERO;
+    workspace.size_nonneg = TEST_CPR_SIZE_NONNEG;
+    workspace.num_sec_ord = 0;
+    workspace.sizes_sec_ord = NULL;
+    workspace.num_exp_pri = 0;
+    workspace.num_exp_dua = 0;
+    workspace.A_col_pointers = A_col_pointers_cpr;
+    workspace.A_row_indeces = A_row_indeces_cpr;
+    workspace.A_data = A_elements_cpr;
+    workspace.b = b;
+    workspace.c = c;
+    workspace.internal = NULL;
+    workspace.internal2 = NULL;
+    workspace.z = z;
+    workspace.pi_z = pi_z;
+    workspace.norm_res_z = norm_res;
+
 
     projection_and_normalized_residual(
-    TEST_CPR_M, TEST_CPR_N, TEST_CPR_SIZE_ZERO, TEST_CPR_SIZE_NONNEG, 
+        &workspace);
+    
+    /*TEST_CPR_M, TEST_CPR_N, TEST_CPR_SIZE_ZERO, TEST_CPR_SIZE_NONNEG, 
     0, NULL,0, 0, A_col_pointers_cpr, A_row_indeces_cpr,
-    A_elements_cpr, b, c, norm_res, pi_z, z);
+    A_elements_cpr, b, c, norm_res, pi_z, z); */
 
     oldnorm = cblas_dnrm2(TEST_CPR_M + TEST_CPR_N+1, norm_res, 1);
 
@@ -83,9 +108,11 @@ cone_prog_refine(
     );
 
     projection_and_normalized_residual(
-    TEST_CPR_M, TEST_CPR_N, TEST_CPR_SIZE_ZERO, TEST_CPR_SIZE_NONNEG, 
+        &workspace);
+    
+    /*TEST_CPR_M, TEST_CPR_N, TEST_CPR_SIZE_ZERO, TEST_CPR_SIZE_NONNEG, 
     0, NULL,0, 0, A_col_pointers_cpr, A_row_indeces_cpr,
-    A_elements_cpr, b, c, norm_res, pi_z, z);
+    A_elements_cpr, b, c, norm_res, pi_z, z);*/
 
     mynorm = cblas_dnrm2(TEST_CPR_M + TEST_CPR_N+1, norm_res, 1);
 

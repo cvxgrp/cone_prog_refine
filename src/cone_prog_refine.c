@@ -132,11 +132,19 @@ int cone_prog_refine(
                     &delta /*Used by LSQR*/
                     );
 
+    workspace.z = z;
+    workspace.pi_z = pi_z;
+    workspace.norm_res_z = norm_res;
+
+
     /*Compute normalized residual*/
     nondiff = projection_and_normalized_residual(
+        &workspace);
+    /*
         m, n, size_zero, size_nonneg, num_sec_ord, sizes_sec_ord,
         num_exp_pri, num_exp_dua, A_col_pointers, A_row_indeces,
         A_data, b, c, norm_res, pi_z, z);
+        */
 
     old_normres = cblas_dnrm2(n+m+1, norm_res, 1);
 
@@ -147,10 +155,6 @@ int cone_prog_refine(
     for (i = 0; i < num_iters; i++){
 
         /*cblas_dscal(m+n+1, 1./fabs(z[m+n]), z, 1);*/
-
-        workspace.z = z;
-        workspace.pi_z = pi_z; /*Used by cone derivatives.*/
-        workspace.norm_res_z = norm_res; /*Used by second term of derivative*/
 
         if (print_info>3) printf("\nIteration %d\n", i);
         
@@ -210,9 +214,11 @@ int cone_prog_refine(
         }
 
             nondiff = projection_and_normalized_residual(
-            m, n, size_zero, size_nonneg, num_sec_ord, sizes_sec_ord,
+                &workspace);
+            
+            /*m, n, size_zero, size_nonneg, num_sec_ord, sizes_sec_ord,
             num_exp_pri, num_exp_dua, A_col_pointers, A_row_indeces,
-            A_data, b, c, norm_res, pi_z, z);
+            A_data, b, c, norm_res, pi_z, z); */
 
             new_normres = cblas_dnrm2(n+m+1, norm_res, 1);
 

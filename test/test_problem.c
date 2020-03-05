@@ -146,8 +146,32 @@ double pi_z[7] = {0,0,0,0,0,0,0};
 const double vector[7] = {1,2,3,4,-5,6,1};
 const double numpy_result[7] = {15.8 ,   13.  ,   18.78,    2.7 ,   -0.4 ,    5.51, -142. };
 
+    lsqr_workspace workspace;
+
+    /*Assign constants to workspace used by LSQR.*/
+    workspace.m = 3;
+    workspace.n = 3;
+    workspace.size_zero = 1;
+    workspace.size_nonneg = 2;
+    workspace.num_sec_ord = 0;
+    workspace.sizes_sec_ord = NULL;
+    workspace.num_exp_pri = 0;
+    workspace.num_exp_dua = 0;
+    workspace.A_col_pointers = col_pointers;
+    workspace.A_row_indeces = row_indeces;
+    workspace.A_data = mat_elements;
+    workspace.b = b;
+    workspace.c = c;
+    workspace.internal = NULL;
+    workspace.internal2 = NULL;
+    workspace.z = (double *)vector;
+    workspace.pi_z = pi_z;
+    workspace.norm_res_z = result;
+
 
 projection_and_normalized_residual(
+    &workspace);
+/*
     3,
     3,
     1,
@@ -165,6 +189,7 @@ projection_and_normalized_residual(
     pi_z,
     vector
     );
+    */
 
 
 
@@ -232,25 +257,6 @@ static const char * test_normalized_residual_matvec(){
     /* Setting z[n+m] = 1. or -1 simplifies the test.*/ 
     /* z[n+m] = 1.; */ 
 
-    projection_and_normalized_residual(
-    m,
-    n,
-    size_zero,
-    size_nonneg,
-    num_sec_ord,
-    sizes_sec_ord,
-    num_exp_pri,
-    num_exp_dua,
-    A_col_pointers, 
-    A_row_indeces,
-    A_data,
-    b,
-    c,
-    norm_res_z,
-    pi_z,
-    (const double *) z
-    );
-
     /*Assign constants to workspace used by LSQR.*/
     workspace.m = m;
     workspace.n = n;
@@ -270,6 +276,28 @@ static const char * test_normalized_residual_matvec(){
     workspace.z = z;
     workspace.pi_z = pi_z;
     workspace.norm_res_z = norm_res_z;
+
+
+    projection_and_normalized_residual(
+    &workspace);
+    /*
+    m,
+    n,
+    size_zero,
+    size_nonneg,
+    num_sec_ord,
+    sizes_sec_ord,
+    num_exp_pri,
+    num_exp_dua,
+    A_col_pointers, 
+    A_row_indeces,
+    A_data,
+    b,
+    c,
+    norm_res_z,
+    pi_z,
+    (const double *) z
+    );*/
 
 
     random_uniform_vector(n+m+1, dz, 
@@ -296,8 +324,13 @@ static const char * test_normalized_residual_matvec(){
         );
 
 
+    workspace.z = z_p_dz;
+    workspace.norm_res_z = check;
+
         projection_and_normalized_residual(
-        m,
+            &workspace);
+       
+       /* m,
         n,
         size_zero,
         size_nonneg,
@@ -310,10 +343,10 @@ static const char * test_normalized_residual_matvec(){
         A_data,
         b,
         c,
-        check, /*N(z + dz)*/
+        check, //N(z + dz)
         pi_z, 
         (const double *) z_p_dz 
-        );
+        ); */
 
         for (i = 0; i < n+m+1; i++){
             error = check[i] - norm_res_z[i] - result[i];
@@ -475,25 +508,6 @@ static const char * test_normalized_residual_vecmat(){
 
     if (DEBUG_PRINT)  printf("z[n+m] = %f\n", z[n+m]);
 
-    projection_and_normalized_residual(
-    m,
-    n,
-    size_zero,
-    size_nonneg,
-    num_sec_ord,
-    sizes_sec_ord,
-    num_exp_pri,
-    num_exp_dua,
-    A_col_pointers, 
-    A_row_indeces,
-    A_data,
-    b,
-    c,
-    norm_res_z,
-    pi_z,
-    (const double *) z
-    );
-
     /*Assign constants to workspace used by LSQR.*/
     workspace.m = m;
     workspace.n = n;
@@ -514,6 +528,27 @@ static const char * test_normalized_residual_vecmat(){
     workspace.pi_z = pi_z;
     workspace.norm_res_z = norm_res_z;
 
+    projection_and_normalized_residual(
+        &workspace);
+    /*
+    m,
+    n,
+    size_zero,
+    size_nonneg,
+    num_sec_ord,
+    sizes_sec_ord,
+    num_exp_pri,
+    num_exp_dua,
+    A_col_pointers, 
+    A_row_indeces,
+    A_data,
+    b,
+    c,
+    norm_res_z,
+    pi_z,
+    (const double *) z
+    );
+    */
 
     for (j = 0; j < 7; j++){
         memset(result_matvec[j], 0, sizeof(double) * (7));
@@ -654,6 +689,9 @@ static const char * test_aprod(){
     if (DEBUG_PRINT)  printf("z[n+m] = %f\n", z[n+m]);
 
     projection_and_normalized_residual(
+        &workspace);
+
+    /*
     m,
     n,
     size_zero,
@@ -671,6 +709,7 @@ static const char * test_aprod(){
     pi_z,
     (const double *) z
     );
+    */
 
 
     for (j = 0; j <  m+n+1; j++){

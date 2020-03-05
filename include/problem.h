@@ -65,6 +65,8 @@ void Q_matvec(
 N(z) and Pi(z).
 */
 int projection_and_normalized_residual(
+    lsqr_workspace * workspace);
+    /*
     const int m,
     const int n,
     const int size_zero,
@@ -81,7 +83,7 @@ int projection_and_normalized_residual(
     double * result,
     double * pi_z,
     const double * z
-    );
+    );*/
 
 /*
 result = result + DN(z) * vector

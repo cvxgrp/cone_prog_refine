@@ -88,60 +88,9 @@ static const char * test_embedded_cone_projection(){
     int lensol = 2;
     int lenzero = 2;
     int lennonneg = 2;
-    double z[7], pi_z[7];
+    double z[7];
     int i,j,k;
     cone_prog_refine_workspace workspace;
-
-
-    workspace.m = 0;
-    workspace.n = 2;
-    workspace.size_zero = 2;
-    workspace.size_nonneg = 2;
-    workspace.num_sec_ord = 0;
-    workspace.sizes_sec_ord = NULL;
-    workspace.num_exp_pri = 0;
-    workspace.num_exp_dua = 0;
-    workspace.z = z;
-    workspace.pi_z = pi_z;
-
-
-    for (j=0; j<NUM_CONES_TESTS; j++){
-        random_uniform_vector(7, z, -1, 1,j);
-        embedded_cone_projection(
-            &workspace);
-       
-       if (DEBUG_PRINT){
-        printf("\nTesting cone projection\n"); 
-        for (i= 0; i<7;i++){
-            printf("z[%d] = %f, pi_z[%d] = %f\n", i, z[i], i, pi_z[i]);
-         }
-     }
-
-
-        for (k = 0; k < lensol + lenzero; k++)
-            mu_assert("real cone projection error", pi_z[k] == z[k]);
-        
-        for (k = lensol + lenzero; k < lensol +lenzero + lennonneg; k++)
-            mu_assert("non-neg cone projection error", pi_z[k] >= 0.);
-        
-        mu_assert("error, pi_z[-1] < 0", pi_z[7-1] >= 0);
-        }
-     return 0;
- }
-
-
- static const char * test_embedded_cone_projection_derivative() {
-    double z[7], 
-    pi_z[7], 
-    dz[7], 
-    z_p_dz[7], 
-    dpi_z[7], 
-    pi_z_p_dz[7];
-    int i,j, k;
-    int equal;
-
-    cone_prog_refine_workspace workspace;
-
 
     initialize_workspace(
         0, 
@@ -160,11 +109,79 @@ static const char * test_embedded_cone_projection(){
         z,
         &workspace);
 
+    for (j=0; j<NUM_CONES_TESTS; j++){
+        random_uniform_vector(7, workspace.z, -1, 1,j);
+        embedded_cone_projection(&workspace);
+       
+       if (DEBUG_PRINT){
+        printf("\nTesting cone projection\n"); 
+        for (i= 0; i<7;i++){
+            printf("z[%d] = %f, pi_z[%d] = %f\n", i, 
+                workspace.z[i], i, workspace.pi_z[i]);
+         }
+     }
+
+
+        for (k = 0; k < lensol + lenzero; k++)
+            mu_assert("real cone projection error", 
+                workspace.pi_z[k] == workspace.z[k]);
+        
+        for (k = lensol + lenzero; k < lensol +lenzero + lennonneg; k++)
+            mu_assert("non-neg cone projection error", 
+                workspace.pi_z[k] >= 0.);
+        
+        mu_assert("error, pi_z[-1] < 0", workspace.pi_z[7-1] >= 0);
+        }
+     return 0;
+ }
+
+#define EMB_CONE_PROJ_DER_SIZE 17
+
+static const char * test_embedded_cone_projection_derivative() {
+
+    const int size_sol = 2;
+    const int size_zero = 2;
+    const int size_nonneg = 2;
+    const int num_sec_ord = 1;
+    const int len_socp_cones[1] = {10};
+
+    const int size = EMB_CONE_PROJ_DER_SIZE;
+
+    double z[EMB_CONE_PROJ_DER_SIZE], 
+    pi_z[EMB_CONE_PROJ_DER_SIZE], 
+    dz[EMB_CONE_PROJ_DER_SIZE], 
+    z_p_dz[EMB_CONE_PROJ_DER_SIZE], 
+    dpi_z[EMB_CONE_PROJ_DER_SIZE], 
+    pi_z_p_dz[EMB_CONE_PROJ_DER_SIZE];
+
+    int i,j, k;
+    int equal;
+
+    cone_prog_refine_workspace workspace;
+
+
+    initialize_workspace(
+        0, 
+        size_sol,
+        size_zero, /*size of zero cone*/
+        size_nonneg, /*size of non-negative cone*/
+        num_sec_ord, /*number of second order cones*/
+        (const int *) len_socp_cones, /*sizes of second order cones*/
+        0, /*number of exponential primal cones*/
+        0, /*number of exponential dual cones*/
+        NULL, /*pointers to columns of A, in CSC format*/
+        NULL, /*indeces of rows of A, in CSC format*/
+        NULL, /*elements of A, in CSC format*/
+        NULL, /*m-vector*/
+        NULL, /*n-vector*/
+        z,
+        &workspace);
+
     workspace.pi_z = pi_z;
 
     for (j=0; j<NUM_CONES_TESTS; j++){
-        random_uniform_vector(7, z, -1, 1, j*1234);
-        random_uniform_vector(7, dz, -1E-8, 1E-8, j*5678);
+        random_uniform_vector(size, z, -1, 1, j*1234);
+        random_uniform_vector(size, dz, -1E-8, 1E-8, j*5678);
 
 
         /* workspace.pi_z = Pi workspace.z */
@@ -174,11 +191,10 @@ static const char * test_embedded_cone_projection(){
 
         if (DEBUG_PRINT) printf("\nscaling dz by (0.9)^%d\n",k);
 
-        for (i= 0; i<7;i++) z_p_dz[i] = z[i] + dz[i];
+        for (i= 0; i<size;i++) z_p_dz[i] = z[i] + dz[i];
 
         workspace.z = z_p_dz;
         workspace.pi_z = pi_z_p_dz;
-
         embedded_cone_projection(&workspace);
         workspace.z = z;
         workspace.pi_z = pi_z;
@@ -191,26 +207,25 @@ static const char * test_embedded_cone_projection(){
 
         if (DEBUG_PRINT){
         printf("\nTesting cone projection derivative\n");
-        for (i= 0; i<7;i++){
-           printf("z[%d] = %.2f, pi_z[%d] = %.2f, dz[%d] = %.2f, dpi_z[%d] = %.2f, pi_z_p_dz[%d] = %.2f\n", 
+        for (i= 0; i<size;i++){
+           printf("z[%d] = %.2e, pi_z[%d] = %.2e, dz[%d] = %.2e, dpi_z[%d] = %.2e, pi_z_p_dz[%d] = %.2e\n", 
                i, z[i], i, pi_z[i], i, dz[i], i, dpi_z[i], i, pi_z_p_dz[i]);
         }
     }
 
         /* pi_z + dpi_z == pi_z_p_dz*/
         equal = 0;
-        for (i = 0; i <7; i++){
+        for (i = 0; i <size; i++){
             if (DEBUG_PRINT)
                     printf("error[%d] = %e\n", i,
                         pi_z[i] + dpi_z[i] - pi_z_p_dz[i]);
             if (fabs(pi_z[i] + dpi_z[i] - pi_z_p_dz[i])>1E-15) {
-                equal = -1;
-                break;} 
+                equal = -1;} 
         }
         if (equal == 0) break;
         
 
-        for (i= 0; i<7;i++) dz[i] *= (0.9);
+        for (i= 0; i<size;i++) dz[i] /= (0.9);
 }
 
         mu_assert("error, pi_z + dpi_z != pi_z_p_dz", !equal);

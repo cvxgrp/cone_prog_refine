@@ -9,16 +9,12 @@
 
 /*Constants for testing.*/
 
-#define DEBUG_PRINT 0 /*O is no print, 1 some, 2 more, ...*/
-#define NUM_CONES_TESTS 10
-#define NUM_BACKTRACKS 10
-
+#define DEBUG_PRINT 1 /*O is no print, 1 some, 2 more, ...*/
 
 /* Simple Macros from http://www.jera.com/techinfo/jtns/jtn002.html */
 #define mu_assert(message, test)  do {if (!(test)) return message; } while (0)
 #define mu_run_test(test) do {const char *message = test(); tests_run++;                  \
     if (message) return message;} while (0)
-
 
 
 /* Write random doubles to array. */

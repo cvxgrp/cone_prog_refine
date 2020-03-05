@@ -219,7 +219,7 @@ static const char * test_normalized_residual_matvec(){
 
     double error;
 
-    for (k = 0; k < NUM_CONES_TESTS; k++){
+    for (k = 0; k < 10; k++){
 
         if (DEBUG_PRINT) printf("\nTesting DN(z) * x\n");
 

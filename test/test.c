@@ -13,7 +13,6 @@ int tests_run = 0;
  
  static const char * all_tests() {
      mu_run_test(test_embedded_cone_projection);
-     mu_run_test(test_embedded_cone_projection_derivative);
      mu_run_test(test_csc_matvec);
      mu_run_test(test_csr_matvec);
      mu_run_test(test_Q_matvec);
@@ -27,6 +26,7 @@ int tests_run = 0;
     mu_run_test(test_lsqr);
     mu_run_test(test_second_order_cone);
     mu_run_test(test_cone_prog_refine);
+         mu_run_test(test_embedded_cone_projection_derivative);
      return 0;
  }
  

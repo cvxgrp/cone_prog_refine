@@ -188,10 +188,10 @@ int normalized_residual_matvec(
     workspace->internal,
     workspace->n,
     workspace->size_zero, 
-    workspace->size_nonneg
-    /*const vecsize num_second_order,
-    const vecsize * sizes_second_order
-    const vecsize num_exp_pri,
+    workspace->size_nonneg,
+    workspace->num_sec_ord,
+    workspace->sizes_sec_ord
+    /*const vecsize num_exp_pri,
     const vecsize num_exp_dua*/
     );
 
@@ -278,10 +278,10 @@ int normalized_residual_vecmat(
     workspace->internal2,
     workspace->n,
     workspace->size_zero, 
-    workspace->size_nonneg
-    /*const vecsize num_second_order,
-    const vecsize * sizes_second_order
-    const vecsize num_exp_pri,
+    workspace->size_nonneg,
+    workspace->num_sec_ord,
+    workspace->sizes_sec_ord
+    /*const vecsize num_exp_pri,
     const vecsize num_exp_dua*/
     );
 

@@ -125,7 +125,8 @@ static const char * test_embedded_cone_projection(){
         embedded_cone_projection(z_p_dz, pi_z_p_dz, 
             LENSOL, LENZERO, LENNONEG, 0, NULL);
 
-        embedded_cone_projection_derivative(z, pi_z, dz, dpi_z, LENSOL, LENZERO, LENNONEG);
+        embedded_cone_projection_derivative(z, pi_z, dz, dpi_z, 
+            LENSOL, LENZERO, LENNONEG, 0, NULL);
 
         if (DEBUG_PRINT){
         printf("\nTesting cone projection derivative\n");

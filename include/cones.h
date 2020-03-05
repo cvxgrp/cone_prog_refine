@@ -25,6 +25,7 @@ void embedded_cone_projection(double *z, double *pi_z, int zero, int nonneg, int
 */
 
 #include <stdint.h>
+#include <problem.h>
 
 
 /*temporarily for interoperability with Python */
@@ -93,6 +94,8 @@ void semidefinite_cone_projection(double *z,
 Embedded cone
 ************/
 int embedded_cone_projection(
+    lsqr_workspace * workspace);
+    /*
     const double * z, 
     double * pi_z,
     const vecsize size_solution,
@@ -100,9 +103,10 @@ int embedded_cone_projection(
     const vecsize size_non_neg,
     const vecsize num_second_order,
     const vecsize * sizes_second_order
-    /*const vecsize num_exp_pri,
-    const vecsize num_exp_dua*/
+    const vecsize num_exp_pri,
+    const vecsize num_exp_dua
     );
+    */
 
 int embedded_cone_projection_derivative(
     const double * z, 

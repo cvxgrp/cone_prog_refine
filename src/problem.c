@@ -118,9 +118,9 @@ int projection_and_normalized_residual(
 
     if (workspace->z[size-1] == 0.) return -1;
 
-    /*pi_z = Pi(z)*/
-    embedded_cone_projection(
-        workspace->z, 
+    /*workspace->pi_z = workspace->Pi(z)*/
+    embedded_cone_projection(workspace);
+        /*workspace->z, 
         workspace->pi_z,
         workspace->n,
         workspace->size_zero, 

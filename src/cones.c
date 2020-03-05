@@ -105,6 +105,8 @@ int embedded_cone_projection_derivative(
             );
         counter += workspace->sizes_sec_ord[i];
     };
+
+    
     /*Last element */
     dpi_z[counter] = workspace->z[counter] <= 0. ? 0. : dz[counter];
 

@@ -9,7 +9,7 @@
 #define NUM_CONES_TESTS 10
 #define NUM_BACKTRACKS 10
 
-#define EXP_CONE_TOLERANCE 1E-14
+#define EXP_CONE_TOLERANCE 1E-15
 
 static void * test_isin_kexp(double * pi_z){
 
@@ -95,29 +95,6 @@ static const char * test_exp_cone_proj(){
         test_isin_kexp(pi_z_m_z);
 
      }
-
-
-     // mu_assert("second order cone projection error", 
-     //    (pi_z[0] - normx) >= -1E-15);
-
-     // /*Also test that (pi_z - z) is in the second order cone */
-
-     // cblas_daxpy(LEN_TEST_SOCP_CONE, -1., z, 1, pi_z, 1);
-
-     // if (DEBUG_PRINT) printf("dual cone\n");
-
-     //    if (DEBUG_PRINT)
-     //        for (i= 0; i<LEN_TEST_SOCP_CONE+1;i++){
-     //        printf("(pi_z - z)[%d] = %f\n",  i, pi_z[i]);
-     //     }
-
-
-     // normx = cblas_dnrm2(LEN_TEST_SOCP_CONE-1,pi_z+1,1);
-
-     // if (DEBUG_PRINT) printf("||x|| = %e\n", normx);
-
-     // mu_assert("second order cone projection error", 
-     //    (pi_z[0] - normx) >= -1E-15);
 
         }
      return 0;

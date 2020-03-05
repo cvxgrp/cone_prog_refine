@@ -39,8 +39,8 @@ static void * test_isin_kexp_star(double * x){
 
 static const char * test_exp_cone_proj(){
 
-    double z[3+1], 
-    pi_z[3+1];
+    double z[6+1], 
+    pi_z[6+1];
 
     double pi_z_m_z[3];
 
@@ -55,17 +55,20 @@ static const char * test_exp_cone_proj(){
     workspace.num_sec_ord = 0;
     workspace.sizes_sec_ord = NULL;
     workspace.num_exp_pri = 1;
-    workspace.num_exp_dua = 0;
+    workspace.num_exp_dua = 1;
     workspace.z = z;
     workspace.pi_z = pi_z;
 
     for (j=0; j<100; j++){
-        random_uniform_vector(3+1, z, -1, 1,j);
+        random_uniform_vector(6+1, z, -1, 1,j);
         
         embedded_cone_projection(&workspace);
        
        if (DEBUG_PRINT){
         printf("\nTesting exp cone projection\n"); 
+        
+        printf("testing primal\n");
+
         for (i= 0; i<3;i++){
             printf("z[%d] = %f, pi_z[%d] = %f\n", i, z[i], i, pi_z[i]);
         }
@@ -77,6 +80,19 @@ static const char * test_exp_cone_proj(){
         pi_z_m_z[2] = pi_z[2] - z[2];
 
         test_isin_kexp_star(pi_z_m_z);
+
+        printf("testing dual\n");
+        for (i= 3; i<6;i++){
+            printf("z[%d] = %f, pi_z[%d] = %f\n", i, z[i], i, pi_z[i]);
+        }
+        
+        test_isin_kexp_star(pi_z+3);
+
+        pi_z_m_z[0] = pi_z[3] - z[3];
+        pi_z_m_z[1] = pi_z[4] - z[4];
+        pi_z_m_z[2] = pi_z[5] - z[5];
+
+        test_isin_kexp(pi_z_m_z);
 
      }
 

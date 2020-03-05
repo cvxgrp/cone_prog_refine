@@ -55,6 +55,16 @@ int embedded_cone_projection(
         counter += 3;
     };
 
+    /* Exponential dual cones. */
+    for (i = 0; i < workspace->num_exp_dua; i++){  
+        exp_cone_projection(workspace->z + counter, 
+            workspace->pi_z + counter);
+        workspace->pi_z[counter] -= workspace->z[counter];
+        workspace->pi_z[counter+1] -= workspace->z[counter+1];
+        workspace->pi_z[counter+2] -= workspace->z[counter+2];
+        counter += 3;
+    };
+
     /*Last element of the embedded cone.*/
     workspace->pi_z[counter] = workspace->z[counter] <= 0 ? 0 : workspace->z[counter];
 

@@ -32,15 +32,19 @@ typedef int64_t vecsize;
 
 
 
-void zero_cone_projection(double *z, const vecsize size);
+/*void zero_cone_projection(double *z, const vecsize size);
 
 void zero_cone_projection_derivative(const double *z, double *dz, const vecsize size);
 
 void non_negative_cone_projection(double *z, const vecsize size);
 
 void non_negative_cone_projection_derivative(const double *z, double *x, 
-                                             const vecsize size);
+                                             const vecsize size);*/
 
+void second_order_cone_projection(
+    const double *z, 
+    double * pi_z,
+    const vecsize size);
 
 
 void second_order_cone_projection_derivative(const double *z, 
@@ -93,10 +97,10 @@ int embedded_cone_projection(
     double * pi_z,
     const vecsize size_solution,
     const vecsize size_zero, 
-    const vecsize size_non_neg
-    /*const vecsize num_second_order,
+    const vecsize size_non_neg,
+    const vecsize num_second_order,
     const vecsize * sizes_second_order
-    const vecsize num_exp_pri,
+    /*const vecsize num_exp_pri,
     const vecsize num_exp_dua*/
     );
 

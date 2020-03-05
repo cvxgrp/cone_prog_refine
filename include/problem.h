@@ -112,9 +112,9 @@ int normalized_residual_vecmat(
 * 
 */
 void normalized_residual_aprod(
-    const int mode, const int lsqr_m, const int lsqr_n, 
+    int mode, int lsqr_m, int lsqr_n, 
     double * x, double * y, 
-    lsqr_workspace * workspace);
+    void * workspace);
 
 
 #endif

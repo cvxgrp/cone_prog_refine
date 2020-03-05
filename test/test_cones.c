@@ -12,7 +12,8 @@ static const char * test_embedded_cone_projection(){
 
     for (j=0; j<NUM_CONES_TESTS; j++){
         random_uniform_vector(N, z, -1, 1,j);
-        embedded_cone_projection(z, pi_z, lensol, lenzero, lennonneg);
+        embedded_cone_projection(z, pi_z, lensol, 
+            lenzero, lennonneg, 0, NULL);
        
        if (DEBUG_PRINT){
         printf("\nTesting cone projection\n"); 
@@ -43,7 +44,8 @@ static const char * test_embedded_cone_projection(){
     for (j=0; j<NUM_CONES_TESTS; j++){
         random_uniform_vector(N, z, -1, 1, j*1234);
         random_uniform_vector(N, dz, -1E-8, 1E-8, j*5678);
-        embedded_cone_projection(z, pi_z, LENSOL, LENZERO, LENNONEG);
+        embedded_cone_projection(z, pi_z, 
+            LENSOL, LENZERO, LENNONEG, 0, NULL);
 
         for (k = 0; k < NUM_BACKTRACKS; k++){
 
@@ -51,7 +53,8 @@ static const char * test_embedded_cone_projection(){
 
         for (i= 0; i<N;i++) z_p_dz[i] = z[i] + dz[i];
 
-        embedded_cone_projection(z_p_dz, pi_z_p_dz, LENSOL, LENZERO, LENNONEG);
+        embedded_cone_projection(z_p_dz, pi_z_p_dz, 
+            LENSOL, LENZERO, LENNONEG, 0, NULL);
 
         embedded_cone_projection_derivative(z, pi_z, dz, dpi_z, LENSOL, LENZERO, LENNONEG);
 

@@ -1,4 +1,4 @@
-#include "truncated_lsqr.h"
+#include "lsqr.h"
 #include "test.h"
 #include "linalg.h"
 
@@ -129,7 +129,7 @@ static const char * test_lsqr(){
       0., /* conlim */
       15,
       (DEBUG_PRINT)? stdout : NULL,
-      // The remaining variables are output only.
+      /* The remaining variables are output only. */
       &istop_out,
       &itn_out,
       &anorm_out,
@@ -139,17 +139,6 @@ static const char * test_lsqr(){
       &xnorm_out
      );
 
-    // truncated_lsqr(TEST_TRUCATED_LSQR_M, 
-    // TEST_TRUCATED_LSQR_N,
-    // aprod,
-    // b, /*m-vector*/
-    // 15,
-    // x, /*result n-vector*/
-    // u, /*internal m-vector*/
-    // v, /*internal n-vector*/
-    // w, /*internal n-vector*/
-    // NULL /*workspace for aprod*/
-    // );
 
     for (i =0; i<TEST_TRUCATED_LSQR_N; i++) {
         if (DEBUG_PRINT)  printf("(LSQR x)[%d]  - x[%d] = %e\n", i,i, x[i] - real_x[i]);

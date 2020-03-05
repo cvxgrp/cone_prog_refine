@@ -19,6 +19,7 @@
 #include "cone_prog_refine.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "problem.h"
 #include "mini_cblas.h"
 #include "lsqr.h"
@@ -153,19 +154,6 @@ int cone_prog_refine(
 
         if (print_info>3) printf("\nIteration %d\n", i);
         
-        /*LSQR*/
-        truncated_lsqr(m+n+1, 
-                       m+n+1,
-                       normalized_residual_aprod,
-                       norm_res, /*m-vector*/
-                       num_lsqr_iters,
-                       delta, /*result n-vector*/
-                        u, /*internal m-vector*/
-                        v, /*internal n-vector*/
-                        w, /*internal n-vector*/
-                        (void *)&workspace /*workspace for aprod*/
-        );
-
     /*u = N(z)*/
     memcpy(u, norm_res, sizeof(double)*(m+n+1));
 
@@ -174,17 +162,17 @@ int cone_prog_refine(
       normalized_residual_aprod,
       sqrt(lambda), /*damp*/
       (void *)&workspace,
-      u,    // len = m
-      v,    // len = n
-      w,    // len = n
-      delta,    // len = n
-      NULL,   // len = *
+      u,    /* len = m */
+      v,    /* len = n */
+      w,    /* len = n */
+      delta,    /* len = n */
+      NULL,   /* len = * */
       0., /*atol*/
       0., /*btol*/
       0., /*conlim*/
       num_lsqr_iters,
       (print_info>2)? stdout:NULL,
-      // The remaining variables are output only.
+      /* The remaining variables are output only. */
       &istop_out,
       &itn_out,
       &anorm_out,

@@ -12,17 +12,17 @@ lsqr( int m,
                     void *UsrWrk ),
       double damp,
       void   *UsrWrk,
-      double u[],    // len = m
-      double v[],    // len = n
-      double w[],    // len = n
-      double x[],    // len = n
-      double se[],   // len = *
+      double u[],    /* len = m */
+      double v[],    /* len = n */
+      double w[],    /* len = n */
+      double x[],    /* len = n */
+      double se[],   /* len = * */
       double atol,
       double btol,
       double conlim,
       int    itnlim,
       FILE   *nout,
-      // The remaining variables are output only.
+      /* The remaining variables are output only. */
       int    *istop_out,
       int    *itn_out,
       double *anorm_out,

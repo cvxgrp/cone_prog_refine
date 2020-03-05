@@ -27,10 +27,10 @@ int embedded_cone_projection(
     double * pi_z,
     const vecsize size_solution,
     const vecsize size_zero, 
-    const vecsize size_non_neg
-    /*const vecsize num_second_order,
+    const vecsize size_non_neg,
+    const vecsize num_second_order,
     const vecsize * sizes_second_order
-    const vecsize num_exp_pri,
+    /*const vecsize num_exp_pri,
     const vecsize num_exp_dua*/
     ){
 
@@ -46,13 +46,14 @@ int embedded_cone_projection(
     }
     counter += size_non_neg;
 
-    /*Second order cones.
+    /* Second order cones. */
     for (i = 0; i < num_second_order; i++){  
         second_order_cone_projection(
-            z[counter], 
-            pi_z[counter],
+            z + counter, 
+            pi_z + counter,
             sizes_second_order[i]);
-        counter += sizes_second_order[i]};*/
+        counter += sizes_second_order[i];
+    };
 
     /*Last element of the embedded cone.*/
     pi_z[counter] = z[counter] <= 0 ? 0 : z[counter];
@@ -89,6 +90,8 @@ int embedded_cone_projection_derivative(
     counter += size_non_neg;
 
     /*Second order cones.*/
+
+    /*Last element */
     dpi_z[counter] = z[counter] <= 0. ? 0. : dz[counter];
 
     return 0;
@@ -96,8 +99,9 @@ int embedded_cone_projection_derivative(
 }
 
 
-/*NEEDS FIXING
-void second_order_cone_projection(const double *z, double * pi_z,
+void second_order_cone_projection(
+    const double *z, 
+    double * pi_z,
     const vecsize size){
 
     double norm_x, rho, mult;
@@ -106,28 +110,29 @@ void second_order_cone_projection(const double *z, double * pi_z,
     norm_x = cblas_dnrm2(size - 1, z + 1, 1);
 
     if (norm_x <= z[0]){
+        memcpy(pi_z, z, sizeof(double) * size);
         return;
     }
 
     if (norm_x <= -z[0]){
-        memset(z, 0, sizeof(double) * size);
+        memset(pi_z, 0, sizeof(double) * size);
         return;
     }
 
     rho = z[0];
 
-    z[0] = (norm_x + rho) / 2.;
+    pi_z[0] = (norm_x + rho) / 2.;
 
-    mult = z[0]/norm_x;
+    mult = pi_z[0]/norm_x;
 
     for (i = 1; i < size; i++){
-        z[i] *= mult;
+        pi_z[i] = z[i] * mult;
     } 
-}*/
+}
 
 
 
-
+/*
 void zero_cone_projection_derivative(const double *z, double *dz, 
                                      const vecsize size){
     memset(dz, 0, sizeof(double) * size);
@@ -143,6 +148,7 @@ void non_negative_cone_projection_derivative(const double *z, double *dz, const 
         };
     }
 }
+*/
 
 
 

@@ -118,7 +118,9 @@ int projection_and_normalized_residual(
         pi_z,
         n,
         size_zero, 
-        size_nonneg);
+        size_nonneg,
+        num_sec_ord,
+        sizes_sec_ord);
 
     /*result = 0.*/
     memset(result, 0, sizeof(double) * (m+n+1));
@@ -290,9 +292,9 @@ int normalized_residual_vecmat(
 
 
 void normalized_residual_aprod(
-    const int mode, const int lsqr_m, const int lsqr_n, 
+    int mode, int lsqr_m, int lsqr_n, 
     double * x, double * y, 
-    lsqr_workspace * workspace){
+    void * workspace){
 
     /*struct lsqr_workspace * workspace = UsrWrk;*/
 
@@ -300,7 +302,7 @@ void normalized_residual_aprod(
     if (mode == 1){
 
     normalized_residual_matvec(
-    workspace,
+    (lsqr_workspace *)workspace,
     y,
     x /*It gets changed but then restored.*/
     );
@@ -310,7 +312,7 @@ void normalized_residual_aprod(
     if (mode == 2){
 
         normalized_residual_vecmat(
-    workspace,
+    (lsqr_workspace *)workspace,
     x, 
     y /*It gets changed but then restored.*/
     );

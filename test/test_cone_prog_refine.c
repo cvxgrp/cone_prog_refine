@@ -6,7 +6,7 @@
 #define TEST_CPR_M 12
 #define TEST_CPR_N 9
 #define TEST_CPR_SIZE_ZERO 2
-#define TEST_CPR_SIZE_NONNEG 10
+#define TEST_CPR_SIZE_NONNEG 5
 
 
 /*Temporarily defined here because N macro from test.h conflicts.*/
@@ -34,6 +34,8 @@ static const char * test_cone_prog_refine(){
     double c[TEST_CPR_N];
     int k;
 
+    const int sizes_sec_ord_cones[] = {5};
+
     cone_prog_refine_workspace workspace;
 
     for (k = 0; k < 10; k++){
@@ -56,8 +58,8 @@ static const char * test_cone_prog_refine(){
         TEST_CPR_N,
         TEST_CPR_SIZE_ZERO, /*size of zero cone*/
         TEST_CPR_SIZE_NONNEG, /*size of non-negative cone*/
-        0, /*number of second order cones*/
-        NULL, /*sizes of second order cones*/
+        1, /*number of second order cones*/
+        sizes_sec_ord_cones, /*sizes of second order cones*/
         0, /*number of exponential primal cones*/
         0, /*number of exponential dual cones*/
         A_col_pointers_cpr, /*pointers to columns of A, in CSC format*/
@@ -78,8 +80,8 @@ cone_prog_refine(
     TEST_CPR_N, /*number of columns of A*/
     TEST_CPR_SIZE_ZERO, /*size of zero cone*/
     TEST_CPR_SIZE_NONNEG, /*size of non-negative cone*/
-    0, /*number of second order cones*/
-    NULL, /*sizes of second order cones*/
+    1, /*number of second order cones*/
+    sizes_sec_ord_cones, /*sizes of second order cones*/
     0, /*number of exponential primal cones*/
     0, /*number of exponential dual cones*/
     A_col_pointers_cpr, /*pointers to columns of A, in CSC format*/

@@ -136,6 +136,9 @@ static const char * test_embedded_cone_projection(){
  }
 
 #define EMB_CONE_PROJ_DER_SIZE 17
+#define DZ_RANGE 1E-6
+#define DPIZ_RANGE 1E-6
+
 
 static const char * test_embedded_cone_projection_derivative() {
 
@@ -151,11 +154,14 @@ static const char * test_embedded_cone_projection_derivative() {
     pi_z[EMB_CONE_PROJ_DER_SIZE], 
     dz[EMB_CONE_PROJ_DER_SIZE], 
     z_p_dz[EMB_CONE_PROJ_DER_SIZE], 
+    z_m_dz[EMB_CONE_PROJ_DER_SIZE], 
     dpi_z[EMB_CONE_PROJ_DER_SIZE], 
-    pi_z_p_dz[EMB_CONE_PROJ_DER_SIZE];
+    pi_z_p_dz[EMB_CONE_PROJ_DER_SIZE],
+    pi_z_m_dz[EMB_CONE_PROJ_DER_SIZE];
 
     int i,j, k;
     int equal;
+    double normerr;
 
     cone_prog_refine_workspace workspace;
 
@@ -181,7 +187,8 @@ static const char * test_embedded_cone_projection_derivative() {
 
     for (j=0; j<NUM_CONES_TESTS; j++){
         random_uniform_vector(size, z, -1, 1, j*1234);
-        random_uniform_vector(size, dz, -1E-8, 1E-8, j*5678);
+        random_uniform_vector(size, dz, -DZ_RANGE, 
+                                DZ_RANGE, j*5678);
 
 
         /* workspace.pi_z = Pi workspace.z */
@@ -191,14 +198,21 @@ static const char * test_embedded_cone_projection_derivative() {
 
         if (DEBUG_PRINT) printf("\nscaling dz by (0.9)^%d\n",k);
 
+        /*Pi(z + dz) */
         for (i= 0; i<size;i++) z_p_dz[i] = z[i] + dz[i];
-
         workspace.z = z_p_dz;
         workspace.pi_z = pi_z_p_dz;
         embedded_cone_projection(&workspace);
+
+        /*Pi(z - dz) */
+        for (i = 0; i<size;i++) z_m_dz[i] = z[i] - dz[i];
+        workspace.z = z_m_dz;
+        workspace.pi_z = pi_z_m_dz;
+        embedded_cone_projection(&workspace);
+        
+        /*re-assign correct workspace*/
         workspace.z = z;
         workspace.pi_z = pi_z;
-
 
         embedded_cone_projection_derivative(
             &workspace,
@@ -214,21 +228,28 @@ static const char * test_embedded_cone_projection_derivative() {
     }
 
         /* pi_z + dpi_z == pi_z_p_dz*/
+
         equal = 0;
+        if (DEBUG_PRINT) printf("\n\n((Pi(z + dz) - Pi(z - dz))/2 - DPi(z)dz)\n");
+        if (DEBUG_PRINT) normerr = cblas_dnrm2(size, dz, 1);
         for (i = 0; i <size; i++){
             if (DEBUG_PRINT)
-                    printf("error[%d] = %e\n", i,
-                        pi_z[i] + dpi_z[i] - pi_z_p_dz[i]);
-            if (fabs(pi_z[i] + dpi_z[i] - pi_z_p_dz[i])>1E-15) {
+                    // printf("(Pi(z + dz) - Pi(z) - DPi(z)dz)[%d] = %e,  \n", i,
+                    //     pi_z_p_dz[i] - dpi_z[i] - pi_z[i] );
+
+                    printf("[%d] = %e,  \n", i,
+                        ((pi_z_p_dz[i] - pi_z_m_dz[i])/2. - dpi_z[i]));
+
+            if (fabs((pi_z_p_dz[i] - pi_z_m_dz[i])/2. - dpi_z[i])>DPIZ_RANGE) {
                 equal = -1;} 
         }
         if (equal == 0) break;
         
 
-        for (i= 0; i<size;i++) dz[i] /= (0.9);
+        for (i= 0; i<size;i++) dz[i] *= (0.9);
 }
 
-        mu_assert("error, pi_z + dpi_z != pi_z_p_dz", !equal);
+        mu_assert("error, (Pi(z + dz) - Pi(z - dz))/2 != DPi(z) dz", !equal);
 
         }
      return 0;

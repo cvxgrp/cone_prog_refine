@@ -55,13 +55,14 @@ int embedded_cone_projection(
 
 }
 
-/*TODO return -1 if non-differentiable.*/
-/*TODO add transpose.*/
+/* dpi_z = DPi dz 
+TODO return -1 if non-differentiable
+TODO add transpose
+TODO make it so that dpi_z += DPi dz */
 int embedded_cone_projection_derivative(
     cone_prog_refine_workspace * workspace,
     const double * dz,
-    double * dpi_z
-    )
+    double * dpi_z)
 {
 
     int i, counter;
@@ -76,8 +77,17 @@ int embedded_cone_projection_derivative(
     }
     counter += workspace->size_nonneg;
 
-    /*Second order cones.*/
-
+    /* Second order cones. */
+    for (i = 0; i < workspace->num_sec_ord; i++){  
+        second_order_cone_projection_derivative(
+            workspace->sizes_sec_ord[i],
+            workspace->z + counter, 
+            workspace->pi_z + counter,
+            dz + counter,
+            dpi_z + counter
+            );
+        counter += workspace->sizes_sec_ord[i];
+    };
     /*Last element */
     dpi_z[counter] = workspace->z[counter] <= 0. ? 0. : dz[counter];
 
@@ -85,11 +95,11 @@ int embedded_cone_projection_derivative(
 
 }
 
-
+/* pi_z = Pi_SOC z */
 void second_order_cone_projection(
     const double *z, 
     double * pi_z,
-    const vecsize size){
+    const int size){
 
     double norm_x, rho, mult;
     int i;
@@ -117,59 +127,43 @@ void second_order_cone_projection(
     } 
 }
 
-
-
-/*
-void zero_cone_projection_derivative(const double *z, double *dz, 
-                                     const vecsize size){
-    memset(dz, 0, sizeof(double) * size);
-}
-
-
-void non_negative_cone_projection_derivative(const double *z, double *dz, const vecsize size){
-    int i;
-
-    for (i = 0; i < size; i++){
-        if (z[i] < 0) {
-            dz[i] = 0;
-        };
-    }
-}
-*/
-
-
-
-
-void second_order_cone_projection_derivative(const double *z, 
-                                             double *dz, 
+/* dpi_z = DPi_SOC dz 
+TODO add non-diff return value*/
+int second_order_cone_projection_derivative(const int size,
+                                             const double *z, 
                                              const double *pi_z,
-                                             const vecsize size){
+                                             const double *dz,
+                                             double *dpi_z
+                                             ){
 
 
-    double norm_x, dot_val, old_dzzero, first_coefficient, second_coefficient;
+    double norm_x, dot_val, 
+        first_coefficient, second_coefficient;
 
     norm_x = cblas_dnrm2(size - 1, z + 1, 1);
 
-    if (norm_x <= z[0]){return;}
+    if (norm_x <= z[0]){
+        memcpy(dpi_z, dz, sizeof(double) * size);
+        return 0;
+    }
     
     if (norm_x <= -z[0]){
-        memset(dz, 0, sizeof(double) * size);
-        return;
+        memset(dpi_z, 0, sizeof(double) * size);
+        return 0;
     }
 
     dot_val = cblas_ddot(size - 1, dz + 1, 1, z + 1, 1);
-
-    old_dzzero = dz[0];
     
-    dz[0] = (dz[0] * norm_x + dot_val) / (2 * norm_x);
+    dpi_z[0] = (dz[0] * norm_x + dot_val) / (2 * norm_x);
 
-    first_coefficient = (z[0] + norm_x) / (2. * norm_x);
-    second_coefficient = (old_dzzero - z[0] * dot_val / (norm_x*norm_x)) / (2. * norm_x);
+    first_coefficient = (dpi_z[0] + norm_x) / (2. * norm_x);
+    second_coefficient = (dz[0] - dpi_z[0] * dot_val / (norm_x*norm_x)) / (2. * norm_x);
 
-    cblas_dscal(size - 1, first_coefficient, dz + 1, 1);
-    cblas_daxpy(size - 1, second_coefficient, z + 1, 1, dz + 1, 1);
+    memcpy(dpi_z+1, dz+1, sizeof(double) * (size-1));
+    cblas_dscal(size - 1, first_coefficient, dpi_z + 1, 1);
+    cblas_daxpy(size - 1, second_coefficient, z + 1, 1, dpi_z + 1, 1);
 
-    return;
+    return 0;
 
 }
 

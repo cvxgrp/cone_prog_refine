@@ -184,11 +184,7 @@ int cone_prog_refine(
     /*Compute normalized residual*/
     nondiff = projection_and_normalized_residual(
         &workspace);
-    /*
-        m, n, size_zero, size_nonneg, num_sec_ord, sizes_sec_ord,
-        num_exp_pri, num_exp_dua, A_col_pointers, A_row_indeces,
-        A_data, b, c, norm_res, pi_z, z);
-        */
+
 
     old_normres = cblas_dnrm2(n+m+1, workspace.norm_res_z, 1);
 

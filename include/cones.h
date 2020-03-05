@@ -43,9 +43,7 @@ void non_negative_cone_projection_derivative(const double *z, double *x,
                                              const vecsize size);*/
 
 void second_order_cone_projection(
-    const double *z, 
-    double * pi_z,
-    const vecsize size);
+    const double *z, double * pi_z, const vecsize size);
 
 
 void second_order_cone_projection_derivative(const double *z, 
@@ -93,33 +91,14 @@ void semidefinite_cone_projection(double *z,
 /************
 Embedded cone
 ************/
-int embedded_cone_projection(
-    lsqr_workspace * workspace);
-    /*
-    const double * z, 
-    double * pi_z,
-    const vecsize size_solution,
-    const vecsize size_zero, 
-    const vecsize size_non_neg,
-    const vecsize num_second_order,
-    const vecsize * sizes_second_order
-    const vecsize num_exp_pri,
-    const vecsize num_exp_dua
-    );
-    */
+
+/*workspace->pi_z = Pi workspace->z*/
+int embedded_cone_projection(cone_prog_refine_workspace * workspace);
+
 
 int embedded_cone_projection_derivative(
-    const double * z, 
-    const double * pi_z,
+    cone_prog_refine_workspace * workspace,
     const double * dz,
-    double * dpi_z,
-    const vecsize size_solution,
-    const vecsize size_zero, 
-    const vecsize size_non_neg,
-    const vecsize num_second_order,
-    const vecsize * sizes_second_order
-    /*const vecsize num_exp_pri,
-    const vecsize num_exp_dua*/
-    );
+    double * dpi_z);
 
 #endif

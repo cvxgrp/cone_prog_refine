@@ -19,29 +19,7 @@
 #define PROBLEM_H
 
 #include <stdbool.h>
-
-
-typedef struct {
-    int m;
-    int n;
-    int size_zero;
-    int size_nonneg;
-    int num_sec_ord;
-    const int * sizes_sec_ord;
-    int num_exp_pri;
-    int num_exp_dua;
-    const int * A_col_pointers;
-    const int * A_row_indeces;
-    const double * A_data;
-    const double * b;
-    const double * c;
-    double * z;
-    double * pi_z; /*Used by cone derivatives.*/
-    double * norm_res_z; /*Used by second term of derivative*/
-    double * internal; /* (n+m+1) array for internal storage space.*/
-    double * internal2; /* (n+m+1) array for internal storage space.*/
-} lsqr_workspace;
-
+#include <cone_prog_refine.h>
 
 /* 
 result = result + (forward) * Q * vector + (!forward) * Q^T * vector
@@ -60,36 +38,17 @@ void Q_matvec(
     );
 
 
-
 /*
 N(z) and Pi(z).
 */
 int projection_and_normalized_residual(
-    lsqr_workspace * workspace);
-    /*
-    const int m,
-    const int n,
-    const int size_zero,
-    const int size_nonneg,
-    const int num_sec_ord,
-    const int *sizes_sec_ord,
-    const int num_exp_pri,
-    const int num_exp_dua,
-    const int * A_col_pointers, 
-    const int * A_row_indeces,
-    const double * A_data,
-    const double * b,
-    const double * c,
-    double * result,
-    double * pi_z,
-    const double * z
-    );*/
+    cone_prog_refine_workspace * workspace);
 
 /*
 result = result + DN(z) * vector
 */
 int normalized_residual_matvec(
-    lsqr_workspace * workspace,
+    cone_prog_refine_workspace * workspace,
     double * result, 
     double * vector /*It gets changed but then restored.*/
     );
@@ -98,7 +57,7 @@ int normalized_residual_matvec(
 result = result + DN(z)^T * vector
 */
 int normalized_residual_vecmat(
-    lsqr_workspace * workspace,
+    cone_prog_refine_workspace * workspace,
     double * result, 
     double * vector /*It gets changed but then restored.*/
     );

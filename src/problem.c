@@ -92,25 +92,7 @@ void Q_matvec(
 N(z) and Pi(z).
 */
 int projection_and_normalized_residual(
-    lsqr_workspace * workspace){
-    /*
-    const int m,
-    const int n,
-    const int size_zero,
-    const int size_nonneg,
-    const int num_sec_ord,
-    const int *sizes_sec_ord,
-    const int num_exp_pri,
-    const int num_exp_dua,
-    const int * A_col_pointers, 
-    const int * A_row_indeces,
-    const double * A_data,
-    const double * b,
-    const double * c,
-    double * result,
-    double * pi_z,
-    const double * z
-    ){*/
+    cone_prog_refine_workspace * workspace){
 
     int size;
 
@@ -120,13 +102,6 @@ int projection_and_normalized_residual(
 
     /*workspace->pi_z = workspace->Pi(z)*/
     embedded_cone_projection(workspace);
-        /*workspace->z, 
-        workspace->pi_z,
-        workspace->n,
-        workspace->size_zero, 
-        workspace->size_nonneg,
-        workspace->num_sec_ord,
-        workspace->sizes_sec_ord);
 
     /*N(z) = 0.*/
     memset(workspace->norm_res_z, 0, sizeof(double) * (size));
@@ -162,7 +137,7 @@ int projection_and_normalized_residual(
 result = result + DN(z) * vector
 */
 int normalized_residual_matvec(
-    lsqr_workspace * workspace,
+    cone_prog_refine_workspace * workspace,
     double * result,
     double * vector /*It gets changed.*/
     ){
@@ -180,20 +155,12 @@ int normalized_residual_matvec(
     /* result += vector */
     cblas_daxpy(size, 1, (const double *)vector, 1, result, 1);
 
+
     /* internal = DPi(z) * vector */
     non_diff = embedded_cone_projection_derivative(
-    (const double *)workspace->z, 
-    (const double *)workspace->pi_z,
-    (const double *)vector,
-    workspace->internal,
-    workspace->n,
-    workspace->size_zero, 
-    workspace->size_nonneg,
-    workspace->num_sec_ord,
-    workspace->sizes_sec_ord
-    /*const vecsize num_exp_pri,
-    const vecsize num_exp_dua*/
-    );
+        workspace,
+        vector,
+        workspace->internal);
 
     /* result -= internal */
     cblas_daxpy(size, -1, (const double *)workspace->internal, 1, result, 1);
@@ -227,7 +194,7 @@ int normalized_residual_matvec(
 result = result + DN(z)^T * vector
 */
 int normalized_residual_vecmat(
-    lsqr_workspace * workspace,
+    cone_prog_refine_workspace * workspace,
     double * result, 
     double * vector /*It gets changed but then restored.*/
     )
@@ -271,19 +238,11 @@ int normalized_residual_vecmat(
         );
 
     /* internal2 = DPi(z)^T * internal . TODO add transpose to embedded_cone_projection_derivative */
+    /* internal = DPi(z) * vector */
     non_diff = embedded_cone_projection_derivative(
-    (const double *)workspace->z, 
-    (const double *)workspace->pi_z,
-    (const double *)workspace->internal,
-    workspace->internal2,
-    workspace->n,
-    workspace->size_zero, 
-    workspace->size_nonneg,
-    workspace->num_sec_ord,
-    workspace->sizes_sec_ord
-    /*const vecsize num_exp_pri,
-    const vecsize num_exp_dua*/
-    );
+        workspace,
+        workspace->internal,
+        workspace->internal2);
 
     /* result += internal2 */
     cblas_daxpy(size, 1, (const double *)workspace->internal2, 1, result, 1);
@@ -302,13 +261,13 @@ void normalized_residual_aprod(
     double * x, double * y, 
     void * workspace){
 
-    /*struct lsqr_workspace * workspace = UsrWrk;*/
+    /*struct cone_prog_refine_workspace * workspace = UsrWrk;*/
 
     /* y = y + A*x */
     if (mode == 1){
 
     normalized_residual_matvec(
-    (lsqr_workspace *)workspace,
+    (cone_prog_refine_workspace *)workspace,
     y,
     x /*It gets changed but then restored.*/
     );
@@ -318,7 +277,7 @@ void normalized_residual_aprod(
     if (mode == 2){
 
         normalized_residual_vecmat(
-    (lsqr_workspace *)workspace,
+    (cone_prog_refine_workspace *)workspace,
     x, 
     y /*It gets changed but then restored.*/
     );

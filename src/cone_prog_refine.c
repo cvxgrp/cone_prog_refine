@@ -25,6 +25,66 @@
 #include "lsqr.h"
 #include <math.h>
 
+int initialize_workspace(
+    const int m, 
+    const int n,
+    const int size_zero, /*size of zero cone*/
+    const int size_nonneg, /*size of non-negative cone*/
+    const int num_sec_ord, /*number of second order cones*/
+    const int *sizes_sec_ord, /*sizes of second order cones*/
+    const int num_exp_pri, /*number of exponential primal cones*/
+    const int num_exp_dua, /*number of exponential dual cones*/
+    const int * A_col_pointers, /*pointers to columns of A, in CSC format*/
+    const int * A_row_indeces, /*indeces of rows of A, in CSC format*/
+    const double * A_data, /*elements of A, in CSC format*/
+    const double * b, /*m-vector*/
+    const double * c, /*n-vector*/
+    double * z,
+    cone_prog_refine_workspace * workspace){
+
+    void * allocated_memory;
+
+    /*Copy constants.*/
+    workspace->m = m;
+    workspace->n = n;
+    workspace->size_zero = size_zero;
+    workspace->size_nonneg = size_nonneg;
+    workspace->num_sec_ord = num_sec_ord;
+    workspace->sizes_sec_ord = sizes_sec_ord;
+    workspace->num_exp_pri = num_exp_pri;
+    workspace->num_exp_dua = num_exp_dua;
+    workspace->A_col_pointers = A_col_pointers;
+    workspace->A_row_indeces = A_row_indeces;
+    workspace->A_data = A_data;
+    workspace->b = b;
+    workspace->c = c;
+
+    /*TODO allocate also z ?*/
+    workspace->z = z;
+
+
+    /*Allocate memory */
+    allocated_memory = malloc(8*(n+m+1) * sizeof(double));
+
+    if (allocated_memory == NULL) /*Allocation failed*/
+        return -1;
+
+    workspace->norm_res_z = (double *) allocated_memory;
+    workspace->pi_z = ((double *) allocated_memory) + (n + m + 1);
+    /*Used by DN(z)*/
+    workspace->internal = ((double *) allocated_memory) + 2*(n + m + 1);
+    workspace->internal2 = ((double *) allocated_memory) + 3*(n + m + 1);
+    /*Used by LSQR*/
+    workspace->u = ((double *) allocated_memory) + 4*(n + m + 1);
+    workspace->v = ((double *) allocated_memory) + 5*(n + m + 1);
+    workspace->w = ((double *) allocated_memory) + 6*(n + m + 1);
+    /*LSQR result*/
+    workspace->delta = ((double *) allocated_memory) + 7*(n + m + 1);
+
+    return 0;
+}
+
+
 int cone_prog_refine_alloc(
     const int m, 
     const int n,
@@ -88,10 +148,6 @@ int cone_prog_refine(
     ){
 
     int nondiff, i, k;
-    double * norm_res;
-    double * pi_z;
-    double * delta;
-    double *u, *v, *w;
     int alloc_success;
     int j;
 
@@ -102,39 +158,27 @@ int cone_prog_refine(
 
     double old_normres, new_normres;
 
-    lsqr_workspace workspace; 
+    cone_prog_refine_workspace workspace; 
 
-    /*Assign constants to workspace used by LSQR.*/
-    workspace.m = m;
-    workspace.n = n;
-    workspace.size_zero = size_zero;
-    workspace.size_nonneg = size_nonneg;
-    workspace.num_sec_ord = num_sec_ord;
-    workspace.sizes_sec_ord = sizes_sec_ord;
-    workspace.num_exp_pri = num_exp_pri;
-    workspace.num_exp_dua = num_exp_dua;
-    workspace.A_col_pointers = A_col_pointers;
-    workspace.A_row_indeces = A_row_indeces;
-    workspace.A_data = A_data;
-    workspace.b = b;
-    workspace.c = c;
 
-    alloc_success = cone_prog_refine_alloc(
-                    m, 
-                    n,
-                    &norm_res,
-                    &pi_z,
-                    &workspace.internal,  /*Used by DN(z)*/
-                    &workspace.internal2,  /*Used by DN(z)*/
-                    &u, /*Used by LSQR*/
-                    &v, /*Used by LSQR*/
-                    &w, /*Used by LSQR*/
-                    &delta /*Used by LSQR*/
-                    );
+    alloc_success = initialize_workspace(
+        m, 
+        n,
+        size_zero, /*size of zero cone*/
+        size_nonneg, /*size of non-negative cone*/
+        num_sec_ord, /*number of second order cones*/
+        sizes_sec_ord, /*sizes of second order cones*/
+        num_exp_pri, /*number of exponential primal cones*/
+        num_exp_dua, /*number of exponential dual cones*/
+        A_col_pointers, /*pointers to columns of A, in CSC format*/
+        A_row_indeces, /*indeces of rows of A, in CSC format*/
+        A_data, /*elements of A, in CSC format*/
+        b, /*m-vector*/
+        c, /*n-vector*/
+        z,
+        &workspace);
 
-    workspace.z = z;
-    workspace.pi_z = pi_z;
-    workspace.norm_res_z = norm_res;
+
 
 
     /*Compute normalized residual*/
@@ -146,7 +190,7 @@ int cone_prog_refine(
         A_data, b, c, norm_res, pi_z, z);
         */
 
-    old_normres = cblas_dnrm2(n+m+1, norm_res, 1);
+    old_normres = cblas_dnrm2(n+m+1, workspace.norm_res_z, 1);
 
     if (print_info)
         printf("Initial ||N(z)|| = %e\n\n", old_normres);
@@ -159,17 +203,17 @@ int cone_prog_refine(
         if (print_info>3) printf("\nIteration %d\n", i);
         
     /*u = N(z)*/
-    memcpy(u, norm_res, sizeof(double)*(m+n+1));
+    memcpy(workspace.u, workspace.norm_res_z, sizeof(double)*(m+n+1));
 
     lsqr(m+n+1,
       m+n+1,
       normalized_residual_aprod,
       sqrt(lambda), /*damp*/
       (void *)&workspace,
-      u,    /* len = m */
-      v,    /* len = n */
-      w,    /* len = n */
-      delta,    /* len = n */
+      workspace.u,    /* len = m */
+      workspace.v,    /* len = n */
+      workspace.w,    /* len = n */
+      workspace.delta,    /* len = n */
       NULL,   /* len = * */
       0., /*atol*/
       0., /*btol*/
@@ -194,12 +238,12 @@ int cone_prog_refine(
     if (print_info>3){
         printf("\n");
             for (j = 0; j < m+n+1; j++)
-                printf("delta[%d] = %e\n", j, delta[j]);
+                printf("delta[%d] = %e\n", j, workspace.delta[j]);
             
         printf("\n");
     }
 
-        cblas_daxpy(m+n+1, -1., delta, 1, z, 1);
+        cblas_daxpy(m+n+1, -1., workspace.delta, 1, workspace.z, 1);
 
         for (k = 0; k < MAX_CONE_PROG_REFINE_BACKTRACKS; k++){
 
@@ -208,7 +252,7 @@ int cone_prog_refine(
             if (print_info>3) 
                 {printf("\n");
             for (j = 0; j < m+n+1; j++)
-                printf("z[%d] = %e\n", j, z[j]);
+                printf("z[%d] = %e\n", j, workspace.z[j]);
             
             printf("\n");
         }
@@ -216,7 +260,7 @@ int cone_prog_refine(
             nondiff = projection_and_normalized_residual(
                 &workspace);
 
-            new_normres = cblas_dnrm2(n+m+1, norm_res, 1);
+            new_normres = cblas_dnrm2(n+m+1, workspace.norm_res_z, 1);
 
             if (print_info>2)
                 printf("new ||N(z)|| = %e\n\n", new_normres);
@@ -225,14 +269,14 @@ int cone_prog_refine(
                 old_normres = new_normres;
                 if (print_info)
                     printf("It. %d, %d lsqr_its, %d btrs, ||N(z)|| = %.2e, %s (z[-1] = %.2e)\n",
-                        i, itn_out, k, new_normres, z[m+n]>0?"SOL":"CERT", z[m+n]);
+                        i, itn_out, k, new_normres, workspace.z[m+n]>0?"SOL":"CERT", workspace.z[m+n]);
                 break;
                 /*TODO It's not exiting it fails to refine.*/
             }
 
             if (print_info>2) 
                 printf("removing %e times delta\n", pow(.5, k+1) );
-            cblas_daxpy(m+n+1, pow(.5, k+1), delta, 1, z, 1);
+            cblas_daxpy(m+n+1, pow(.5, k+1), workspace.delta, 1, workspace.z, 1);
 
     }
 

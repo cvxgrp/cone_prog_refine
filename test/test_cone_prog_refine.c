@@ -29,15 +29,12 @@ static const int A_row_indeces_cpr[32] = {1,  5,  7,  8,  9,  4,  4,  6,  7,  8,
 static const char * test_cone_prog_refine(){
 
     double z[TEST_CPR_M + TEST_CPR_N + 1];
-    double norm_res[TEST_CPR_M + TEST_CPR_N + 1];
-    double pi_z[TEST_CPR_M + TEST_CPR_N + 1];
     double oldnorm, mynorm;
-
     double b[TEST_CPR_M];
     double c[TEST_CPR_N];
     int k;
 
-    lsqr_workspace workspace;
+    cone_prog_refine_workspace workspace;
 
     for (k = 0; k < 10; k++){
 
@@ -54,34 +51,26 @@ static const char * test_cone_prog_refine(){
     random_uniform_vector(32, A_elements_cpr, 
            -1, 1, (k+1)*123);
 
-    workspace.m = TEST_CPR_M;
-    workspace.n = TEST_CPR_N;
-    workspace.size_zero = TEST_CPR_SIZE_ZERO;
-    workspace.size_nonneg = TEST_CPR_SIZE_NONNEG;
-    workspace.num_sec_ord = 0;
-    workspace.sizes_sec_ord = NULL;
-    workspace.num_exp_pri = 0;
-    workspace.num_exp_dua = 0;
-    workspace.A_col_pointers = A_col_pointers_cpr;
-    workspace.A_row_indeces = A_row_indeces_cpr;
-    workspace.A_data = A_elements_cpr;
-    workspace.b = b;
-    workspace.c = c;
-    workspace.internal = NULL;
-    workspace.internal2 = NULL;
-    workspace.z = z;
-    workspace.pi_z = pi_z;
-    workspace.norm_res_z = norm_res;
-
-
-    projection_and_normalized_residual(
+    initialize_workspace(
+        TEST_CPR_M, 
+        TEST_CPR_N,
+        TEST_CPR_SIZE_ZERO, /*size of zero cone*/
+        TEST_CPR_SIZE_NONNEG, /*size of non-negative cone*/
+        0, /*number of second order cones*/
+        NULL, /*sizes of second order cones*/
+        0, /*number of exponential primal cones*/
+        0, /*number of exponential dual cones*/
+        A_col_pointers_cpr, /*pointers to columns of A, in CSC format*/
+        A_row_indeces_cpr, /*indeces of rows of A, in CSC format*/
+        A_elements_cpr, /*elements of A, in CSC format*/
+        b, /*m-vector*/
+        c, /*n-vector*/
+        z,
         &workspace);
-    
-    /*TEST_CPR_M, TEST_CPR_N, TEST_CPR_SIZE_ZERO, TEST_CPR_SIZE_NONNEG, 
-    0, NULL,0, 0, A_col_pointers_cpr, A_row_indeces_cpr,
-    A_elements_cpr, b, c, norm_res, pi_z, z); */
 
-    oldnorm = cblas_dnrm2(TEST_CPR_M + TEST_CPR_N+1, norm_res, 1);
+    projection_and_normalized_residual(&workspace);
+    oldnorm = cblas_dnrm2(workspace.m + workspace.n+1, 
+                          workspace.norm_res_z, 1);
 
 
 cone_prog_refine(
@@ -107,14 +96,9 @@ cone_prog_refine(
     DEBUG_PRINT /*print informations on convergence*/
     );
 
-    projection_and_normalized_residual(
-        &workspace);
-    
-    /*TEST_CPR_M, TEST_CPR_N, TEST_CPR_SIZE_ZERO, TEST_CPR_SIZE_NONNEG, 
-    0, NULL,0, 0, A_col_pointers_cpr, A_row_indeces_cpr,
-    A_elements_cpr, b, c, norm_res, pi_z, z);*/
-
-    mynorm = cblas_dnrm2(TEST_CPR_M + TEST_CPR_N+1, norm_res, 1);
+    projection_and_normalized_residual(&workspace);
+    mynorm = cblas_dnrm2(workspace.m + workspace.n+1, 
+                          workspace.norm_res_z, 1);
 
     mu_assert("residual norm has not decreased after refinn",
         mynorm < oldnorm);

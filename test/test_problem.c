@@ -140,74 +140,46 @@ const double c[3] = {11,13,17};
 
 as CSC matrix */
 
-
-double result[7] = {0,0,0,0,0,0,0};
-double pi_z[7] = {0,0,0,0,0,0,0};
 const double vector[7] = {1,2,3,4,-5,6,1};
 const double numpy_result[7] = {15.8 ,   13.  ,   18.78,    2.7 ,   -0.4 ,    5.51, -142. };
 
-    lsqr_workspace workspace;
+    cone_prog_refine_workspace workspace;
 
-    /*Assign constants to workspace used by LSQR.*/
-    workspace.m = 3;
-    workspace.n = 3;
-    workspace.size_zero = 1;
-    workspace.size_nonneg = 2;
-    workspace.num_sec_ord = 0;
-    workspace.sizes_sec_ord = NULL;
-    workspace.num_exp_pri = 0;
-    workspace.num_exp_dua = 0;
-    workspace.A_col_pointers = col_pointers;
-    workspace.A_row_indeces = row_indeces;
-    workspace.A_data = mat_elements;
-    workspace.b = b;
-    workspace.c = c;
-    workspace.internal = NULL;
-    workspace.internal2 = NULL;
-    workspace.z = (double *)vector;
-    workspace.pi_z = pi_z;
-    workspace.norm_res_z = result;
-
+    initialize_workspace(
+    3, 
+    3,
+    1, /*size of zero cone*/
+    2, /*size of non-negative cone*/
+    0, /*number of second order cones*/
+    NULL, /*sizes of second order cones*/
+    0, /*number of exponential primal cones*/
+    0, /*number of exponential dual cones*/
+    col_pointers, /*pointers to columns of A, in CSC format*/
+    row_indeces, /*indeces of rows of A, in CSC format*/
+    mat_elements, /*elements of A, in CSC format*/
+    b, /*m-vector*/
+    c, /*n-vector*/
+    (double *)vector,
+    &workspace);
 
 projection_and_normalized_residual(
     &workspace);
-/*
-    3,
-    3,
-    1,
-    2,
-    0,
-    NULL,
-    0,
-    0,
-    col_pointers, 
-    row_indeces,
-    mat_elements,
-    b,
-    c,
-    result,
-    pi_z,
-    vector
-    );
-    */
-
-
 
 if (DEBUG_PRINT){
         printf("\nTesting Q_matvec\n"); 
         for (i= 0; i<7;i++){
             printf("result[%d] = %f, pi_z[%d] = %f\n", 
-                i, result[i], i, pi_z[i]);
+                i, workspace.norm_res_z[i], i, workspace.pi_z[i]);
          }}
 
 mu_assert("wrong result Q matrix vector multiplication",
-(fabs(result[0] - numpy_result[0]) < 1E-15) &&
-(fabs(result[1] - numpy_result[1]) < 1E-15) &&
-(fabs(result[2] - numpy_result[2]) < 1E-15) &&
-(fabs(result[3] - numpy_result[3]) < 1E-15) &&
-(fabs(result[4] - numpy_result[4]) < 1E-15) &&
-(fabs(result[5] - numpy_result[5]) < 1E-15) &&
-(fabs(result[6] - numpy_result[6]) < 1E-15));
+(fabs(workspace.norm_res_z[0] - numpy_result[0]) < 1E-15) &&
+(fabs(workspace.norm_res_z[1] - numpy_result[1]) < 1E-15) &&
+(fabs(workspace.norm_res_z[2] - numpy_result[2]) < 1E-15) &&
+(fabs(workspace.norm_res_z[3] - numpy_result[3]) < 1E-15) &&
+(fabs(workspace.norm_res_z[4] - numpy_result[4]) < 1E-15) &&
+(fabs(workspace.norm_res_z[5] - numpy_result[5]) < 1E-15) &&
+(fabs(workspace.norm_res_z[6] - numpy_result[6]) < 1E-15));
 
 return 0;
 
@@ -243,7 +215,7 @@ static const char * test_normalized_residual_matvec(){
     double z_p_dz[7];
     double check[7];
 
-    lsqr_workspace workspace;
+    cone_prog_refine_workspace workspace;
 
     double error;
 
@@ -278,27 +250,7 @@ static const char * test_normalized_residual_matvec(){
     workspace.norm_res_z = norm_res_z;
 
 
-    projection_and_normalized_residual(
-    &workspace);
-    /*
-    m,
-    n,
-    size_zero,
-    size_nonneg,
-    num_sec_ord,
-    sizes_sec_ord,
-    num_exp_pri,
-    num_exp_dua,
-    A_col_pointers, 
-    A_row_indeces,
-    A_data,
-    b,
-    c,
-    norm_res_z,
-    pi_z,
-    (const double *) z
-    );*/
-
+    projection_and_normalized_residual(&workspace);
 
     random_uniform_vector(n+m+1, dz, 
                         -1E-8, 1E-8, (1+k)*5678);
@@ -317,8 +269,7 @@ static const char * test_normalized_residual_matvec(){
     result[5] = 0.;
     result[6] = 0.;
 
-    normalized_residual_matvec(
-        &workspace,
+    normalized_residual_matvec(&workspace,
         result,
         dz /*It gets changed.*/
         );
@@ -330,24 +281,6 @@ static const char * test_normalized_residual_matvec(){
         projection_and_normalized_residual(
             &workspace);
        
-       /* m,
-        n,
-        size_zero,
-        size_nonneg,
-        num_sec_ord,
-        sizes_sec_ord,
-        num_exp_pri,
-        num_exp_dua,
-        A_col_pointers, 
-        A_row_indeces,
-        A_data,
-        b,
-        c,
-        check, //N(z + dz)
-        pi_z, 
-        (const double *) z_p_dz 
-        ); */
-
         for (i = 0; i < n+m+1; i++){
             error = check[i] - norm_res_z[i] - result[i];
             if (DEBUG_PRINT) printf("(N(z + dz) - N(z) - DN(z) dz)[%d] = %e\n", 
@@ -356,14 +289,8 @@ static const char * test_normalized_residual_matvec(){
 
             if (DEBUG_PRINT)  printf("(N(z + dz)[%d] = %e, N(z)[%d] = %e,  DN(z)dz[%d] = %e\n", 
                 i, check[i],i, norm_res_z[i],i, result[i]);
-
         }
-
     }
-
-
-
-
 
     return 0;
 }
@@ -486,7 +413,7 @@ static const char * test_normalized_residual_vecmat(){
     double internal2[7];
     double d[7]; 
 
-    lsqr_workspace workspace; 
+    cone_prog_refine_workspace workspace; 
 
 
 
@@ -530,25 +457,6 @@ static const char * test_normalized_residual_vecmat(){
 
     projection_and_normalized_residual(
         &workspace);
-    /*
-    m,
-    n,
-    size_zero,
-    size_nonneg,
-    num_sec_ord,
-    sizes_sec_ord,
-    num_exp_pri,
-    num_exp_dua,
-    A_col_pointers, 
-    A_row_indeces,
-    A_data,
-    b,
-    c,
-    norm_res_z,
-    pi_z,
-    (const double *) z
-    );
-    */
 
     for (j = 0; j < 7; j++){
         memset(result_matvec[j], 0, sizeof(double) * (7));
@@ -580,9 +488,6 @@ static const char * test_normalized_residual_vecmat(){
 
     /*We build the matrix by using aprod forward and backward,
     and check that they are equal if transposed.*/
-
-
-
 
     normalized_residual_vecmat(
         &workspace,
@@ -646,7 +551,7 @@ static const char * test_aprod(){
     double d[7]; 
     int j;
 
-    lsqr_workspace workspace; 
+    cone_prog_refine_workspace workspace; 
 
     /*We build the matrix by using aprod forward and backward,
     and check that they are equal if transposed.*/
@@ -690,27 +595,6 @@ static const char * test_aprod(){
 
     projection_and_normalized_residual(
         &workspace);
-
-    /*
-    m,
-    n,
-    size_zero,
-    size_nonneg,
-    num_sec_ord,
-    sizes_sec_ord,
-    num_exp_pri,
-    num_exp_dua,
-    A_col_pointers, 
-    A_row_indeces,
-    A_data,
-    b,
-    c,
-    norm_res_z,
-    pi_z,
-    (const double *) z
-    );
-    */
-
 
     for (j = 0; j <  m+n+1; j++){
         memset(result_matvec[j], 0, sizeof(double) * ( m+n+1));

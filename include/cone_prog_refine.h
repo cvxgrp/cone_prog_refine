@@ -20,6 +20,50 @@
 
 #define MAX_CONE_PROG_REFINE_BACKTRACKS 10
 
+typedef struct {
+    int m;
+    int n;
+    int size_zero;
+    int size_nonneg;
+    int num_sec_ord;
+    const int * sizes_sec_ord;
+    int num_exp_pri;
+    int num_exp_dua;
+    const int * A_col_pointers;
+    const int * A_row_indeces;
+    const double * A_data;
+    const double * b;
+    const double * c;
+    double * z;
+    double * pi_z; /*Used by cone derivatives.*/
+    double * norm_res_z; /*Used by second term of derivative*/
+    double * internal; /* (n+m+1) array for internal storage space.*/
+    double * internal2; /* (n+m+1) array for internal storage space.*/
+    /*These are used by LSQR, TODO can probably save two.*/
+    double * u;
+    double * v;
+    double * w;
+    double * delta;
+} cone_prog_refine_workspace;
+
+/*Allocates memory.*/
+int initialize_workspace(
+    const int m, 
+    const int n,
+    const int size_zero, /*size of zero cone*/
+    const int size_nonneg, /*size of non-negative cone*/
+    const int num_sec_ord, /*number of second order cones*/
+    const int *sizes_sec_ord, /*sizes of second order cones*/
+    const int num_exp_pri, /*number of exponential primal cones*/
+    const int num_exp_dua, /*number of exponential dual cones*/
+    const int * A_col_pointers, /*pointers to columns of A, in CSC format*/
+    const int * A_row_indeces, /*indeces of rows of A, in CSC format*/
+    const double * A_data, /*elements of A, in CSC format*/
+    const double * b, /*m-vector*/
+    const double * c, /*n-vector*/
+    double * z,
+    cone_prog_refine_workspace * workspace);
+
 int cone_prog_refine_alloc(
     const int m, 
     const int n,

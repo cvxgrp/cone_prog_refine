@@ -32,8 +32,8 @@ mini_cblas.o : mini_cblas.c
 	$(CC) -c mini_cblas.c $(CFLAGS) $(LIBS)
 
 test: ../test/test.c ../test/test.h cones.o lsqr.o mini_cblas.o truncated_lsqr.o linalg.o problem.o  cone_prog_refine.o
-	$(CC) -o ../test/runtests ../test/test.c cones.o lsqr.o mini_cblas.o truncated_lsqr.o linalg.o problem.o  cone_prog_refine.o $(CFLAGS) $(LIBS) $(LFLAGS); \
-	chmod a+x ../test/runtests; ../test/runtests
+	if $(CC) -o ../test/runtests ../test/test.c cones.o lsqr.o mini_cblas.o truncated_lsqr.o linalg.o problem.o  cone_prog_refine.o $(CFLAGS) $(LIBS) $(LFLAGS); \
+	then chmod a+x ../test/runtests; ../test/runtests; else echo "\nCOMPILATION FAILED!\n";fi 
 
 gdbtest: ../test/test.c ../test/test.h cones.o lsqr.o mini_cblas.o truncated_lsqr.o linalg.o problem.o  cone_prog_refine.o
 	$(CC) -g -o ../test/runtests ../test/test.c cones.o lsqr.o mini_cblas.o truncated_lsqr.o linalg.o problem.o  cone_prog_refine.o $(GDBCFLAGS) $(LIBS) $(LFLAGS); \

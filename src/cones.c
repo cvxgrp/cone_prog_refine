@@ -23,18 +23,7 @@
 #include "mini_cblas.h"
 
 int embedded_cone_projection(
-    lsqr_workspace * workspace)
-    /* 
-    const double * z, 
-    double * pi_z,
-    const vecsize size_solution,
-    const vecsize size_zero, 
-    const vecsize size_non_neg,
-    const vecsize num_second_order,
-    const vecsize * sizes_second_order
-    /*const vecsize num_exp_pri,
-    const vecsize num_exp_dua
-    )*/
+    cone_prog_refine_workspace * workspace)
     {
 
     int i, counter;
@@ -69,36 +58,28 @@ int embedded_cone_projection(
 /*TODO return -1 if non-differentiable.*/
 /*TODO add transpose.*/
 int embedded_cone_projection_derivative(
-    const double * z, 
-    const double * pi_z,
+    cone_prog_refine_workspace * workspace,
     const double * dz,
-    double * dpi_z,
-    const vecsize size_solution,
-    const vecsize size_zero, 
-    const vecsize size_non_neg,
-    const vecsize num_second_order,
-    const vecsize * sizes_second_order
-    /*
-    const vecsize num_exp_pri,
-    const vecsize num_exp_dua*/
-    ){
+    double * dpi_z
+    )
+{
 
     int i, counter;
 
     /*Zero cone.*/
-    counter = size_solution + size_zero;
+    counter = workspace->n + workspace->size_zero;
     memcpy(dpi_z, dz, sizeof(double) * (counter));
 
     /*Non-negative cone.*/
-    for (i = counter; i < counter + size_non_neg; i++){
-        dpi_z[i] = z[i] <= 0. ? 0. : dz[i];
+    for (i = counter; i < counter + workspace->size_nonneg; i++){
+        dpi_z[i] = workspace->z[i] <= 0. ? 0. : dz[i];
     }
-    counter += size_non_neg;
+    counter += workspace->size_nonneg;
 
     /*Second order cones.*/
 
     /*Last element */
-    dpi_z[counter] = z[counter] <= 0. ? 0. : dz[counter];
+    dpi_z[counter] = workspace->z[counter] <= 0. ? 0. : dz[counter];
 
     return 0;
 

@@ -32,7 +32,6 @@ static const int A_row_indeces1[32] = {1,  5,  7,  8,  9,  4,  4,  6,  7,  8, 11
 static void aprod(const int mode, const int m, const int n, 
                   double * x, double * y, void *UsrWrk){
 
-
     /* y = y + A*x */
     if (mode == 1){
 

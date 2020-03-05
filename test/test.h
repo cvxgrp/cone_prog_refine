@@ -11,7 +11,7 @@
 #define LENSOL  2
 #define LENZERO 2
 #define LENNONEG 2
-#define N (LENSOL + LENZERO + LENNONEG + 1)
+#define TEST_CONES_N (LENSOL + LENZERO + LENNONEG + 1)
 #define DEBUG_PRINT 0 /*O is no print, 1 some, 2 more, ...*/
 #define NUM_CONES_TESTS 10
 #define NUM_BACKTRACKS 10

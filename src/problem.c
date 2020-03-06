@@ -157,10 +157,12 @@ int normalized_residual_matvec(
 
 
     /* internal = DPi(z) * vector */
+    memset(workspace->internal, 0., sizeof(double)*size);
     non_diff = embedded_cone_projection_derivative(
         workspace,
         vector,
-        workspace->internal);
+        workspace->internal,
+        1);
 
     /* result -= internal */
     cblas_daxpy(size, -1, (const double *)workspace->internal, 1, result, 1);
@@ -238,11 +240,12 @@ int normalized_residual_vecmat(
         );
 
     /* internal2 = DPi(z)^T * internal . TODO add transpose to embedded_cone_projection_derivative */
-    /* internal = DPi(z) * vector */
+    memset(workspace->internal2, 0., sizeof(double)*size);
     non_diff = embedded_cone_projection_derivative(
         workspace,
         workspace->internal,
-        workspace->internal2);
+        workspace->internal2,
+        2);
 
     /* result += internal2 */
     cblas_daxpy(size, 1, (const double *)workspace->internal2, 1, result, 1);

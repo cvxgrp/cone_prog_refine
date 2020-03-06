@@ -72,25 +72,30 @@ int embedded_cone_projection(
 
 }
 
-/* dpi_z = DPi dz 
+/* 
+if mode==1,  y += DPi x
+if mode==2,  y += DPi^T x
+
 TODO return -1 if non-differentiable
-TODO add transpose
-TODO make it so that dpi_z += DPi dz */
+*/
 int embedded_cone_projection_derivative(
     cone_prog_refine_workspace * workspace,
-    const double * dz,
-    double * dpi_z)
+    const double * x,
+    double * y,
+    const int mode) 
 {
 
     int i, counter;
 
     /*Zero cone.*/
     counter = workspace->n + workspace->size_zero;
-    memcpy(dpi_z, dz, sizeof(double) * (counter));
+    cblas_daxpy(counter, 1., (const double *)x, 1, y, 1);
+    
+    /*memcpy(dpi_z, dz, sizeof(double) * (counter));*/
 
     /*Non-negative cone.*/
     for (i = counter; i < counter + workspace->size_nonneg; i++){
-        dpi_z[i] = workspace->z[i] <= 0. ? 0. : dz[i];
+        y[i] += (workspace->z[i] <= 0.) ? 0. : x[i];
     }
     counter += workspace->size_nonneg;
 
@@ -100,15 +105,21 @@ int embedded_cone_projection_derivative(
             workspace->sizes_sec_ord[i],
             workspace->z + counter, 
             workspace->pi_z + counter,
-            dz + counter,
-            dpi_z + counter
+            x + counter,
+            y + counter
             );
         counter += workspace->sizes_sec_ord[i];
     };
 
-    
+    /*Exponential primal cones.*/
+
+
+    /*Exponential dual cones.*/
+
+    /*Semi-definite cones.*
+
     /*Last element */
-    dpi_z[counter] = workspace->z[counter] <= 0. ? 0. : dz[counter];
+    y[counter] = workspace->z[counter] <= 0. ? 0. : x[counter];
 
     return 0;
 
@@ -146,7 +157,7 @@ void second_order_cone_projection(
     } 
 }
 
-/* dpi_z = DPi_SOC dz 
+/* dpi_z += DPi_SOC dz 
 TODO add non-diff return value*/
 int second_order_cone_projection_derivative(const int size,
                                              const double *z, 
@@ -163,12 +174,13 @@ int second_order_cone_projection_derivative(const int size,
     norm_x = cblas_dnrm2(size - 1, z + 1, 1);
 
     if (norm_x <= z[0]){
-        memcpy(dpi_z, dz, sizeof(double) * size);
+        cblas_daxpy(size, 1., (const double *)dz, 1, dpi_z, 1);
+        /*memcpy(dpi_z, dz, sizeof(double) * size);*/
         return 0;
     }
     
     if (norm_x <= -z[0]){
-        memset(dpi_z, 0, sizeof(double) * size);
+        /*memset(dpi_z, 0, sizeof(double) * size);*/
         return 0;
     }
 
@@ -177,13 +189,16 @@ int second_order_cone_projection_derivative(const int size,
     temp /= norm_x;
     
     /*result[0] */
-    dpi_z[0] = (dz[0] + temp) / 2.;
+    dpi_z[0] += (dz[0] + temp) / 2.;
+
+    /* result[1:] += u * (t / ||x|| + 1) / 2 */
+    cblas_daxpy(size-1, (z[0] / norm_x + 1. )/2.,dz+1, 1,dpi_z+1,1);
 
     /* result[1:] = u */
-    memcpy(dpi_z+1, dz+1, sizeof(double) * (size-1));
+    /*memcpy(dpi_z+1, dz+1, sizeof(double) * (size-1));*/
 
     /* result[1:] *= (t / ||x|| + 1) / 2 */
-    cblas_dscal(size - 1, (z[0] / norm_x + 1. )/2., dpi_z + 1, 1);
+    /*cblas_dscal(size - 1, (z[0] / norm_x + 1. )/2., dpi_z + 1, 1);*/
     
     /* result[1:] += x (s - temp * t /||x||) / ( 2 * ||x||)*/
     cblas_daxpy(size - 1, (dz[0] - temp * z[0] / norm_x) / (norm_x * 2), 
@@ -309,9 +324,6 @@ void exp_cone_projection(double *z, double *pi_z) {
     }
   }
 
-  // z[0] = x[0];
-  // z[1] = x[1];
-  // z[2] = x[2];
   return;
 }
 

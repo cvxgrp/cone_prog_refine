@@ -84,10 +84,14 @@ Embedded cone
 int embedded_cone_projection(cone_prog_refine_workspace * workspace);
 
 
-/* dpi_z = DPi(workspace->z) dz */
+/* 
+if mode==1,  dpi_z = DPi dz + dpi_z
+if mode==2,  dpi_z = DPi^T dz + dpi_z
+*/
 int embedded_cone_projection_derivative(
     cone_prog_refine_workspace * workspace,
     const double * dz,
-    double * dpi_z);
+    double * dpi_z,
+    const int mode);
 
 #endif

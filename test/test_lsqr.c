@@ -1,4 +1,6 @@
 #include "lsqr.h"
+#include "truncated_lsqr.h"
+
 #include "test.h"
 #include "linalg.h"
 

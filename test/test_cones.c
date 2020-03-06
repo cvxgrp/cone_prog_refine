@@ -11,7 +11,7 @@
 
 #define EXP_CONE_TOLERANCE 1E-15
 
-static void * test_isin_kexp(double * pi_z){
+static const char *  test_isin_kexp(double * pi_z){
 
     mu_assert("Exp cone projection: y < 0", pi_z[1] >= 0);
 
@@ -22,9 +22,10 @@ static void * test_isin_kexp(double * pi_z){
         mu_assert("Exp cone projection: y > 0 and not y exp (x/y) >= z", 
             pi_z[1] * exp(pi_z[0] / pi_z[1]) <= pi_z[2] + EXP_CONE_TOLERANCE);
 
+return 0;
 }
 
-static void * test_isin_kexp_star(double * x){
+static const char *  test_isin_kexp_star(double * x){
 
     mu_assert("Exp cone projection: u > 0", x[0] <= 0);
 
@@ -34,6 +35,8 @@ static void * test_isin_kexp_star(double * x){
     else
         mu_assert("Exp cone projection: u < 0 and not -u e(v/u) <= w ", 
             - x[0] * exp(x[1] / x[0]) <= exp(1.) * x[2] + EXP_CONE_TOLERANCE);
+
+return 0;
 
 }
 
@@ -45,7 +48,6 @@ static const char * test_exp_cone_proj(){
     double pi_z_m_z[3];
 
     int i,j;
-    double normx;
     cone_prog_refine_workspace workspace;
 
     workspace.m = 0;
@@ -305,10 +307,14 @@ static const char * test_embedded_cone_projection_derivative() {
         workspace.z = z;
         workspace.pi_z = pi_z;
 
+
+        memset(dpi_z, 0., sizeof(double)*EMB_CONE_PROJ_DER_SIZE);
+
         embedded_cone_projection_derivative(
             &workspace,
             dz,
-            dpi_z);
+            dpi_z,
+            1);
 
         if (DEBUG_PRINT){
         printf("\nTesting cone projection derivative\n");

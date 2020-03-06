@@ -111,12 +111,36 @@ int embedded_cone_projection_derivative(
         counter += workspace->sizes_sec_ord[i];
     };
 
-    /*Exponential primal cones.*/
 
+    /* Exponential primal cones. */
+    for (i = 0; i < workspace->num_exp_pri; i++){  
+        exp_cone_projection_derivative(workspace->z + counter, 
+                                   x + counter,
+                                   y + counter, 
+                                     workspace->pi_z + counter);
+        counter += 3;
+    };
 
-    /*Exponential dual cones.*/
+    /* Exponential dual cones. */
+    for (i = 0; i < workspace->num_exp_dua; i++){  
 
-    /*Semi-definite cones.*
+        workspace->pi_z[counter] += workspace->z[counter];
+        workspace->pi_z[counter+1] += workspace->z[counter+1];
+        workspace->pi_z[counter+2] += workspace->z[counter+2];
+
+        exp_cone_projection_derivative(workspace->z + counter, 
+                                   x + counter,
+                                   y + counter, 
+                                     workspace->pi_z + counter);
+        y[counter] -= x[counter];
+        y[counter+1] -= x[counter+1];
+        y[counter+2] -= x[counter+2];
+
+        workspace->pi_z[counter] -= workspace->z[counter];
+        workspace->pi_z[counter+1] -= workspace->z[counter+1];
+        workspace->pi_z[counter+2] -= workspace->z[counter+2];
+        counter += 3;
+    };
 
     /*Last element */
     y[counter] = workspace->z[counter] <= 0. ? 0. : x[counter];
@@ -212,7 +236,7 @@ int second_order_cone_projection_derivative(const int size,
 #define CONE_TOL (1e-16)
 #define CONE_THRESH (1e-16)
 #define CONE_THRESH_TWO (1e-16)
-#define EXP_CONE_MAX_ITERS (50)
+#define EXP_CONE_MAX_ITERS (100)
 
 const double EulerConstant = 2.718281828459045; 
 

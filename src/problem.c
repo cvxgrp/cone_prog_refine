@@ -239,11 +239,11 @@ int normalized_residual_vecmat(
         0 /*Q^T */
         );
 
-    /* internal2 = DPi(z)^T * internal . TODO add transpose to embedded_cone_projection_derivative */
+    /* result += DPi(z)^T * internal . TODO add transpose to embedded_cone_projection_derivative */
     memset(workspace->internal2, 0., sizeof(double)*size);
     non_diff = embedded_cone_projection_derivative(
         workspace,
-        workspace->internal,
+        (const double *) workspace->internal,
         workspace->internal2,
         2);
 

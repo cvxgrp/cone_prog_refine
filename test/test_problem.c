@@ -642,7 +642,7 @@ static const char * test_aprod(){
             if (DEBUG_PRINT)  printf("%.2e  ", result_vecmat[i][j]);
             
             mu_assert("DN(z) transpose not equal to DN(z)",
-                (result_matvec[i][j] == result_vecmat[j][i]));
+                fabs(result_matvec[i][j] - result_vecmat[j][i])<1E-15);
 
         }
         if (DEBUG_PRINT)  printf("\n");

@@ -61,8 +61,8 @@ static const char * test_exp_cone_proj(){
     workspace.z = z;
     workspace.pi_z = pi_z;
 
-    for (j=0; j<100; j++){
-        random_uniform_vector(6+1, z, -1, 1,j);
+    for (j=0; j<1000; j++){
+        random_uniform_vector(6+1, z, -1, 1, j*1234567);
         
         embedded_cone_projection(&workspace);
        
@@ -229,9 +229,9 @@ static const char * test_embedded_cone_projection(){
      return 0;
  }
 
-#define EMB_CONE_PROJ_DER_SIZE 17
+#define EMB_CONE_PROJ_DER_SIZE 23
 #define DZ_RANGE 1E-8
-#define DPIZ_RANGE 1E-15
+#define DPIZ_RANGE 1E-13
 
 static const char * test_embedded_cone_projection_derivative() {
 
@@ -266,8 +266,8 @@ static const char * test_embedded_cone_projection_derivative() {
         size_nonneg, /*size of non-negative cone*/
         num_sec_ord, /*number of second order cones*/
         (const int *) len_socp_cones, /*sizes of second order cones*/
-        0, /*number of exponential primal cones*/
-        0, /*number of exponential dual cones*/
+        1, /*number of exponential primal cones*/
+        1, /*number of exponential dual cones*/
         NULL, /*pointers to columns of A, in CSC format*/
         NULL, /*indeces of rows of A, in CSC format*/
         NULL, /*elements of A, in CSC format*/
@@ -278,7 +278,7 @@ static const char * test_embedded_cone_projection_derivative() {
 
     workspace.pi_z = pi_z;
 
-    for (j=0; j<NUM_CONES_TESTS*3; j++){
+    for (j=0; j<NUM_CONES_TESTS*100; j++){
         random_uniform_vector(size, z, -1, 1, j*1234);
         random_uniform_vector(size, dz, -DZ_RANGE, 
                                 DZ_RANGE, j*5678);

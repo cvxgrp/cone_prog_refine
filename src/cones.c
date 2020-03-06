@@ -234,7 +234,7 @@ int second_order_cone_projection_derivative(const int size,
 
 
 #define CONE_TOL (1e-16)
-#define CONE_THRESH (1e-16)
+#define CONE_THRESH (1e-15)
 #define CONE_THRESH_TWO (1e-16)
 #define EXP_CONE_MAX_ITERS (100)
 

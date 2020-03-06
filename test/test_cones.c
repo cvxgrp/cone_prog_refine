@@ -5,11 +5,6 @@
 
 
 
-#define LEN_TEST_SOCP_CONE 10
-#define NUM_CONES_TESTS 10
-#define NUM_BACKTRACKS 10
-
-#define EXP_CONE_TOLERANCE 1E-15
 
 static const char *  test_isin_kexp(double * pi_z){
 
@@ -20,7 +15,7 @@ static const char *  test_isin_kexp(double * pi_z){
             (pi_z[0] <= 0) && (pi_z[2] >= 0));
     else
         mu_assert("Exp cone projection: y > 0 and not y exp (x/y) >= z", 
-            pi_z[1] * exp(pi_z[0] / pi_z[1]) <= pi_z[2] + EXP_CONE_TOLERANCE);
+            pi_z[1] * exp(pi_z[0] / pi_z[1]) <= pi_z[2]);
 
 return 0;
 }
@@ -34,7 +29,7 @@ static const char *  test_isin_kexp_star(double * x){
             (x[1] >= 0) && (x[2] >= 0));
     else
         mu_assert("Exp cone projection: u < 0 and not -u e(v/u) <= w ", 
-            - x[0] * exp(x[1] / x[0]) <= exp(1.) * x[2] + EXP_CONE_TOLERANCE);
+            - x[0] * exp(x[1] / x[0]) <= exp(1.) * x[2]);
 
 return 0;
 
@@ -62,18 +57,22 @@ static const char * test_exp_cone_proj(){
     workspace.pi_z = pi_z;
 
     for (j=0; j<1000; j++){
-        random_uniform_vector(6+1, z, -1, 1, j*1234567);
+        random_uniform_vector(6+1, z, -1, 1, j*12345);
         
         embedded_cone_projection(&workspace);
        
-       if (DEBUG_PRINT){
+       
+      if (DEBUG_PRINT)
         printf("\nTesting exp cone projection\n"); 
         
-        printf("testing primal\n");
+        if (DEBUG_PRINT){
+            printf("testing primal\n");
+        
 
         for (i= 0; i<3;i++){
-            printf("z[%d] = %f, pi_z[%d] = %f\n", i, z[i], i, pi_z[i]);
-        }
+            printf("z[%d] = %e, pi_z[%d] = %e, (pi_z-z)[%d] = %e\n", 
+                i, z[i], i, pi_z[i], i, pi_z[i] - z[i]);
+        }}
         
         test_isin_kexp(pi_z);
 
@@ -81,26 +80,51 @@ static const char * test_exp_cone_proj(){
         pi_z_m_z[1] = pi_z[1] - z[1];
         pi_z_m_z[2] = pi_z[2] - z[2];
 
+        if (DEBUG_PRINT) printf("duality gap %e\n", (pi_z[0] * pi_z_m_z[0] +
+            pi_z[1] * pi_z_m_z[1] +
+            pi_z[2] * pi_z_m_z[2]));
+
+        mu_assert("primal Pi(z)^T(Pi(z) - z) != 0 ",
+         (fabs(pi_z[0] * pi_z_m_z[0] +
+            pi_z[1] * pi_z_m_z[1] +
+            pi_z[2] * pi_z_m_z[2]) < 1E-15));
+
+
         test_isin_kexp_star(pi_z_m_z);
 
+       if (DEBUG_PRINT){ 
         printf("testing dual\n");
         for (i= 3; i<6;i++){
-            printf("z[%d] = %f, pi_z[%d] = %f\n", i, z[i], i, pi_z[i]);
-        }
+            printf("z[%d] = %e, pi_z[%d] = %e, (pi_z-z)[%d] = %e\n", 
+                i, z[i], i, pi_z[i], i, pi_z[i] - z[i]);
+        }}
         
         test_isin_kexp_star(pi_z+3);
 
-        pi_z_m_z[0] = pi_z[3] - z[3];
-        pi_z_m_z[1] = pi_z[4] - z[4];
-        pi_z_m_z[2] = pi_z[5] - z[5];
+        pi_z_m_z[0] = pi_z[3] + z[3];
+        pi_z_m_z[1] = pi_z[4] + z[4];
+        pi_z_m_z[2] = pi_z[5] + z[5];
+
+        if (DEBUG_PRINT) printf("duality gap %e\n", 
+            (pi_z[3] * pi_z_m_z[0] +
+            pi_z[4] * pi_z_m_z[1] +
+            pi_z[5] * pi_z_m_z[2]));
+
+        mu_assert("dual Pi(z)^T(Pi(z) - z) != 0 ",
+         fabs(pi_z[3] * pi_z_m_z[0] +
+            pi_z[4] * pi_z_m_z[1] +
+            pi_z[5] * pi_z_m_z[2])<1E-15);
 
         test_isin_kexp(pi_z_m_z);
 
-     }
+     
 
         }
      return 0;
  }
+
+
+#define LEN_TEST_SOCP_CONE 10
 
 
 static const char * test_second_order_cone(){
@@ -203,7 +227,7 @@ static const char * test_embedded_cone_projection(){
         z,
         &workspace);
 
-    for (j=0; j<NUM_CONES_TESTS; j++){
+    for (j=0; j<10; j++){
         random_uniform_vector(7, workspace.z, -1, 1,j);
         embedded_cone_projection(&workspace);
        
@@ -231,7 +255,7 @@ static const char * test_embedded_cone_projection(){
 
 #define EMB_CONE_PROJ_DER_SIZE 23
 #define DZ_RANGE 1E-8
-#define DPIZ_RANGE 1E-13
+#define DPIZ_RANGE 1E-14
 
 static const char * test_embedded_cone_projection_derivative() {
 
@@ -278,10 +302,12 @@ static const char * test_embedded_cone_projection_derivative() {
 
     workspace.pi_z = pi_z;
 
-    for (j=0; j<NUM_CONES_TESTS*100; j++){
+    for (j=0; j<20; j++){
         random_uniform_vector(size, z, -1, 1, j*1234);
         random_uniform_vector(size, dz, -DZ_RANGE, 
                                 DZ_RANGE, j*5678);
+
+        if (DEBUG_PRINT) printf("\nTest #%d of numerical accuracy of DN(z)\n",j);
 
 
         /* workspace.pi_z = Pi workspace.z */
@@ -319,8 +345,8 @@ static const char * test_embedded_cone_projection_derivative() {
         if (DEBUG_PRINT){
         printf("\nTesting cone projection derivative\n");
         for (i= 0; i<size;i++){
-           printf("z[%d] = %.2e, pi_z[%d] = %.2e, dz[%d] = %.2e, dpi_z[%d] = %.2e, pi_z_p_dz[%d] = %.2e\n", 
-               i, z[i], i, pi_z[i], i, dz[i], i, dpi_z[i], i, pi_z_p_dz[i]);
+           printf("z[%d] = %.2e, pi_z[%d] = %.2e, dz[%d] = %.2e, dpi_z[%d] = %.2e, (pi_z_p_dz - pi_z)[%d] = %.2e\n", 
+               i, z[i], i, pi_z[i], i, dz[i], i, dpi_z[i], i, pi_z_p_dz[i] - pi_z[i]);
         }
     }
 
